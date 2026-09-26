@@ -350,6 +350,10 @@ import {
   updateWhatsappTemplateApi,
 } from './services/whatsapp-domain';
 import {
+  getSalaoConfigApi,
+  saveSalaoConfigApi,
+} from './services/salao-config.service';
+import {
   criarAgendamentoPublico,
   listProfissionaisPublic,
   listServicosPublic,
@@ -3843,6 +3847,52 @@ const app = new Elysia({ adapter: node() })
       return fail('SERVER', msg);
     }
   })
+  .get('/api/salao/config', async ({ request }) => {
+    const auth = await authenticateRequest(request);
+    if (!auth.ok) return auth.response;
+    const denied = requireAdminRole(auth.user);
+    if (denied) return denied;
+    try {
+      return ok({ config: await getSalaoConfigApi(db) });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return fail('SERVER', msg);
+    }
+  })
+  .put(
+    '/api/salao/config',
+    async ({ request, body }) => {
+      const auth = await authenticateRequest(request);
+      if (!auth.ok) return auth.response;
+      const denied = requireAdminRole(auth.user);
+      if (denied) return denied;
+      try {
+        const b = body as Record<string, unknown>;
+        const googleReviewUrl =
+          b.google_review_url !== undefined
+            ? b.google_review_url
+            : b.googleReviewUrl;
+        const config = await saveSalaoConfigApi(db, {
+          google_review_url:
+            googleReviewUrl !== undefined
+              ? googleReviewUrl == null
+                ? null
+                : String(googleReviewUrl)
+              : undefined,
+        });
+        return ok({ config });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return fail('VALIDATION', msg);
+      }
+    },
+    {
+      body: t.Object({
+        google_review_url: t.Optional(t.Union([t.String(), t.Null()])),
+        googleReviewUrl: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    },
+  )
   .listen(
     {
       port: Number(process.env.PORT) || 3000,

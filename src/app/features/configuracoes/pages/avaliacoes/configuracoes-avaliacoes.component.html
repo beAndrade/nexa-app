@@ -1,0 +1,70 @@
+<div class="list-page av-config-page">
+  <header class="list-head av-config-page__head">
+    <div class="list-head__title-row">
+      <div class="list-head__left">
+        <div class="av-config-page__title-block">
+          <p class="av-config-page__context">Configurações</p>
+          <h1 class="list-head__title">Avaliações</h1>
+          <p class="av-config-page__subtitle">
+            Link que será enviado aos clientes após o atendimento.
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="av-config-page__body">
+    @if (carregando()) {
+      <p class="wa-hint" role="status">Carregando…</p>
+    } @else if (!config && erro()) {
+      <p class="wa-alert" role="alert">{{ erro() }}</p>
+    } @else {
+      <section class="wa-card">
+        <header class="wa-card__head">
+          <div>
+            <h2 class="wa-card__title">Link do Google</h2>
+            <p class="wa-card__meta">
+              Esse é o link que será enviado aos clientes após o atendimento.
+            </p>
+          </div>
+        </header>
+
+        <div class="wa-form-grid">
+          <label class="wa-field wa-form-grid__full">
+            <span>Link para avaliações do Google</span>
+            <input
+              type="url"
+              [(ngModel)]="googleReviewUrl"
+              name="googleReviewUrl"
+              placeholder="https://g.page/r/…/review"
+              autocomplete="off"
+              [disabled]="salvando()"
+            />
+            <p class="wa-hint">
+              Cole o link de avaliação do salão no Google. Ele entra na mensagem
+              enviada ao cliente depois do atendimento.
+            </p>
+          </label>
+        </div>
+
+        <footer class="wa-form-footer">
+          <div class="wa-form-footer__meta"></div>
+          <div class="wa-actions">
+            <button
+              type="button"
+              class="wa-btn wa-btn--primary"
+              (click)="salvar()"
+              [disabled]="salvando()"
+            >
+              {{ salvando() ? 'Salvando…' : 'Salvar' }}
+            </button>
+          </div>
+        </footer>
+
+        @if (erro()) {
+          <p class="wa-alert" role="alert">{{ erro() }}</p>
+        }
+      </section>
+    }
+  </div>
+</div>

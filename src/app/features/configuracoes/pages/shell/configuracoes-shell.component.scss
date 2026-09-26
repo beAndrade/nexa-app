@@ -1,3 +1,50 @@
 .config-shell {
   min-height: 100%;
 }
+
+.config-shell__tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 0.75rem 0 0.25rem;
+  padding: 0;
+  border-bottom: 1px solid #efefef;
+}
+
+.config-shell__tab {
+  position: relative;
+  margin: 0;
+  padding: 0.65rem 1.1rem 0.8rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #78716c;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: transparent;
+    border-radius: 2px 2px 0 0;
+  }
+
+  &:hover {
+    color: #44403c;
+  }
+
+  &--active {
+    color: var(--color-primary);
+
+    &::after {
+      background: var(--color-primary);
+    }
+  }
+}

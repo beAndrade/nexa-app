@@ -782,6 +782,14 @@ export const usuarios = pgTable(
   ],
 );
 
+/** Configuração singleton do salão (id = 1). Separada da integração WhatsApp. */
+export const salaoConfig = pgTable('salao_config', {
+  id: serial('id').primaryKey(),
+  googleReviewUrl: text('google_review_url'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const whatsappProviderEnum = pgEnum('whatsapp_provider', [
   'evolution',
 ]);

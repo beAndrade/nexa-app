@@ -491,6 +491,13 @@
       "when": 1775750000000,
       "tag": "0068_atendimento_itens_tipo_chk_pacote_queratina",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1775760000000,
+      "tag": "0069_salao_config",
+      "breakpoints": true
     }
   ]
 }

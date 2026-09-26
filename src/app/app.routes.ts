@@ -265,6 +265,14 @@ export const routes: Routes = [
           ).then((m) => m.ConfiguracoesWhatsappComponent),
         title: 'Configurações — WhatsApp',
       },
+      {
+        path: 'avaliacoes',
+        loadComponent: () =>
+          import(
+            './features/configuracoes/pages/avaliacoes/configuracoes-avaliacoes.component'
+          ).then((m) => m.ConfiguracoesAvaliacoesComponent),
+        title: 'Configurações — Avaliações',
+      },
     ],
   },
   {

@@ -1,3 +1,19 @@
 <div class="config-shell">
+  <nav class="config-shell__tabs" aria-label="Seções de configurações">
+    <a
+      routerLink="/configuracoes/whatsapp"
+      routerLinkActive="config-shell__tab--active"
+      class="config-shell__tab"
+    >
+      WhatsApp
+    </a>
+    <a
+      routerLink="/configuracoes/avaliacoes"
+      routerLinkActive="config-shell__tab--active"
+      class="config-shell__tab"
+    >
+      Avaliações
+    </a>
+  </nav>
   <router-outlet />
 </div>
