@@ -55,6 +55,7 @@ import {
   buildWhatsappSendUrl,
 } from '../../../../core/utils/whatsapp-deep-link';
 import { SalaoConfigService } from '../../../../core/services/salao-config/salao-config.service';
+import { AvaliacaoSolicitacoesService } from '../../../../core/services/avaliacoes/avaliacao-solicitacoes.service';
 import {
   SolicitarAvaliacaoModalComponent,
   textoSolicitacaoAvaliacao,
@@ -142,6 +143,7 @@ export class NovaComandaDrawerComponent implements OnInit {
   private readonly api = inject(SheetsApiService);
   private readonly toast = inject(AppToastService);
   private readonly salaoConfig = inject(SalaoConfigService);
+  private readonly avaliacoes = inject(AvaliacaoSolicitacoesService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Preenchido ao abrir a partir do drawer de agendamento (cliente / data correntes). */
@@ -1176,6 +1178,38 @@ export class NovaComandaDrawerComponent implements OnInit {
     abrirWhatsappSendUrl(url);
     this.toast.show('Abrindo WhatsApp...');
     this.fecharModalAvaliacao();
+    this.registrarSolicitacaoAvaliacao(digitos, link);
+  }
+
+  private registrarSolicitacaoAvaliacao(
+    telefone: string,
+    googleReviewUrl: string,
+  ): void {
+    const idAtendimento = this.contexto()?.idAtendimento?.trim() ?? '';
+    const clienteId = this.contexto()?.clienteId?.trim() ?? '';
+    if (!idAtendimento || !clienteId) {
+      console.error(
+        'Solicitação de avaliação não registrada: atendimento ou cliente ausente.',
+      );
+      return;
+    }
+    this.avaliacoes
+      .registrar({
+        id_atendimento: idAtendimento,
+        cliente_id: clienteId,
+        telefone,
+        google_review_url: googleReviewUrl,
+      })
+      .pipe(
+        catchError((err: unknown) => {
+          console.error(
+            'Solicitação de avaliação não registrada:',
+            err instanceof Error ? err.message : err,
+          );
+          return of(null);
+        }),
+      )
+      .subscribe();
   }
 
   private telefoneAvaliacaoDigitos(): string {

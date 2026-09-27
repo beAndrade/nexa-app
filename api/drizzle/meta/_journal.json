@@ -498,6 +498,13 @@
       "when": 1775760000000,
       "tag": "0069_salao_config",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1775770000000,
+      "tag": "0070_avaliacao_solicitacoes",
+      "breakpoints": true
     }
   ]
 }

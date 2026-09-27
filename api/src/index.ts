@@ -353,6 +353,7 @@ import {
   getSalaoConfigApi,
   saveSalaoConfigApi,
 } from './services/salao-config.service';
+import { criarAvaliacaoSolicitacaoApi } from './services/avaliacao-solicitacoes.service';
 import {
   criarAgendamentoPublico,
   listProfissionaisPublic,
@@ -3890,6 +3891,39 @@ const app = new Elysia({ adapter: node() })
       body: t.Object({
         google_review_url: t.Optional(t.Union([t.String(), t.Null()])),
         googleReviewUrl: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    },
+  )
+  .post(
+    '/api/avaliacoes/solicitacoes',
+    async ({ body }) => {
+      try {
+        const b = body as Record<string, unknown>;
+        const solicitacao = await criarAvaliacaoSolicitacaoApi(db, {
+          id_atendimento: String(
+            b.id_atendimento ?? b.idAtendimento ?? '',
+          ),
+          cliente_id: String(b.cliente_id ?? b.clienteId ?? ''),
+          telefone: String(b.telefone ?? ''),
+          google_review_url: String(
+            b.google_review_url ?? b.googleReviewUrl ?? '',
+          ),
+        });
+        return ok({ solicitacao });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return fail('VALIDATION', msg);
+      }
+    },
+    {
+      body: t.Object({
+        id_atendimento: t.Optional(t.String()),
+        idAtendimento: t.Optional(t.String()),
+        cliente_id: t.Optional(t.String()),
+        clienteId: t.Optional(t.String()),
+        telefone: t.String(),
+        google_review_url: t.Optional(t.String()),
+        googleReviewUrl: t.Optional(t.String()),
       }),
     },
   )

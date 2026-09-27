@@ -790,6 +790,36 @@ export const salaoConfig = pgTable('salao_config', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Abertura do WhatsApp para pedir avaliação. Não confirma o envio da mensagem.
+ * `status` inicial: `whatsapp_aberto`.
+ */
+export const avaliacaoSolicitacoes = pgTable(
+  'avaliacao_solicitacoes',
+  {
+    id: serial('id').primaryKey(),
+    idAtendimento: text('id_atendimento').references(
+      () => atendimentosPedido.idAtendimento,
+      { onDelete: 'set null' },
+    ),
+    clienteId: text('cliente_id').references(() => clientes.idCliente, {
+      onDelete: 'set null',
+    }),
+    telefone: text('telefone').notNull(),
+    googleReviewUrl: text('google_review_url').notNull(),
+    status: text('status').notNull().default('whatsapp_aberto'),
+    whatsappAbertoEm: timestamp('whatsapp_aberto_em', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('avaliacao_solicitacoes_created_at_idx').on(t.createdAt),
+    index('avaliacao_solicitacoes_id_atendimento_idx').on(t.idAtendimento),
+    index('avaliacao_solicitacoes_cliente_id_idx').on(t.clienteId),
+  ],
+);
+
 export const whatsappProviderEnum = pgEnum('whatsapp_provider', [
   'evolution',
 ]);

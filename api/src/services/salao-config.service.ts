@@ -21,7 +21,7 @@ function mapConfigApi(row: typeof salaoConfig.$inferSelect): SalaoConfigApiItem 
   };
 }
 
-function normalizeGoogleReviewUrl(raw: string | null | undefined): string | null {
+export function normalizeGoogleReviewUrl(raw: string | null | undefined): string | null {
   const value = String(raw ?? '').trim();
   if (!value) return null;
   if (value.length > URL_MAX) {
