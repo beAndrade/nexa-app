@@ -557,6 +557,7 @@ export class AgendaHubComponent implements OnInit, OnDestroy {
     if (this.comandaPainelAberto) {
       ev.preventDefault();
       ev.stopImmediatePropagation();
+      if (this.comandaDrawerRef?.tratarEscapeInterno()) return;
       this.fecharComandaDrawer();
       return;
     }

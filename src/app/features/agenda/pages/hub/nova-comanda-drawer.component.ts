@@ -48,6 +48,9 @@ import {
 import type { ComandaDrawerContextoAgenda } from '../../../../shared/comanda-drawer/comanda-drawer.types';
 import type { AbrirCadastroClientePayload } from '../../../../shared/cliente-cadastro-drawer/cliente-cadastro-drawer.service';
 import { resolverHoraWhatsappAgendamento } from '../../../../core/utils/whatsapp-agendamento-hora';
+import { nomeClienteParaWhatsapp } from '../../../../core/utils/whatsapp-variaveis';
+import { SalaoConfigService } from '../../../../core/services/salao-config/salao-config.service';
+import { SolicitarAvaliacaoModalComponent } from './solicitar-avaliacao-modal.component';
 import {
   formataMoedaBrl,
   moedaAPartirDosDigitos,
@@ -120,6 +123,7 @@ const RESUMO_VAZIO: ComandaResumoPagamentos = {
     AgendaModalCalendarComponent,
     ComandaResumoBarComponent,
     ReactiveFormsModule,
+    SolicitarAvaliacaoModalComponent,
   ],
   templateUrl: './nova-comanda-drawer.component.html',
   styleUrl: './nova-comanda-drawer.component.scss',
@@ -129,6 +133,7 @@ export class NovaComandaDrawerComponent implements OnInit {
     viewChild(AgendaNovoClientSidebarComponent);
   private readonly api = inject(SheetsApiService);
   private readonly toast = inject(AppToastService);
+  private readonly salaoConfig = inject(SalaoConfigService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Preenchido ao abrir a partir do drawer de agendamento (cliente / data correntes). */
@@ -196,6 +201,11 @@ export class NovaComandaDrawerComponent implements OnInit {
   private readonly duracaoPulsoExcluirMs = 600;
   private readonly duracaoExcluirMenuFecharMs = 280;
   modalConfirmExcluirAberto = false;
+  modalAvaliacaoAberto = false;
+  avaliacaoCarregando = false;
+  avaliacaoLink: string | null = null;
+  avaliacaoErro: string | null = null;
+  private avaliacaoReq = 0;
   /** Confirmação ao alterar a data da comanda (finalizada ou com pagamentos). */
   modalConfirmDataAberto = false;
   /** YMD pendente no modal de data. */
@@ -1078,6 +1088,49 @@ export class NovaComandaDrawerComponent implements OnInit {
   }
 
   // ----- Ações --------------------------------------------------------------
+
+  nomeClienteAvaliacao(): string {
+    return nomeClienteParaWhatsapp(
+      this.clienteParaSidebar(),
+      this.clienteNomeCtrl.value,
+    );
+  }
+
+  abrirSolicitarAvaliacao(): void {
+    const req = ++this.avaliacaoReq;
+    this.modalAvaliacaoAberto = true;
+    this.avaliacaoCarregando = true;
+    this.avaliacaoLink = null;
+    this.avaliacaoErro = null;
+    this.salaoConfig
+      .getConfig()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (cfg) => {
+          if (req !== this.avaliacaoReq || !this.modalAvaliacaoAberto) return;
+          const url = String(cfg.google_review_url ?? '').trim();
+          this.avaliacaoLink = url || null;
+          this.avaliacaoCarregando = false;
+        },
+        error: (e: unknown) => {
+          if (req !== this.avaliacaoReq || !this.modalAvaliacaoAberto) return;
+          this.avaliacaoErro = SalaoConfigService.errorMessage(e);
+          this.avaliacaoCarregando = false;
+        },
+      });
+  }
+
+  fecharModalAvaliacao(): void {
+    this.modalAvaliacaoAberto = false;
+    this.avaliacaoCarregando = false;
+  }
+
+  /** Fecha a prévia de avaliação antes do drawer. Usado pelos hosts no Escape. */
+  tratarEscapeInterno(): boolean {
+    if (!this.modalAvaliacaoAberto) return false;
+    this.fecharModalAvaliacao();
+    return true;
+  }
 
   podeFaturar(): boolean {
     return Boolean(

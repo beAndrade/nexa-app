@@ -164,6 +164,11 @@ export class ClienteCadastroDrawerHostComponent implements OnInit, OnDestroy {
       this.fecharEditAgendamentoEmpilhado();
       return;
     }
+    if (this.comandaEmpilhadaRef?.tratarEscapeInterno()) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      return;
+    }
     if (this.d.tratarEscapeComandaEmpilhadaNaFicha()) {
       ev.preventDefault();
       ev.stopImmediatePropagation();

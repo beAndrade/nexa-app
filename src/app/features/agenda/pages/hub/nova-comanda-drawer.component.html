@@ -450,10 +450,29 @@
         >
           {{ comandaFinalizada() ? 'Ver pagamentos' : 'Faturar' }}
         </button>
+        @if (comandaFinalizada()) {
+          <button
+            type="button"
+            class="btn btn-footer btn-footer--ghost"
+            (click)="abrirSolicitarAvaliacao()"
+          >
+            ⭐ Solicitar avaliação
+          </button>
+        }
       </div>
     </div>
   </footer>
 </div>
+
+@if (modalAvaliacaoAberto) {
+  <app-solicitar-avaliacao-modal
+    [nome]="nomeClienteAvaliacao()"
+    [link]="avaliacaoLink"
+    [carregando]="avaliacaoCarregando"
+    [erro]="avaliacaoErro"
+    (fechar)="fecharModalAvaliacao()"
+  />
+}
 
 @if (modalConfirmExcluirAberto) {
   <div

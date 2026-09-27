@@ -276,6 +276,7 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
     }
     if (this.comandaPainelAberto) {
       ev.preventDefault();
+      if (this.comandaDrawerRef?.tratarEscapeInterno()) return;
       this.fecharComandaDrawer();
       return;
     }

@@ -1637,6 +1637,7 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
     }
     if (this.comandaPainelAberto) {
       ev.preventDefault();
+      if (this.comandaDrawerRef?.tratarEscapeInterno()) return;
       this.fecharComandaDrawer();
       return;
     }
