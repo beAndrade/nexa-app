@@ -353,7 +353,10 @@ import {
   getSalaoConfigApi,
   saveSalaoConfigApi,
 } from './services/salao-config.service';
-import { criarAvaliacaoSolicitacaoApi } from './services/avaliacao-solicitacoes.service';
+import {
+  criarAvaliacaoSolicitacaoApi,
+  listarAvaliacaoSolicitacoesApi,
+} from './services/avaliacao-solicitacoes.service';
 import {
   criarAgendamentoPublico,
   listProfissionaisPublic,
@@ -3894,6 +3897,14 @@ const app = new Elysia({ adapter: node() })
       }),
     },
   )
+  .get('/api/avaliacoes/solicitacoes', async () => {
+    try {
+      return ok(await listarAvaliacaoSolicitacoesApi(db));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return fail('SERVER', msg);
+    }
+  })
   .post(
     '/api/avaliacoes/solicitacoes',
     async ({ body }) => {

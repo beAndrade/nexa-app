@@ -201,7 +201,9 @@ export const routes: Routes = [
   {
     path: 'avaliacoes',
     loadComponent: () =>
-      import('./pages/em-breve/em-breve.component').then((m) => m.EmBreveComponent),
+      import('./features/avaliacoes/pages/main/avaliacoes.component').then(
+        (m) => m.AvaliacoesComponent,
+      ),
     canActivate: [authGuard, adminGuard],
     title: 'Avaliações',
     data: { titulo: 'Avaliações' },

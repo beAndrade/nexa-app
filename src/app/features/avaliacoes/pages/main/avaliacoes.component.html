@@ -1,0 +1,110 @@
+<div class="list-page avaliacoes-page">
+  <div class="list-page__lead">
+    <header class="list-head">
+      <div class="list-head__title-row">
+        <div class="list-head__left">
+          <h1 class="list-head__title">Avaliações</h1>
+          <p class="avaliacoes-page__desc">
+            Gerencie suas solicitações de avaliação e acompanhe o relacionamento
+            com seus clientes.
+          </p>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  @if (carregando()) {
+    <p class="avaliacoes-page__status" role="status">Carregando solicitações…</p>
+  } @else if (erro()) {
+    <p class="list-page__error" role="alert">{{ erro() }}</p>
+  } @else if (resumo()) {
+    @if (resumo(); as resumo) {
+    <section class="avaliacoes-kpis" aria-label="Indicadores de avaliações">
+      <article class="avaliacoes-kpi">
+        <p class="avaliacoes-kpi__label">Solicitações realizadas</p>
+        <p class="avaliacoes-kpi__value">{{ resumo.total }}</p>
+      </article>
+      <article class="avaliacoes-kpi">
+        <p class="avaliacoes-kpi__label">Solicitações este mês</p>
+        <p class="avaliacoes-kpi__value">{{ resumo.este_mes }}</p>
+      </article>
+      <article class="avaliacoes-kpi">
+        <p class="avaliacoes-kpi__label">Clientes alcançados</p>
+        <p class="avaliacoes-kpi__value">{{ resumo.clientes_alcancados }}</p>
+      </article>
+      <article class="avaliacoes-kpi">
+        <p class="avaliacoes-kpi__label">Última solicitação</p>
+        <p class="avaliacoes-kpi__value avaliacoes-kpi__value--data">
+          {{ rotuloData(resumo.ultima_solicitacao_em) }}
+        </p>
+      </article>
+    </section>
+
+    <section class="avaliacoes-recentes" aria-labelledby="avaliacoes-recentes-titulo">
+      <h2 id="avaliacoes-recentes-titulo" class="avaliacoes-recentes__titulo">
+        Solicitações recentes
+      </h2>
+
+      @if (items().length === 0) {
+        <div class="list-table-card avaliacoes-empty">
+          <app-table-empty
+            label="Você ainda não solicitou nenhuma avaliação."
+          />
+          <p class="avaliacoes-empty__hint">
+            Elas aparecem quando a solicitação é feita na comanda.
+          </p>
+        </div>
+      } @else {
+        <div class="list-table-card">
+          <div class="table-wrap avaliacoes-desktop-table">
+            <table class="list-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Atendimento</th>
+                  <th>Telefone</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of items(); track item.id) {
+                  <tr>
+                    <td>{{ rotuloData(item.whatsapp_aberto_em) }}</td>
+                    <td>{{ rotuloCliente(item) }}</td>
+                    <td>{{ rotuloAtendimento(item) }}</td>
+                    <td>{{ rotuloTelefone(item.telefone) }}</td>
+                    <td>
+                      <span class="avaliacoes-status">{{ rotuloStatus(item.status) }}</span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="avaliacoes-mobile-list">
+            @for (item of items(); track item.id) {
+              <article class="avaliacoes-mobile-card">
+                <p class="avaliacoes-mobile-card__data">
+                  {{ rotuloData(item.whatsapp_aberto_em) }}
+                </p>
+                <p class="avaliacoes-mobile-card__nome">{{ rotuloCliente(item) }}</p>
+                <p class="avaliacoes-mobile-card__linha">
+                  Atendimento {{ rotuloAtendimento(item) }}
+                </p>
+                <p class="avaliacoes-mobile-card__linha">
+                  {{ rotuloTelefone(item.telefone) }}
+                </p>
+                <p class="avaliacoes-mobile-card__status">
+                  {{ rotuloStatus(item.status) }}
+                </p>
+              </article>
+            }
+          </div>
+        </div>
+      }
+    </section>
+    }
+  }
+</div>

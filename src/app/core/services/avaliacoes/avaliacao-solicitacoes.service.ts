@@ -15,6 +15,23 @@ export interface AvaliacaoSolicitacao {
   created_at: string;
 }
 
+export interface AvaliacaoSolicitacaoLista extends AvaliacaoSolicitacao {
+  numero_comanda: number | null;
+  cliente_nome: string | null;
+}
+
+export interface AvaliacaoSolicitacoesResumo {
+  total: number;
+  este_mes: number;
+  clientes_alcancados: number;
+  ultima_solicitacao_em: string | null;
+}
+
+export interface AvaliacaoSolicitacoesLista {
+  resumo: AvaliacaoSolicitacoesResumo;
+  items: AvaliacaoSolicitacaoLista[];
+}
+
 export interface CriarAvaliacaoSolicitacaoPayload {
   id_atendimento: string;
   cliente_id: string;
@@ -26,6 +43,23 @@ export interface CriarAvaliacaoSolicitacaoPayload {
 export class AvaliacaoSolicitacoesService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiBaseUrl.replace(/\/$/, '');
+
+  listar(): Observable<AvaliacaoSolicitacoesLista> {
+    return this.http
+      .get<ApiResponse<AvaliacaoSolicitacoesLista>>(
+        `${this.baseUrl}/api/avaliacoes/solicitacoes`,
+      )
+      .pipe(
+        map((r) => {
+          if (!r.ok || r.data == null) {
+            throw new Error(
+              r.error?.message ?? 'Não foi possível carregar as solicitações.',
+            );
+          }
+          return r.data;
+        }),
+      );
+  }
 
   registrar(
     payload: CriarAvaliacaoSolicitacaoPayload,
