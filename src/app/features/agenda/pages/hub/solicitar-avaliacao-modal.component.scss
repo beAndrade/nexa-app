@@ -99,6 +99,10 @@
   color: var(--color-error, #ef4444);
 }
 
+.av-solicitar-modal__alert--abaixo {
+  margin-top: 16px;
+}
+
 .av-solicitar-modal__link-label {
   margin: 16px 0 4px;
   font-size: 13px;
@@ -161,4 +165,9 @@
   background: var(--drawer-btn-primary-bg, var(--color-primary));
   border-color: var(--drawer-btn-primary-border, var(--color-primary));
   color: var(--drawer-btn-primary-fg, #fff);
+
+  &:hover:not(:disabled) {
+    background: var(--drawer-btn-primary-hover-bg, var(--color-primary-hover));
+    border-color: var(--drawer-btn-primary-hover-border, var(--color-primary-hover));
+  }
 }

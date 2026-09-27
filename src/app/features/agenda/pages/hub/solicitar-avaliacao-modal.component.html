@@ -49,19 +49,15 @@
         Configure o link em Configurações → Avaliações.
       </p>
     } @else {
-      <p class="av-solicitar-modal__ola">
-        @if (nome().trim()) {
-          Olá, {{ nome() }}!
-        } @else {
-          Olá!
-        }
-      </p>
-      <p class="av-solicitar-modal__texto">
-        Foi um prazer receber você no Espaço Lounge. Se você gostou do
-        atendimento, poderia compartilhar sua experiência com a gente no Google?
-      </p>
+      <p class="av-solicitar-modal__ola">{{ saudacao() }}</p>
+      <p class="av-solicitar-modal__texto">{{ corpoMensagem }}</p>
       <p class="av-solicitar-modal__link-label">Link:</p>
       <p class="av-solicitar-modal__link">{{ link() }}</p>
+      @if (aviso()) {
+        <p class="av-solicitar-modal__alert av-solicitar-modal__alert--abaixo" role="alert">
+          {{ aviso() }}
+        </p>
+      }
     }
   </div>
 
@@ -76,7 +72,8 @@
     <button
       type="button"
       class="av-solicitar-modal__btn av-solicitar-modal__btn--primary"
-      disabled
+      [disabled]="!podeAbrir()"
+      (click)="abrirWhatsapp.emit()"
     >
       Abrir WhatsApp
     </button>

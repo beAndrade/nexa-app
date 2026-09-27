@@ -470,7 +470,10 @@
     [link]="avaliacaoLink"
     [carregando]="avaliacaoCarregando"
     [erro]="avaliacaoErro"
+    [aviso]="avisoAvaliacaoWhatsapp()"
+    [podeAbrir]="podeAbrirWhatsappAvaliacao()"
     (fechar)="fecharModalAvaliacao()"
+    (abrirWhatsapp)="abrirWhatsappAvaliacao()"
   />
 }
 

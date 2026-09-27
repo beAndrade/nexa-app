@@ -49,8 +49,16 @@ import type { ComandaDrawerContextoAgenda } from '../../../../shared/comanda-dra
 import type { AbrirCadastroClientePayload } from '../../../../shared/cliente-cadastro-drawer/cliente-cadastro-drawer.service';
 import { resolverHoraWhatsappAgendamento } from '../../../../core/utils/whatsapp-agendamento-hora';
 import { nomeClienteParaWhatsapp } from '../../../../core/utils/whatsapp-variaveis';
+import { telefoneClienteWhatsappDigitos } from '../../../../core/utils/telefone-br';
+import {
+  abrirWhatsappSendUrl,
+  buildWhatsappSendUrl,
+} from '../../../../core/utils/whatsapp-deep-link';
 import { SalaoConfigService } from '../../../../core/services/salao-config/salao-config.service';
-import { SolicitarAvaliacaoModalComponent } from './solicitar-avaliacao-modal.component';
+import {
+  SolicitarAvaliacaoModalComponent,
+  textoSolicitacaoAvaliacao,
+} from './solicitar-avaliacao-modal.component';
 import {
   formataMoedaBrl,
   moedaAPartirDosDigitos,
@@ -205,6 +213,8 @@ export class NovaComandaDrawerComponent implements OnInit {
   avaliacaoCarregando = false;
   avaliacaoLink: string | null = null;
   avaliacaoErro: string | null = null;
+  /** Falha ao montar o wa.me com telefone e link já válidos na tela. */
+  avaliacaoErroAbrir: string | null = null;
   private avaliacaoReq = 0;
   /** Confirmação ao alterar a data da comanda (finalizada ou com pagamentos). */
   modalConfirmDataAberto = false;
@@ -1102,6 +1112,7 @@ export class NovaComandaDrawerComponent implements OnInit {
     this.avaliacaoCarregando = true;
     this.avaliacaoLink = null;
     this.avaliacaoErro = null;
+    this.avaliacaoErroAbrir = null;
     this.salaoConfig
       .getConfig()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -1123,6 +1134,52 @@ export class NovaComandaDrawerComponent implements OnInit {
   fecharModalAvaliacao(): void {
     this.modalAvaliacaoAberto = false;
     this.avaliacaoCarregando = false;
+    this.avaliacaoErroAbrir = null;
+  }
+
+  podeAbrirWhatsappAvaliacao(): boolean {
+    return (
+      !this.avaliacaoCarregando &&
+      !this.avaliacaoErro &&
+      !!String(this.avaliacaoLink ?? '').trim() &&
+      this.telefoneAvaliacaoDigitos().length >= 10
+    );
+  }
+
+  avisoAvaliacaoWhatsapp(): string | null {
+    if (this.avaliacaoErroAbrir) return this.avaliacaoErroAbrir;
+    if (this.avaliacaoCarregando || this.avaliacaoErro || !this.avaliacaoLink) {
+      return null;
+    }
+    if (this.telefoneAvaliacaoDigitos().length >= 10) return null;
+    return 'Cliente sem telefone válido para WhatsApp.';
+  }
+
+  abrirWhatsappAvaliacao(): void {
+    const link = String(this.avaliacaoLink ?? '').trim();
+    const digitos = this.telefoneAvaliacaoDigitos();
+    if (digitos.length < 10 || !link) {
+      if (digitos.length < 10) {
+        this.avaliacaoErroAbrir = 'Cliente sem telefone válido para WhatsApp.';
+      }
+      return;
+    }
+
+    const texto = textoSolicitacaoAvaliacao(this.nomeClienteAvaliacao(), link);
+    const url = buildWhatsappSendUrl(digitos, texto);
+    if (!url.includes('wa.me/')) {
+      this.avaliacaoErroAbrir = 'Não foi possível montar o link do WhatsApp.';
+      return;
+    }
+
+    this.avaliacaoErroAbrir = null;
+    abrirWhatsappSendUrl(url);
+    this.toast.show('Abrindo WhatsApp...');
+    this.fecharModalAvaliacao();
+  }
+
+  private telefoneAvaliacaoDigitos(): string {
+    return telefoneClienteWhatsappDigitos(this.clienteParaSidebar());
   }
 
   /** Fecha a prévia de avaliação antes do drawer. Usado pelos hosts no Escape. */
