@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   HostListener,
@@ -60,6 +61,7 @@ const STATUS_OPTIONS = [
 export class AvaliacoesComponent {
   private readonly api = inject(AvaliacaoSolicitacoesService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly searchInput$ = new Subject<string>();
 
   readonly periodoPresetOptions = AVALIACOES_PERIODO_PRESET_OPTIONS;
@@ -229,10 +231,27 @@ export class AvaliacoesComponent {
     if (!this.buscaAberta()) {
       this.dispararPulsoToolbar('busca');
       this.buscaAberta.set(true);
-      queueMicrotask(() => {
-        document.getElementById('avaliacoes-busca-input')?.focus();
-      });
+      // OnPush: aplicar --search-open (visibility/pointer-events) antes do focus.
+      this.cdr.detectChanges();
     }
+    this.focarInputBusca();
+  }
+
+  private focarInputBusca(): void {
+    const tryFocus = (): boolean => {
+      const input = document.getElementById(
+        'avaliacoes-busca-input',
+      ) as HTMLInputElement | null;
+      if (!input) return false;
+      input.focus({ preventScroll: true });
+      return document.activeElement === input;
+    };
+
+    if (tryFocus()) return;
+    requestAnimationFrame(() => {
+      if (tryFocus()) return;
+      setTimeout(() => tryFocus(), 0);
+    });
   }
 
   fecharPainelBusca(): void {

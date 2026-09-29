@@ -70,6 +70,12 @@
 
 .avaliacoes-page__toolbar-busca .list-head__busca-wrap {
   margin-left: 0;
+  cursor: text;
+}
+
+.avaliacoes-page__toolbar-busca .list-head__busca-icon,
+.avaliacoes-page__toolbar-busca .list-head__busca-label {
+  cursor: text;
 }
 
 :host ::ng-deep .avaliacoes-page__toolbar .saas-select__trigger {
