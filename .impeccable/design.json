@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-29T05:50:00.000Z",
+  "title": "Design System: Nexa",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Operational Slate-Blue",
+        "canonical": "#3f769d",
+        "tonalRamp": ["#152033", "#1e3a4f", "#2f5e7e", "#3f769d", "#5a91b3", "#7aacc7", "#a8c9db", "#d5e6ef"]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Deep Slate-Blue",
+        "canonical": "#2f5e7e",
+        "tonalRamp": ["#152033", "#1a3346", "#244a63", "#2f5e7e", "#4a7a99", "#6f9bb5", "#9cbdd1", "#cfe0ea"]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Ink Slate",
+        "canonical": "#101828",
+        "tonalRamp": ["#0b1220", "#101828", "#152033", "#1f2937", "#334155", "#64748b", "#94a3b8", "#e2e8f0"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Workspace Mist",
+        "canonical": "#f8f8f8",
+        "tonalRamp": ["#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9", "#f8f8f8"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f8fafc", "#ffffff"]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Ink Text",
+        "canonical": "#0f172a",
+        "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#f1f5f9"]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Success Green",
+        "canonical": "#22c55e",
+        "tonalRamp": ["#14532d", "#166534", "#16a34a", "#22c55e", "#4ade80", "#86efac", "#bbf7d0", "#f0fdf4"]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Warning Amber",
+        "canonical": "#f59e0b",
+        "tonalRamp": ["#78350f", "#92400e", "#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#fde68a", "#fffbeb"]
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "Error Red",
+        "canonical": "#ef4444",
+        "tonalRamp": ["#7f1d1d", "#991b1b", "#dc2626", "#ef4444", "#f87171", "#fca5a5", "#fecaca", "#fef2f2"]
+      },
+      "confirm-action": {
+        "role": "secondary",
+        "displayName": "Confirm Green",
+        "canonical": "#70c040",
+        "tonalRamp": ["#3f6b24", "#4f862c", "#5fa336", "#70c040", "#88c761", "#a3d787", "#c5e8b0", "#e8f6dc"]
+      },
+      "danger-action": {
+        "role": "secondary",
+        "displayName": "Alert Coral",
+        "canonical": "#ff4d4f",
+        "tonalRamp": ["#a61d24", "#cf1322", "#f5222d", "#ff4d4f", "#ff7875", "#ffa39e", "#ffccc7", "#fff1f0"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display / Brand",
+        "purpose": "Wordmark e hero de login (Space Grotesk)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Abas e títulos compactos de seção."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Corpo operacional, tabelas e formulários."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Labels de campo em drawers e forms."
+      }
+    },
+    "shadows": [
+      {
+        "name": "list-table-card",
+        "value": "0 0 10px 3px rgba(197 197 197 / 12%)",
+        "purpose": "Elevação estrutural do cartão de tabela."
+      },
+      {
+        "name": "list-surface-elev",
+        "value": "0 2px 0 rgba(0, 0, 0, 0.02)",
+        "purpose": "Hairline de elevação em superfície de lista."
+      },
+      {
+        "name": "drawer-panel",
+        "value": "-4px 0 24px rgba(15, 23, 42, 0.12)",
+        "purpose": "Painel lateral sobre o canvas."
+      }
+    ],
+    "motion": [
+      {
+        "name": "drawer-ease",
+        "value": "0.43s cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Abrir/fechar drawer e overlay."
+      },
+      {
+        "name": "color-ease",
+        "value": "0.2s ease",
+        "purpose": "Transições de cor em tabs e hovers leves."
+      },
+      {
+        "name": "shadow-snap",
+        "value": "0.1s",
+        "purpose": "Micro-transição de sombra em cards de lista."
+      }
+    ],
+    "breakpoints": [
+      { "name": "formNarrow", "value": "560px" },
+      { "name": "shellMobile", "value": "768px" },
+      { "name": "drawerForm", "value": "720px" },
+      { "name": "drawerTablet", "value": "1024px" },
+      { "name": "drawerSidebarHide", "value": "1336px" },
+      { "name": "drawerWide", "value": "1650px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal em footers de drawer e toolbars.",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\">Salvar</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 4px 16px; border: 1px solid #3f769d; border-radius: 12px; background: #3f769d; color: #ffffff; font-family: Inter, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease; } .ds-btn-primary:hover { background: #2f5e7e; border-color: #2f5e7e; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, #3f769d 6%, transparent); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Cancelar / ação secundária em footers.",
+      "html": "<button type=\"button\" class=\"ds-btn-ghost\">Cancelar</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 4px 16px; border: 1px solid #f1f1f1; border-radius: 12px; background: #ffffff; color: rgba(0,0,0,.75); font-family: Inter, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: color 0.2s ease, border-color 0.2s ease; } .ds-btn-ghost:hover { color: #2f5e7e; border-color: #2f5e7e; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, #3f769d 6%, transparent); }"
+    },
+    {
+      "name": "Confirm Button",
+      "kind": "button",
+      "refersTo": "button-confirm",
+      "description": "Faturar / confirmar fluxo operacional.",
+      "html": "<button type=\"button\" class=\"ds-btn-confirm\">Faturar</button>",
+      "css": ".ds-btn-confirm { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 4px 16px; border: 1px solid #70c040; border-radius: 12px; background: #70c040; color: #ffffff; font-family: Inter, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease; } .ds-btn-confirm:hover { background: #88c761; border-color: #88c761; } .ds-btn-confirm:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, #70c040 18%, transparent); }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Excluir / ação destrutiva.",
+      "html": "<button type=\"button\" class=\"ds-btn-danger\">Excluir</button>",
+      "css": ".ds-btn-danger { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 4px 16px; border: 1px solid #ff4d4f; border-radius: 12px; background: #ff4d4f; color: #ffffff; font-family: Inter, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease; } .ds-btn-danger:hover { background: #ff7875; border-color: #ff7875; } .ds-btn-danger:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, #ff4d4f 18%, transparent); }"
+    },
+      {
+        "name": "Text Field",
+        "kind": "input",
+        "refersTo": "input-default",
+        "description": "Campo padrão de drawer/cadastro.",
+        "html": "<label class=\"ds-field\"><span class=\"ds-field__label\">Nome</span><input class=\"ds-input\" type=\"text\" placeholder=\"\" /></label>",
+        "css": ".ds-field { display: flex; flex-direction: column; gap: 8px; font-family: Inter, sans-serif; } .ds-field__label { font-size: 15px; font-weight: 500; color: rgba(0,0,0,.75); } .ds-input { height: 38px; padding: 4px 11px; border: 1px solid #f1f1f1; border-radius: 12px; background: #ffffff; color: #0f172a; font: inherit; transition: border-color 0.2s ease, box-shadow 0.2s ease; } .ds-input:hover { border-color: #2f5e7e; } .ds-input:focus { outline: none; border-color: #3f769d; box-shadow: 0 0 0 2px color-mix(in srgb, #3f769d 6%, transparent); } .ds-input[aria-invalid=\"true\"] { border-color: #ff4d4f; }"
+      },
+      {
+        "name": "SaaS Select",
+        "kind": "input",
+        "refersTo": "select-trigger",
+        "description": "Select/combobox de formulário (app-saas-select); mesmo idioma de input e touch-min.",
+        "html": "<div class=\"ds-saas-select\"><button type=\"button\" class=\"ds-saas-select__trigger\" aria-haspopup=\"listbox\"><span class=\"ds-saas-select__value\">Opção selecionada</span></button><div class=\"ds-saas-select__panel\" role=\"listbox\"><button type=\"button\" class=\"ds-saas-select__option ds-saas-select__option--active\">Opção selecionada</button><button type=\"button\" class=\"ds-saas-select__option\">Outra opção</button></div></div>",
+        "css": ".ds-saas-select { position: relative; width: 100%; font-family: Inter, sans-serif; } .ds-saas-select__trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid #e7e5e4; border-radius: 12px; background: #ffffff; color: #0f172a; text-align: left; cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-saas-select__trigger:hover { border-color: #3f769d; } .ds-saas-select__trigger:focus-visible { outline: none; border-color: #3f769d; box-shadow: 0 0 0 2px color-mix(in srgb, #3f769d 6%, transparent); } .ds-saas-select__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-saas-select__panel { margin-top: 4px; border-radius: 10px; background: #ffffff; box-shadow: 4px 10px 24px rgba(0,0,0,.1); padding: 5px 0; max-width: min(90vw, 36rem); } .ds-saas-select__option { display: block; width: calc(100% - 10px); margin: 0 5px; padding: 0.55rem 0.75rem; border: none; border-radius: 10px; background: transparent; text-align: left; font: inherit; font-size: 0.9rem; color: #0f172a; cursor: pointer; } .ds-saas-select__option:hover:not(.ds-saas-select__option--active) { background: #f5f5f4; } .ds-saas-select__option--active { background: #eef2ff; }"
+      },
+      {
+        "name": "Status Badge",
+        "kind": "chip",
+        "refersTo": null,
+        "description": "Badge semântico de status (ex.: pago).",
+        "html": "<span class=\"ds-badge ds-badge--pago\">Pago</span>",
+        "css": ".ds-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; border: 1px solid #bbf7d0; background: #dcfce7; color: #15803d; font-family: Inter, sans-serif; font-size: 12px; font-weight: 600; } .ds-badge--pago { border-color: #bbf7d0; background: #dcfce7; color: #15803d; }"
+      },
+      {
+        "name": "List Table Card",
+        "kind": "card",
+        "refersTo": "card-list",
+        "description": "Cartão estrutural de listagens.",
+        "html": "<div class=\"ds-list-card\"><div class=\"ds-list-card__row\">Cliente exemplo</div></div>",
+        "css": ".ds-list-card { background: #ffffff; border: 1px solid rgba(0,0,0,.03); border-radius: 12px; box-shadow: 0 0 10px 3px rgba(197,197,197,.12); overflow: hidden; font-family: Inter, sans-serif; color: #0f172a; } .ds-list-card__row { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; } .ds-list-card__row:last-child { border-bottom: none; }"
+      },
+      {
+        "name": "Sidebar Nav Item",
+        "kind": "nav",
+        "refersTo": null,
+        "description": "Item de navegação no shell escuro (desktop).",
+        "html": "<nav class=\"ds-side-nav\"><button type=\"button\" class=\"ds-side-nav__item ds-side-nav__item--active\">Agenda</button><button type=\"button\" class=\"ds-side-nav__item\">Clientes</button></nav>",
+        "css": ".ds-side-nav { display: flex; flex-direction: column; gap: 4px; padding: 12px; background: linear-gradient(180deg, #101828 0%, #152033 55%, #1a3a52 130%); font-family: Inter, sans-serif; } .ds-side-nav__item { text-align: left; border: none; border-radius: 10px; padding: 10px 12px; background: transparent; color: rgba(255,255,255,.82); cursor: pointer; font: inherit; } .ds-side-nav__item:hover { background: color-mix(in srgb, #ffffff 14%, transparent); } .ds-side-nav__item--active { background: color-mix(in srgb, #3f769d 30%, #232e3e); color: #ffffff; } .ds-side-nav__item:focus-visible { outline: 2px solid #3f769d; outline-offset: 2px; }"
+      },
+      {
+        "name": "Contextual Mobile Bottom Nav",
+        "kind": "nav",
+        "refersTo": null,
+        "description": "Padrão responsivo do App Shell (≤767px): Menu + ações da feature via AppShellUiService. Não é navegação global fixa.",
+        "html": "<nav class=\"ds-shell-bottom-nav\" aria-label=\"Navegação inferior\"><button type=\"button\" class=\"ds-shell-bottom-nav__btn\"><span class=\"ds-shell-bottom-nav__label\">Menu</span></button><button type=\"button\" class=\"ds-shell-bottom-nav__btn\"><span class=\"ds-shell-bottom-nav__label\">Filtro</span></button><button type=\"button\" class=\"ds-shell-bottom-nav__btn ds-shell-bottom-nav__btn--accent\"><span class=\"ds-shell-bottom-nav__label\">Criar</span></button></nav>",
+        "css": ".ds-shell-bottom-nav { display: flex; justify-content: space-evenly; align-items: stretch; gap: 0; margin: 0 15px; padding: 0; border: 1px solid rgba(255,255,255,.18); border-radius: 28px; background: rgba(255,255,255,.065); backdrop-filter: blur(2px) saturate(1.04); box-shadow: 0 6px 18px rgba(0,0,0,.09), 0 1px 4px rgba(0,0,0,.055); font-family: Inter, sans-serif; overflow: hidden; } .ds-shell-bottom-nav__btn { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; height: 61px; border: none; background: transparent; color: #585858; cursor: pointer; font: inherit; } .ds-shell-bottom-nav__btn--accent { color: #3f769d; font-weight: 600; } .ds-shell-bottom-nav__label { font-size: 11px; line-height: 1; }"
+      }
+    ],
+  "narrative": {
+    "northStar": "The Soft Steel Console",
+    "overview": "Nexa é uma plataforma SaaS modular. O visual do core é um console operacional de aço suave: sidebar em slate escuro, accent Operational Slate-Blue, canvas claro e densidade de ferramenta — profissional, operacional, sóbrio, confiável, denso-mas-escaneável e leve. Zero teatro. Beauty é o módulo comercial atual e o Espaço Lounge é piloto; nenhum dos dois define a linguagem visual estrutural.\n\nA fonte de verdade do que está na tela é o runtime CSS (`src/styles.scss` `:root` e shells em `src/app/styles/`). Tokens TypeScript em `src/app/design-system/tokens/` espelham esse runtime. Brand.md registra intenção de marca com drift conhecido (Primary Blue `#3F76D9` vs runtime `#3f769d`; accent rosa `#F43F7A` ausente no `:root`) — não “corrigir” o runtime neste documento; alinhamento de marca é sprint futuro.",
+    "keyCharacteristics": [
+      "Plataforma neutra entre verticais; Beauty influencia conteúdo, não a forma do core",
+      "Flat-by-default; sombra só para elevação estrutural",
+      "Inter (UI) + Space Grotesk (marca/logo no shell)",
+      "Reuso de shells (list-page-shell, table-card-shell, cliente-drawer) antes de inventar",
+      "Touch mínimo 44px; mobile browser como cena operacional primária",
+      "saas-select como select de formulário do sistema",
+      "Bottom nav mobile contextual por feature (Agenda/Clientes), não sitemap global"
+    ],
+    "rules": [
+      {
+        "name": "The Runtime Truth Rule",
+        "body": "CSS :root manda. Não substituir o primary runtime pelo hex do Brand.md sem sprint explícito.",
+        "section": "colors"
+      },
+      {
+        "name": "The Platform Neutral Rule",
+        "body": "Cores e padrões do core servem qualquer vertical. Não introduzir paletas ou texturas “de salão” no Design System estrutural.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Voice Rule",
+        "body": "Operational Slate-Blue é o único accent de marca no core; raridade relativa — status e confirmações usam semânticos, não um segundo brand color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Font Rule",
+        "body": "Inter para operar; Space Grotesk para marcar. Não adicionar uma terceira família no core.",
+        "section": "typography"
+      },
+      {
+        "name": "The Shell First Rule",
+        "body": "Novas telas de lista ou cadastro herdam list-page-shell / table-card-shell / cliente-drawer antes de inventar layout.",
+        "section": "layout"
+      },
+      {
+        "name": "The Contextual Chrome Rule",
+        "body": "No mobile, chrome inferior contextual só quando a feature registra ações via AppShellUiService; não inventar uma bottom nav de destinos globais “para preencher slots”.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Sombras só em drawer, card/lista e superfícies que realmente precisem de hierarquia. Sem glow decorativo, sem multi-layer “premium stack”.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Twelve Rule",
+        "body": "Preferir 12px; desviar só onde o shell já documenta (thead 14, chrome mobile 28).",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do tratar o core como plataforma Nexa reutilizável por verticais futuros (Sports, Clinic, Food, …).",
+      "Do reutilizar shells e tokens de runtime antes de criar padrões paralelos.",
+      "Do usar Operational Slate-Blue #3f769d como único accent de marca no core.",
+      "Do manter flat-by-default; sombra só para hierarquia estrutural.",
+      "Do validar desktop e mobile (shell ≤768px) em superfícies novas.",
+      "Do usar app-saas-select para selects de formulário, alinhado a input/botão e touch.",
+      "Do registrar Mobile Bottom Nav só com ações da feature ativa (padrão Agenda / Clientes)."
+    ],
+    "donts": [
+      "Don't estetizar o core como branding de salão / beauty.",
+      "Don't usar o accent rosa #F43F7A do Brand.md até sprint de alinhamento.",
+      "Don't introduzir Material, Tailwind ou outro design kit paralelo.",
+      "Don't parecer ERP desktop legado densamente chromeado (excesso de bordas, toolbars metalizadas, densidade sem hierarquia).",
+      "Don't “corrigir” cores runtime para Brand.md sem decisão explícita de produto.",
+      "Don't inventar depoimentos, clientes ou claims visuais de vertical no sistema de design.",
+      "Don't transformar a Bottom Navigation num menu global fixo de destinos quando a feature não exige ações contextuais.",
+      "Don't estilizar <select> nativo paralelo ao saas-select no mesmo formulário."
+    ]
+  }
+}
