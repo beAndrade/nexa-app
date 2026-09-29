@@ -5,8 +5,7 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Avaliações</h1>
           <p class="avaliacoes-page__desc">
-            Gerencie suas solicitações de avaliação e acompanhe o relacionamento
-            com seus clientes.
+            Solicitações feitas a partir da comanda.
           </p>
         </div>
       </div>
@@ -16,7 +15,16 @@
   @if (carregando()) {
     <p class="avaliacoes-page__status" role="status">Carregando solicitações…</p>
   } @else if (erro()) {
-    <p class="list-page__error" role="alert">{{ erro() }}</p>
+    <div class="avaliacoes-page__error" role="alert">
+      <p class="list-page__error">{{ erro() }}</p>
+      <button
+        type="button"
+        class="list-head__toolbar-btn avaliacoes-page__error-retry"
+        (click)="carregar()"
+      >
+        Tentar novamente
+      </button>
+    </div>
   } @else if (resumo()) {
     @if (resumo(); as resumo) {
     <section class="avaliacoes-kpis" aria-label="Indicadores de avaliações">
@@ -97,7 +105,7 @@
                   {{ rotuloTelefone(item.telefone) }}
                 </p>
                 <p class="avaliacoes-mobile-card__status">
-                  {{ rotuloStatus(item.status) }}
+                  <span class="avaliacoes-status">{{ rotuloStatus(item.status) }}</span>
                 </p>
               </article>
             }
