@@ -4,56 +4,205 @@
       <div class="list-head__title-row">
         <div class="list-head__left">
           <h1 class="list-head__title">Avaliações</h1>
-          <p class="avaliacoes-page__desc">
-            Solicitações feitas a partir da comanda.
-          </p>
         </div>
+        @if (shellMobile()) {
+          <div class="list-head__actions">
+            <button
+              type="button"
+              class="list-head__toolbar-btn"
+              [class.list-head__toolbar-btn--filtro-on]="temFiltroAtivo()"
+              [class.list-head__toolbar-btn--pulse-once-filtro]="pulsoToolbarFiltro()"
+              (click)="toggleFiltros($event)"
+              aria-label="Abrir filtros"
+              [attr.aria-expanded]="filtrosAbertos()"
+              [attr.title]="temFiltroAtivo() ? 'Filtros ativos' : 'Filtrar'"
+            >
+              <svg
+                class="list-icon-sm list-icon-sm--funnel"
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"
+                />
+              </svg>
+              <span class="list-head__toolbar-label">Filtrar</span>
+            </button>
+            <ng-container *ngTemplateOutlet="avaliacoesBusca" />
+          </div>
+        }
       </div>
+
+      @if (!shellMobile()) {
+        <div class="avaliacoes-page__toolbar">
+          <div class="avaliacoes-page__toolbar-field avaliacoes-page__toolbar-field--periodo">
+            <span class="avaliacoes-page__toolbar-label">Período</span>
+            <app-saas-select
+              [bindToControl]="periodoPresetControl"
+              [options]="periodoPresetOptions"
+              [showFilter]="false"
+              placeholder="Período"
+              ariaFieldLabel="Período"
+            />
+          </div>
+          @if (periodoPresetId() === 'personalizado') {
+            <div class="avaliacoes-page__toolbar-field avaliacoes-page__toolbar-field--personalizado">
+              <app-cliente-drawer-periodo-filtro
+                [(inicioYmd)]="periodoInicioYmd"
+                [(fimYmd)]="periodoFimYmd"
+                exibicaoFormato="belasis"
+                [painelFlutuante]="true"
+                (periodoAlterado)="onPeriodoPersonalizadoAlterado()"
+              />
+            </div>
+          }
+          <div class="avaliacoes-page__toolbar-field avaliacoes-page__toolbar-field--status">
+            <span class="avaliacoes-page__toolbar-label">Status</span>
+            <app-saas-select
+              [bindToControl]="statusControl"
+              [options]="statusOptions"
+              [showFilter]="false"
+              placeholder="Status"
+              ariaFieldLabel="Status"
+            />
+          </div>
+          <div class="avaliacoes-page__toolbar-busca">
+            <ng-container *ngTemplateOutlet="avaliacoesBusca" />
+          </div>
+          @if (temFiltroAtivo()) {
+            <button
+              type="button"
+              class="list-head__toolbar-btn list-head__toolbar-btn--link avaliacoes-page__limpar"
+              (click)="limparFiltros()"
+            >
+              Limpar filtros
+            </button>
+          }
+        </div>
+      }
     </header>
+
+    <ng-template #avaliacoesBusca>
+      <div
+        class="list-head__busca-wrap"
+        [class.list-head__busca-wrap--open]="buscaAberta()"
+        role="search"
+        (click)="onBuscaWrapClick()"
+      >
+        <span class="list-head__busca-icon" aria-hidden="true">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-search"
+          >
+            <path d="m21 21-4.34-4.34" />
+            <circle cx="11" cy="11" r="8" />
+          </svg>
+        </span>
+        <span
+          class="list-head__busca-label"
+          [class.list-head__busca-label--hidden]="buscaAberta()"
+          aria-hidden="true"
+          >Buscar</span
+        >
+        <label class="sr-only" for="avaliacoes-busca-input"
+          >Buscar solicitações</label
+        >
+        <input
+          id="avaliacoes-busca-input"
+          type="search"
+          class="list-head__busca-input"
+          [value]="searchDraft()"
+          name="buscaAvaliacoes"
+          placeholder="Buscar cliente, telefone ou comanda..."
+          [class.list-head__busca-input--search-open]="buscaAberta()"
+          [class.list-head__busca-input--pulse-once-busca]="pulsoToolbarBusca()"
+          autocomplete="off"
+          [attr.tabindex]="buscaAberta() ? 0 : -1"
+          (click)="$event.stopPropagation()"
+          (input)="onSearchInput($event)"
+          [attr.aria-expanded]="buscaAberta()"
+          aria-label="Buscar cliente, telefone ou comanda"
+        />
+      </div>
+    </ng-template>
   </div>
 
-  @if (carregando()) {
+  @if (carregandoInicial()) {
     <p class="avaliacoes-page__status" role="status">Carregando solicitações…</p>
-  } @else if (erro()) {
+  } @else if (erro() && !resumo()) {
     <div class="avaliacoes-page__error" role="alert">
       <p class="list-page__error">{{ erro() }}</p>
       <button
         type="button"
         class="list-head__toolbar-btn avaliacoes-page__error-retry"
-        (click)="carregar()"
+        (click)="carregar(true)"
       >
         Tentar novamente
       </button>
     </div>
   } @else if (resumo()) {
-    @if (resumo(); as resumo) {
+    @if (resumo(); as resumoKpi) {
     <section class="avaliacoes-kpis" aria-label="Indicadores de avaliações">
       <article class="avaliacoes-kpi">
         <p class="avaliacoes-kpi__label">Solicitações realizadas</p>
-        <p class="avaliacoes-kpi__value">{{ resumo.total }}</p>
+        <p class="avaliacoes-kpi__value">{{ resumoKpi.total }}</p>
       </article>
       <article class="avaliacoes-kpi">
         <p class="avaliacoes-kpi__label">Solicitações este mês</p>
-        <p class="avaliacoes-kpi__value">{{ resumo.este_mes }}</p>
+        <p class="avaliacoes-kpi__value">{{ resumoKpi.este_mes }}</p>
       </article>
       <article class="avaliacoes-kpi">
         <p class="avaliacoes-kpi__label">Clientes alcançados</p>
-        <p class="avaliacoes-kpi__value">{{ resumo.clientes_alcancados }}</p>
+        <p class="avaliacoes-kpi__value">{{ resumoKpi.clientes_alcancados }}</p>
       </article>
       <article class="avaliacoes-kpi">
         <p class="avaliacoes-kpi__label">Última solicitação</p>
         <p class="avaliacoes-kpi__value avaliacoes-kpi__value--data">
-          {{ rotuloData(resumo.ultima_solicitacao_em) }}
+          {{ rotuloData(resumoKpi.ultima_solicitacao_em) }}
         </p>
       </article>
     </section>
 
-    <section class="avaliacoes-recentes" aria-labelledby="avaliacoes-recentes-titulo">
+    @if (erro()) {
+      <div class="avaliacoes-page__error avaliacoes-page__error--inline" role="alert">
+        <p class="list-page__error">{{ erro() }}</p>
+        <button
+          type="button"
+          class="list-head__toolbar-btn avaliacoes-page__error-retry"
+          (click)="carregar()"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    }
+
+    <section
+      class="avaliacoes-recentes"
+      aria-labelledby="avaliacoes-recentes-titulo"
+      [class.avaliacoes-recentes--loading]="carregandoLista()"
+      [attr.aria-busy]="carregandoLista()"
+    >
       <h2 id="avaliacoes-recentes-titulo" class="avaliacoes-recentes__titulo">
         Solicitações recentes
       </h2>
 
-      @if (items().length === 0) {
+      @if (mostrarEmptyGlobal()) {
         <div class="list-table-card avaliacoes-empty">
           <app-table-empty
             label="Você ainda não solicitou nenhuma avaliação."
@@ -61,6 +210,12 @@
           <p class="avaliacoes-empty__hint">
             Elas aparecem quando a solicitação é feita na comanda.
           </p>
+        </div>
+      } @else if (mostrarEmptyFiltrado()) {
+        <div class="list-table-card avaliacoes-empty">
+          <app-table-empty
+            label="Nenhuma solicitação encontrada para os filtros selecionados."
+          />
         </div>
       } @else {
         <div class="list-table-card">
@@ -83,7 +238,9 @@
                     <td>{{ rotuloAtendimento(item) }}</td>
                     <td>{{ rotuloTelefone(item.telefone) }}</td>
                     <td>
-                      <span class="avaliacoes-status">{{ rotuloStatus(item.status) }}</span>
+                      <span class="avaliacoes-status">{{
+                        rotuloStatus(item.status)
+                      }}</span>
                     </td>
                   </tr>
                 }
@@ -94,19 +251,27 @@
           <div class="avaliacoes-mobile-list">
             @for (item of items(); track item.id) {
               <article class="avaliacoes-mobile-card">
-                <p class="avaliacoes-mobile-card__data">
-                  {{ rotuloData(item.whatsapp_aberto_em) }}
-                </p>
-                <p class="avaliacoes-mobile-card__nome">{{ rotuloCliente(item) }}</p>
-                <p class="avaliacoes-mobile-card__linha">
-                  Atendimento {{ rotuloAtendimento(item) }}
-                </p>
-                <p class="avaliacoes-mobile-card__linha">
-                  {{ rotuloTelefone(item.telefone) }}
-                </p>
-                <p class="avaliacoes-mobile-card__status">
-                  <span class="avaliacoes-status">{{ rotuloStatus(item.status) }}</span>
-                </p>
+                <div class="avaliacoes-mobile-card__body">
+                  <p class="avaliacoes-mobile-card__nome">
+                    {{ rotuloCliente(item) }}
+                  </p>
+                  <p class="avaliacoes-mobile-card__linha">
+                    Atendimento {{ rotuloAtendimento(item) }}
+                  </p>
+                  <p class="avaliacoes-mobile-card__linha">
+                    {{ rotuloTelefone(item.telefone) }}
+                  </p>
+                </div>
+                <div class="avaliacoes-mobile-card__aside">
+                  <p class="avaliacoes-mobile-card__data">
+                    {{ rotuloData(item.whatsapp_aberto_em) }}
+                  </p>
+                  <p class="avaliacoes-mobile-card__status">
+                    <span class="avaliacoes-status">{{
+                      rotuloStatus(item.status)
+                    }}</span>
+                  </p>
+                </div>
               </article>
             }
           </div>
@@ -115,4 +280,105 @@
     </section>
     }
   }
+
+  <div
+    class="avaliacoes-filtros-sheet-overlay"
+    [class.avaliacoes-filtros-sheet-overlay--open]="shellMobile() && filtrosAbertos()"
+    (click)="fecharFiltros()"
+    aria-hidden="true"
+  ></div>
+  <div
+    class="avaliacoes-filtros-sheet"
+    [class.avaliacoes-filtros-sheet--open]="shellMobile() && filtrosAbertos()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Filtros"
+    [attr.aria-hidden]="shellMobile() && filtrosAbertos() ? null : 'true'"
+  >
+    <header class="avaliacoes-filtros-sheet__head">
+      <h2 class="avaliacoes-filtros-sheet__title">Filtros</h2>
+      <button
+        type="button"
+        class="avaliacoes-filtros-sheet__close"
+        (click)="fecharFiltros()"
+        aria-label="Fechar filtros"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="avaliacoes-filtros-sheet__body">
+      <section class="avaliacoes-filtros-sheet__section">
+        <h3 class="avaliacoes-filtros-sheet__label">Período</h3>
+        <div class="avaliacoes-filtros-sheet__card">
+          @for (opt of periodoPresetOptions; track opt.value) {
+            <label class="avaliacoes-filtros-sheet__row">
+              <input
+                type="radio"
+                class="avaliacoes-filtros-sheet__radio"
+                name="avaliacoes_periodo_sheet"
+                [checked]="periodoPresetId() === opt.value"
+                (change)="selecionarPresetMobile(opt.value)"
+              />
+              <span>{{ opt.label }}</span>
+            </label>
+          }
+        </div>
+        @if (periodoPresetId() === 'personalizado') {
+          <div class="avaliacoes-filtros-sheet__periodo">
+            <app-cliente-drawer-periodo-filtro
+              [(inicioYmd)]="periodoInicioYmd"
+              [(fimYmd)]="periodoFimYmd"
+              exibicaoFormato="belasis"
+              [painelFlutuante]="true"
+              [triggerUnico]="true"
+              (periodoAlterado)="onPeriodoPersonalizadoAlterado()"
+            />
+          </div>
+        }
+      </section>
+
+      <section class="avaliacoes-filtros-sheet__section">
+        <h3 class="avaliacoes-filtros-sheet__label">Status</h3>
+        <div class="avaliacoes-filtros-sheet__card">
+          @for (opt of statusOptions; track opt.value) {
+            <label class="avaliacoes-filtros-sheet__row">
+              <input
+                type="radio"
+                class="avaliacoes-filtros-sheet__radio"
+                name="avaliacoes_status_sheet"
+                [checked]="statusControl.value === opt.value"
+                (change)="selecionarStatusMobile(opt.value)"
+              />
+              <span>{{ opt.label }}</span>
+            </label>
+          }
+        </div>
+      </section>
+
+      @if (temFiltroAtivo()) {
+        <button
+          type="button"
+          class="list-head__toolbar-btn list-head__toolbar-btn--link avaliacoes-filtros-sheet__limpar"
+          (click)="limparFiltros(); fecharFiltros()"
+        >
+          Limpar filtros
+        </button>
+      }
+    </div>
+  </div>
 </div>

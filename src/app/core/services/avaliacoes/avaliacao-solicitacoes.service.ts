@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import type { ApiResponse } from '../../models/api.models';
@@ -30,6 +30,18 @@ export interface AvaliacaoSolicitacoesResumo {
 export interface AvaliacaoSolicitacoesLista {
   resumo: AvaliacaoSolicitacoesResumo;
   items: AvaliacaoSolicitacaoLista[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ListarAvaliacaoSolicitacoesParams {
+  search?: string;
+  status?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface CriarAvaliacaoSolicitacaoPayload {
@@ -44,10 +56,29 @@ export class AvaliacaoSolicitacoesService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiBaseUrl.replace(/\/$/, '');
 
-  listar(): Observable<AvaliacaoSolicitacoesLista> {
+  listar(
+    params?: ListarAvaliacaoSolicitacoesParams,
+  ): Observable<AvaliacaoSolicitacoesLista> {
+    let httpParams = new HttpParams();
+    const search = String(params?.search ?? '').trim();
+    if (search) httpParams = httpParams.set('search', search);
+    const status = String(params?.status ?? '').trim();
+    if (status) httpParams = httpParams.set('status', status);
+    const di = String(params?.dataInicio ?? '').trim().slice(0, 10);
+    if (di) httpParams = httpParams.set('data_inicio', di);
+    const df = String(params?.dataFim ?? '').trim().slice(0, 10);
+    if (df) httpParams = httpParams.set('data_fim', df);
+    if (params?.page != null) {
+      httpParams = httpParams.set('page', String(params.page));
+    }
+    if (params?.pageSize != null) {
+      httpParams = httpParams.set('page_size', String(params.pageSize));
+    }
+
     return this.http
       .get<ApiResponse<AvaliacaoSolicitacoesLista>>(
         `${this.baseUrl}/api/avaliacoes/solicitacoes`,
+        { params: httpParams },
       )
       .pipe(
         map((r) => {
