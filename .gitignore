@@ -43,3 +43,6 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Impeccable engine binaries
+.cursor/skills/impeccable/scripts/bin/
