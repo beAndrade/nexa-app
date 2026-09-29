@@ -505,6 +505,13 @@
       "when": 1775770000000,
       "tag": "0070_avaliacao_solicitacoes",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1775780000000,
+      "tag": "0071_avaliacao_solicitacoes_whatsapp_aberto_em_idx",
+      "breakpoints": true
     }
   ]
 }

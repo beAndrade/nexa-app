@@ -3897,17 +3897,36 @@ const app = new Elysia({ adapter: node() })
       }),
     },
   )
-  .get('/api/avaliacoes/solicitacoes', async () => {
+  .get('/api/avaliacoes/solicitacoes', async ({ request, query }) => {
+    const auth = await authenticateRequest(request);
+    if (!auth.ok) return auth.response;
     try {
-      return ok(await listarAvaliacaoSolicitacoesApi(db));
+      const q = query as Record<string, string | undefined>;
+      const page = Number.parseInt(String(q.page ?? '1'), 10);
+      const pageSizeRaw =
+        q.limit ?? q.page_size ?? q.pageSize ?? '50';
+      const pageSize = Number.parseInt(String(pageSizeRaw), 10);
+      const data = await listarAvaliacaoSolicitacoesApi(db, {
+        page: Number.isFinite(page) ? page : 1,
+        pageSize: Number.isFinite(pageSize) ? pageSize : 50,
+        search: q.search,
+        status: q.status,
+        dataInicio: q.data_inicio ?? q.dataInicio,
+        dataFim: q.data_fim ?? q.dataFim,
+      });
+      return ok(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      return fail('SERVER', msg);
+      const validation =
+        /inválid|não pode ser posterior|obrigatór/i.test(msg);
+      return fail(validation ? 'VALIDATION' : 'SERVER', msg);
     }
   })
   .post(
     '/api/avaliacoes/solicitacoes',
-    async ({ body }) => {
+    async ({ request, body }) => {
+      const auth = await authenticateRequest(request);
+      if (!auth.ok) return auth.response;
       try {
         const b = body as Record<string, unknown>;
         const solicitacao = await criarAvaliacaoSolicitacaoApi(db, {

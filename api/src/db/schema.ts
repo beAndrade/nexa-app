@@ -815,6 +815,7 @@ export const avaliacaoSolicitacoes = pgTable(
   },
   (t) => [
     index('avaliacao_solicitacoes_created_at_idx').on(t.createdAt),
+    index('avaliacao_solicitacoes_whatsapp_aberto_em_idx').on(t.whatsappAbertoEm),
     index('avaliacao_solicitacoes_id_atendimento_idx').on(t.idAtendimento),
     index('avaliacao_solicitacoes_cliente_id_idx').on(t.clienteId),
   ],
