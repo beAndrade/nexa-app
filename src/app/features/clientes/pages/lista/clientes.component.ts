@@ -27,6 +27,15 @@ import { UI_TIP_SHOW_DELAY_MS } from '../../../../shared/ui-tip-trigger/ui-tip-d
 import { UiTipTriggerComponent } from '../../../../shared/ui-tip-trigger/ui-tip-trigger.component';
 import { ClienteDrawerPeriodoFiltroComponent } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-drawer-periodo-filtro.component';
 import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import {
+  areAllSelected,
+  buildSelectionBottomNavActions,
+  selectAllIds,
+  selectionCount,
+  setId,
+  setIds,
+  toggleId,
+} from '../../../../shared/mobile-list-selection/mobile-list-selection';
 import { ymdValido } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-periodo-filtro.util';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
@@ -241,31 +250,15 @@ export class ClientesComponent implements OnInit, OnDestroy {
       return;
     }
     if (this.modoSelecao) {
-      this.shellUi.setMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER, [
-        {
-          id: 'cancelar-selecao',
-          label: 'Cancelar',
-          ariaLabel: 'Cancelar seleção',
-          icon: 'x',
-          onClick: () => this.sairModoSelecao(),
-        },
-        {
-          id: 'selecionar-tudo',
-          label: 'Selecionar tudo',
-          ariaLabel: 'Selecionar todos os clientes',
-          icon: 'check',
-          active: this.todosFiltradosSelecionados(),
-          onClick: () => this.selecionarTodosMobile(),
-        },
-        {
-          id: 'acoes',
-          label: 'Ações',
-          ariaLabel: 'Ações da seleção',
-          icon: 'more',
-          accent: true,
-          onClick: () => this.onAcoesSelecao(),
-        },
-      ]);
+      this.shellUi.setMobileBottomNavActions(
+        CLIENTES_BOTTOM_NAV_OWNER,
+        buildSelectionBottomNavActions(this.todosFiltradosSelecionados(), {
+          onCancel: () => this.sairModoSelecao(),
+          onSelectAll: () => this.selecionarTodosMobile(),
+          onActions: () => this.onAcoesSelecao(),
+          selectAllAriaLabel: 'Selecionar todos os clientes',
+        }),
+      );
       return;
     }
     this.shellUi.setMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER, [
@@ -395,24 +388,28 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   todosFiltradosSelecionados(): boolean {
-    const list = this.filtrados();
-    return list.length > 0 && list.every((c) => this.selecionados.has(c.id));
+    return areAllSelected(
+      this.filtrados().map((c) => c.id),
+      this.selecionados,
+    );
   }
 
   selecionarTodosMobile(): void {
     this.toast.showLoading('Selecionando...');
-    for (const c of this.filtrados()) {
-      this.selecionados.add(c.id);
-    }
+    this.selecionados = selectAllIds(
+      this.selecionados,
+      this.filtrados().map((c) => c.id),
+    );
     this.syncShellBottomNavActions();
   }
 
   onAcoesSelecao(): void {
-    if (this.selecionados.size === 0) {
+    const total = selectionCount(this.selecionados);
+    if (total === 0) {
       this.toast.showWarning('Selecione ao menos um cliente.');
       return;
     }
-    this.toast.showInfo(`${this.selecionados.size} selecionado(s)`);
+    this.toast.showInfo(`${total} selecionado(s)`);
   }
 
   carregar(): void {
@@ -520,8 +517,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   private toggleSelecionadoCliente(c: Cliente): void {
-    if (this.selecionados.has(c.id)) this.selecionados.delete(c.id);
-    else this.selecionados.add(c.id);
+    this.selecionados = toggleId(this.selecionados, c.id);
   }
 
   toggleFiltroStatus(which: 'ativos' | 'inativos', ev: Event): void {
@@ -905,21 +901,23 @@ export class ClientesComponent implements OnInit, OnDestroy {
 
   toggleSelecionado(c: Cliente, ev: Event): void {
     const checked = (ev.target as HTMLInputElement).checked;
-    if (checked) this.selecionados.add(c.id);
-    else this.selecionados.delete(c.id);
+    this.selecionados = setId(this.selecionados, c.id, checked);
   }
 
   todosDaPaginaSelecionados(): boolean {
-    const page = this.itensPagina();
-    return page.length > 0 && page.every((c) => this.selecionados.has(c.id));
+    return areAllSelected(
+      this.itensPagina().map((c) => c.id),
+      this.selecionados,
+    );
   }
 
   toggleSelecionarTodos(ev: Event): void {
     const checked = (ev.target as HTMLInputElement).checked;
-    for (const c of this.itensPagina()) {
-      if (checked) this.selecionados.add(c.id);
-      else this.selecionados.delete(c.id);
-    }
+    this.selecionados = setIds(
+      this.selecionados,
+      this.itensPagina().map((c) => c.id),
+      checked,
+    );
   }
 
   exibirCelular(c: Cliente): string {
