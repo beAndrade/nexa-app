@@ -19,10 +19,11 @@
   position: fixed;
   z-index: var(--z-mobile-list-actions-menu);
   right: var(--shell-mobile-bottom-nav-inset, 15px);
+  /* Mesma âncora de antes (inset + altura + 8px + safe-area); o teclado entra no max. */
   bottom: calc(
     var(--shell-mobile-bottom-nav-inset, 15px) +
       var(--shell-mobile-bottom-nav-h, 61.14px) + 8px +
-      env(safe-area-inset-bottom, 0px)
+      max(env(safe-area-inset-bottom, 0px), var(--shell-vv-offset, 0px))
   );
   width: min(16rem, calc(100vw - 2 * var(--shell-mobile-bottom-nav-inset, 15px)));
   margin: 0;

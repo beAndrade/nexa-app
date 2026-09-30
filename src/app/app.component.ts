@@ -27,6 +27,7 @@ import { FornecedorCadastroDrawerHostComponent } from './shared/fornecedor-cadas
 import { SessaoUsuarioService } from './core/services/sessao-usuario.service';
 import { SidebarProfileComponent } from './layout/sidebar-profile/sidebar-profile.component';
 import { SidebarFlyoutService } from './layout/sidebar-flyout.service';
+import { shellKeyboardOffset } from './core/utils/shell-keyboard';
 import { mediaQueryMin } from './styles/breakpoints';
 import { AppShellUiService } from './core/services/app-shell-ui.service';
 import { SidebarNovoMenuComponent } from './layout/sidebar-novo-menu/sidebar-novo-menu.component';
@@ -208,6 +209,7 @@ export class AppComponent implements OnInit {
       /* ignore */
     }
     this.setupMobileViewport();
+    this.setupShellKeyboard();
     this.setupShellUiRequests();
     this.syncNavExpandForActiveRoutes();
     this.router.events
@@ -308,6 +310,70 @@ export class AppComponent implements OnInit {
     this.desktopMq.addEventListener('change', onChange);
     this.destroyRef.onDestroy(() => {
       this.desktopMq?.removeEventListener('change', onChange);
+    });
+  }
+
+  /**
+   * Publica `--shell-vv-offset` (px) só com a faixa coberta pelo teclado.
+   * O CSS soma isso por cima do inset e da safe-area já existentes, via max(),
+   * para o teclado fechado não mudar o `bottom` atual.
+   */
+  private setupShellKeyboard(): void {
+    if (typeof window === 'undefined' || !this.desktopMq) return;
+    const vv = window.visualViewport;
+    const host = this.hostEl.nativeElement;
+    let frame = 0;
+
+    const publish = (offset: number): void => {
+      host.style.setProperty('--shell-vv-offset', `${offset}px`);
+      host.style.setProperty('--shell-keyboard-open', offset > 0 ? '1' : '0');
+    };
+
+    const schedule = (): void => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        if (!vv) {
+          publish(0);
+          return;
+        }
+        publish(
+          shellKeyboardOffset({
+            innerHeight: window.innerHeight,
+            visualHeight: vv.height,
+            offsetTop: vv.offsetTop,
+            desktop: this.desktopMq?.matches ?? true,
+          }),
+        );
+      });
+    };
+
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'hidden') {
+        if (frame) {
+          window.cancelAnimationFrame(frame);
+          frame = 0;
+        }
+        publish(0);
+        return;
+      }
+      schedule();
+    };
+
+    publish(0);
+    if (!vv) return;
+
+    schedule();
+    vv.addEventListener('resize', schedule);
+    vv.addEventListener('scroll', schedule);
+    this.desktopMq.addEventListener('change', schedule);
+    document.addEventListener('visibilitychange', onVisibility);
+    this.destroyRef.onDestroy(() => {
+      if (frame) window.cancelAnimationFrame(frame);
+      vv.removeEventListener('resize', schedule);
+      vv.removeEventListener('scroll', schedule);
+      this.desktopMq?.removeEventListener('change', schedule);
+      document.removeEventListener('visibilitychange', onVisibility);
     });
   }
 

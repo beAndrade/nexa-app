@@ -15,7 +15,11 @@
 
   pointer-events: auto;
   position: fixed;
-  bottom: calc(var(--shell-bottom-nav-inset) + env(safe-area-inset-bottom, 0px));
+  /* inset (15px) + max(safe-area, teclado). Offset 0 preserva o bottom anterior. */
+  bottom: calc(
+    var(--shell-bottom-nav-inset) +
+      max(env(safe-area-inset-bottom, 0px), var(--shell-vv-offset, 0px))
+  );
   left: var(--shell-bottom-nav-inset);
   right: var(--shell-bottom-nav-inset);
   z-index: 901;
