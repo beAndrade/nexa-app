@@ -1,0 +1,95 @@
+:host {
+  display: contents;
+  --z-mobile-list-actions-menu: 930;
+}
+
+@media (min-width: 768px) {
+  :host {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-list-actions-menu {
+    transition: none;
+  }
+}
+
+.mobile-list-actions-menu {
+  position: fixed;
+  z-index: var(--z-mobile-list-actions-menu);
+  right: var(--shell-mobile-bottom-nav-inset, 15px);
+  bottom: calc(
+    var(--shell-mobile-bottom-nav-inset, 15px) +
+      var(--shell-mobile-bottom-nav-h, 61.14px) + 8px +
+      env(safe-area-inset-bottom, 0px)
+  );
+  width: min(16rem, calc(100vw - 2 * var(--shell-mobile-bottom-nav-inset, 15px)));
+  margin: 0;
+  padding: 4px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  box-shadow: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition:
+    opacity 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.18s;
+}
+
+.mobile-list-actions-menu--open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition:
+    opacity 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
+}
+
+.mobile-list-actions-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #0f172a;
+  box-shadow: none;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #f5f5f4;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #3788d8);
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  &--danger {
+    color: #dc2626;
+
+    &:hover:not(:disabled) {
+      background: #fef2f2;
+    }
+  }
+}

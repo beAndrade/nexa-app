@@ -1,0 +1,22 @@
+<div
+  class="mobile-list-actions-menu"
+  [class.mobile-list-actions-menu--open]="open"
+  [attr.data-anchor]="anchor"
+  role="menu"
+  [attr.aria-hidden]="open ? null : 'true'"
+  [attr.inert]="open ? null : ''"
+>
+  @for (item of items; track item.id) {
+    <button
+      type="button"
+      class="mobile-list-actions-menu__item"
+      [class.mobile-list-actions-menu__item--danger]="item.danger"
+      role="menuitem"
+      [disabled]="!!item.disabled"
+      [attr.aria-label]="item.ariaLabel || null"
+      (click)="selectItem(item)"
+    >
+      {{ item.label }}
+    </button>
+  }
+</div>
