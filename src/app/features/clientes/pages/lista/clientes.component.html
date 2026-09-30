@@ -850,48 +850,13 @@
     </div>
   </div>
 
-  <!-- Sheet de filtros (mobile ≤767): slide da direita → esquerda -->
-  <div
-    class="clientes-filtros-sheet-overlay"
-    [class.clientes-filtros-sheet-overlay--open]="shellBottomNavEligible && filtrosAbertos"
-    (click)="fecharFiltros()"
-    aria-hidden="true"
-  ></div>
-  <div
-    class="clientes-filtros-sheet"
-    [class.clientes-filtros-sheet--open]="shellBottomNavEligible && filtrosAbertos"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Filtros"
-    [attr.aria-hidden]="shellBottomNavEligible && filtrosAbertos ? null : 'true'"
+  <!-- Sheet de filtros (mobile ≤767): chrome compartilhado; regras ficam na feature. -->
+  <app-mobile-filtros-sheet
+    [open]="shellBottomNavEligible && filtrosAbertos"
+    [closeOnEscape]="false"
+    title="Filtros"
+    (closed)="fecharFiltros()"
   >
-    <header class="clientes-filtros-sheet__head">
-      <h2 class="clientes-filtros-sheet__title">Filtros</h2>
-      <button
-        type="button"
-        class="clientes-filtros-sheet__close"
-        (click)="fecharFiltros()"
-        aria-label="Fechar filtros"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
-      </button>
-    </header>
-
-    <div class="clientes-filtros-sheet__body">
       <section class="clientes-filtros-sheet__section">
         <h3 class="clientes-filtros-sheet__label">Status</h3>
         <div class="clientes-filtros-sheet__card">
@@ -1025,8 +990,7 @@
           </div>
         </div>
       </section>
-    </div>
-  </div>
+  </app-mobile-filtros-sheet>
 
   @if (excluirModalAberto) {
     <div

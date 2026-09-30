@@ -26,6 +26,7 @@ import {
 import { UI_TIP_SHOW_DELAY_MS } from '../../../../shared/ui-tip-trigger/ui-tip-delay';
 import { UiTipTriggerComponent } from '../../../../shared/ui-tip-trigger/ui-tip-trigger.component';
 import { ClienteDrawerPeriodoFiltroComponent } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-drawer-periodo-filtro.component';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
 import { ymdValido } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-periodo-filtro.util';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
@@ -103,6 +104,7 @@ const CLIENTES_COLUNAS_PADRAO: ClienteColunaId[] = [
     ClienteAvatarComponent,
     UiTipTriggerComponent,
     ClienteDrawerPeriodoFiltroComponent,
+    MobileFiltrosSheetComponent,
   ],
   templateUrl: './clientes.component.html',
   styleUrl: './clientes.component.scss',

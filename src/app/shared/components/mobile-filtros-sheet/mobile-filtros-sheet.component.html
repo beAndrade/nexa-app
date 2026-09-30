@@ -1,0 +1,51 @@
+<div
+  class="mobile-filtros-sheet__overlay"
+  [class.mobile-filtros-sheet__overlay--open]="open"
+  (click)="requestClose()"
+  aria-hidden="true"
+></div>
+
+<div
+  class="mobile-filtros-sheet"
+  [class.mobile-filtros-sheet--open]="open"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="titleId"
+  [attr.aria-hidden]="open ? null : 'true'"
+  [attr.inert]="open ? null : ''"
+>
+  <header class="mobile-filtros-sheet__head">
+    <h2 [id]="titleId" class="mobile-filtros-sheet__title">{{ title }}</h2>
+    <button
+      #closeBtn
+      type="button"
+      class="mobile-filtros-sheet__close"
+      [attr.aria-label]="closeAriaLabel"
+      (click)="requestClose()"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+      </svg>
+    </button>
+  </header>
+
+  <div class="mobile-filtros-sheet__body">
+    <ng-content />
+  </div>
+
+  <footer class="mobile-filtros-sheet__footer">
+    <ng-content select="[mobileFiltrosSheetFooter]" />
+  </footer>
+</div>
