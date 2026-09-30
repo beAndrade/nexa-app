@@ -1034,4 +1034,12 @@
       </div>
     </div>
   }
+
+  <app-mobile-list-actions-menu
+    [open]="shellBottomNavEligible && acoesMenuAberto"
+    [items]="acoesMenuItens()"
+    anchor="acoes"
+    (openChange)="onAcoesMenuOpenChange($event)"
+    (itemSelect)="onItemAcaoSelecao($event)"
+  />
 </div>

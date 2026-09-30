@@ -28,6 +28,10 @@ import { UiTipTriggerComponent } from '../../../../shared/ui-tip-trigger/ui-tip-
 import { ClienteDrawerPeriodoFiltroComponent } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-drawer-periodo-filtro.component';
 import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
 import {
+  MobileListActionMenuItem,
+  MobileListActionsMenuComponent,
+} from '../../../../shared/components/mobile-list-actions-menu/mobile-list-actions-menu.component';
+import {
   areAllSelected,
   buildSelectionBottomNavActions,
   selectAllIds,
@@ -114,6 +118,7 @@ const CLIENTES_COLUNAS_PADRAO: ClienteColunaId[] = [
     UiTipTriggerComponent,
     ClienteDrawerPeriodoFiltroComponent,
     MobileFiltrosSheetComponent,
+    MobileListActionsMenuComponent,
   ],
   templateUrl: './clientes.component.html',
   styleUrl: './clientes.component.scss',
@@ -141,6 +146,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   filtrosAbertos = false;
   /** Mobile: exibe checkboxes na lista e permite seleção em lote. */
   modoSelecao = false;
+  acoesMenuAberto = false;
   pulsoToolbarFiltro = false;
   pulsoToolbarBusca = false;
   private readonly duracaoPulsoToolbarMs = 600;
@@ -228,6 +234,9 @@ export class ClientesComponent implements OnInit, OnDestroy {
         this.modoSelecao = false;
         this.selecionados.clear();
       }
+      if (!this.shellBottomNavEligible) {
+        this.acoesMenuAberto = false;
+      }
       if (!this.shellBottomNavEligible && this.filtrosAbertos) {
         this.filtrosAbertos = false;
       }
@@ -250,15 +259,18 @@ export class ClientesComponent implements OnInit, OnDestroy {
       return;
     }
     if (this.modoSelecao) {
-      this.shellUi.setMobileBottomNavActions(
-        CLIENTES_BOTTOM_NAV_OWNER,
-        buildSelectionBottomNavActions(this.todosFiltradosSelecionados(), {
+      const actions = buildSelectionBottomNavActions(
+        this.todosFiltradosSelecionados(),
+        {
           onCancel: () => this.sairModoSelecao(),
           onSelectAll: () => this.selecionarTodosMobile(),
           onActions: () => this.onAcoesSelecao(),
           selectAllAriaLabel: 'Selecionar todos os clientes',
-        }),
+        },
       );
+      const acoes = actions.find((action) => action.id === 'acoes');
+      if (acoes) acoes.active = this.acoesMenuAberto;
+      this.shellUi.setMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER, actions);
       return;
     }
     this.shellUi.setMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER, [
@@ -377,6 +389,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
 
   sairModoSelecao(): void {
     this.modoSelecao = false;
+    this.acoesMenuAberto = false;
     this.selecionados.clear();
     this.syncShellBottomNavActions();
   }
@@ -404,12 +417,41 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onAcoesSelecao(): void {
-    const total = selectionCount(this.selecionados);
-    if (total === 0) {
+    if (selectionCount(this.selecionados) === 0) {
       this.toast.showWarning('Selecione ao menos um cliente.');
+      if (this.acoesMenuAberto) {
+        this.acoesMenuAberto = false;
+        this.syncShellBottomNavActions();
+      }
       return;
     }
-    this.toast.showInfo(`${total} selecionado(s)`);
+    this.acoesMenuAberto = !this.acoesMenuAberto;
+    this.syncShellBottomNavActions();
+  }
+
+  acoesMenuItens(): MobileListActionMenuItem[] {
+    return [
+      {
+        id: 'excluir',
+        label: 'Excluir',
+        danger: true,
+        disabled: this.selecionados.size !== 1,
+      },
+    ];
+  }
+
+  onAcoesMenuOpenChange(open: boolean): void {
+    if (open || !this.acoesMenuAberto) return;
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
+  }
+
+  onItemAcaoSelecao(item: MobileListActionMenuItem): void {
+    if (item.id !== 'excluir' || this.selecionados.size !== 1) return;
+    const id = [...this.selecionados][0];
+    const cliente = this.itens.find((c) => c.id === id);
+    if (!cliente) return;
+    this.onExcluirCliente(cliente);
   }
 
   carregar(): void {
