@@ -1071,3 +1071,46 @@ select.list-footer__per-page {
   color: #991b1b;
   margin-bottom: 1rem;
 }
+
+/// Mobile List Pattern v1 — touch chrome (≤767, alinhado ao AppShell / JS shellMobile).
+/// Colocado após as regras base para vencer a cascata (mesma especificidade).
+/// Hit ≥44×44 via `--touch-min`; desktop (≥768) permanece 32px / pager 28–24.
+@media not all and (min-width: #{bp.bp(shell-mobile)}) {
+  .list-head__busca-wrap {
+    height: var(--touch-min, 44px);
+    min-height: var(--touch-min, 44px);
+  }
+
+  .list-head__busca-input {
+    height: var(--touch-min, 44px);
+    min-height: var(--touch-min, 44px);
+    line-height: var(--touch-min, 44px);
+  }
+
+  .list-head__toolbar-btn {
+    height: var(--touch-min, 44px);
+    min-height: var(--touch-min, 44px);
+    min-width: var(--touch-min, 44px);
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .list-footer__chev,
+  .list-footer__page-btn {
+    width: var(--touch-min, 44px);
+    height: var(--touch-min, 44px);
+    min-width: var(--touch-min, 44px);
+    min-height: var(--touch-min, 44px);
+  }
+
+  .list-footer__page-num {
+    min-width: var(--touch-min, 44px);
+    min-height: var(--touch-min, 44px);
+    height: var(--touch-min, 44px);
+  }
+
+  .list-footer__per-page {
+    height: var(--touch-min, 44px);
+    min-height: var(--touch-min, 44px);
+  }
+}

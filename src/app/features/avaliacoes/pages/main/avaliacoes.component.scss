@@ -293,7 +293,7 @@
 @media (max-width: 767px) {
   /**
    * Filtrar à esquerda, Buscar à direita (cresce para a direita ao abrir).
-   * Touch ≥44px sem alterar .list-head__toolbar-btn global.
+   * Hit ≥44px vem do list-page-shell (Mobile List Pattern v1 / MLP1-01).
    */
   .avaliacoes-page .list-head__actions {
     display: flex;
@@ -309,8 +309,6 @@
 
   .avaliacoes-page .list-head__busca-wrap {
     box-sizing: border-box;
-    min-height: 44px;
-    height: 44px;
     flex: 0 0 auto;
     margin-left: 0;
   }
@@ -337,11 +335,6 @@
     flex-shrink: 0;
     box-sizing: border-box;
     order: 0;
-    min-width: 44px;
-    min-height: 44px;
-    height: 44px;
-    padding-left: 12px;
-    padding-right: 12px;
   }
 
   .avaliacoes-page .list-head__actions > .list-head__busca-wrap {
