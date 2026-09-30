@@ -1,16 +1,38 @@
 # Nexa Mobile List Pattern v1
 
-**Status:** APROVADO PARA IMPLEMENTAÇÃO
+**Status:** FASE 1 CONCLUÍDA COM LIMITAÇÕES
 
-**Tipo:** especificação de produto / contrato de UX (não é implementação).
+**Tipo:** especificação de produto / contrato de UX. O contrato abaixo permanece; o que muda nesta revisão é o estado real da implementação.
 
-**Implementação:** ainda **não** iniciada. Este documento é a base aprovada para as fases futuras de fundações compartilhadas e migração de telas.
+**Implementação:** Fase 1 entregue em Clientes e Avaliações (MLP1-01 a MLP1-07). Fundações shared: touch ≥44 no `list-page-shell`, filter sheet, selection helpers, action popover e keyboard awareness no AppShell. A limitação é o teclado virtual real: o browser de validação não abre teclado, então o estado sem teclado foi medido (offset 0) e o offset positivo ficou na fórmula CSS e no spec. Não é defeito de implementação.
 
 **Escopo:** experiência MOBILE (≤767px / `shellMobile`) das **telas de lista** do Nexa. Desktop permanece com `list-table` + toolbar/aside, salvo menção explícita.
 
 **Referência visual de origem:** mockups da lista de Serviços (estados normal, filtros, seleção, selecionar tudo, menu Ações). O contrato extrai o **padrão** de interação e composição — não o copy nem o domínio de Serviços.
 
 **Relação com o Design System:** consolida e expande Soft Steel / Shell First / Contextual Mobile Bottom Navigation. **Não** substitui DESIGN.md, PRODUCT.md nem `design.json` nesta etapa.
+
+---
+
+## Estado real — Fase 1
+
+O contrato das seções seguintes não foi reescrito. Este bloco registra o que está no código.
+
+**Nesta fase**
+
+- Clientes e Avaliações consomem o filter sheet compartilhado. Desktop das duas telas permanece tabela, toolbar e drawer/aside.
+- Clientes tem seleção (helpers puros, estado na feature) e o popover Ações com um único item, Excluir, no fluxo unitário já existente.
+- Avaliações filtra período e status no sheet; KPIs continuam globais; Limpar fecha o sheet.
+- Chrome shared: `app-mobile-filtros-sheet`, `app-mobile-list-actions-menu`, `mobile-list-selection`, `--shell-vv-offset` no AppShell. A barra sobe com `max(safe-area, offset)`; o offset 0 reproduz o `bottom` anterior. O popover fica na mesma fórmula, 8px acima da altura token da barra.
+- Agenda Hub não foi migrada.
+
+**Limitação**
+
+- Teclado virtual real (iOS Safari e Chrome Android) não foi exercitado. Sem `visualViewport`, o offset é 0. O sheet continua `100dvh`, sem padding de teclado.
+
+**Próximas ondas, fora da Fase 1**
+
+Serviços, Profissionais, Fornecedores, Categorias, Marcas, Comandas, Orçamentos, Transações, Comissões e as demais listas.
 
 ---
 
@@ -333,7 +355,7 @@ A implementação **ainda não começou**. Quando iniciar, seguir esta ordem:
 - Menu contextual ancorado (Agenda Hub) como análogo do popover Ações
 - Set de ícones da bar (`filter`, `plus`, `check`, `x`, `search`, `bolt`, `more`, …)
 
-### Precisa ser criado/ajustado na implementação (não nesta etapa documental)
+### Precisa ser criado/ajustado na implementação (snapshot da aprovação, anterior à Fase 1)
 
 - Popover Ações compartilhado (Clientes ainda usa toast)
 - Contrato visual único do sheet de filtros de lista
@@ -345,7 +367,7 @@ A implementação **ainda não começou**. Quando iniciar, seguir esta ordem:
 
 ## Validação documental
 
-- Este arquivo é **especificação**, não implementação.
+- Este arquivo continua sendo o **contrato** do padrão. O estado da Fase 1 está na seção Estado real.
 - Terminologia oficial: **Nexa Mobile List Pattern v1**.
-- Status: **APROVADO PARA IMPLEMENTAÇÃO** — código ainda não alterado por este documento.
-- DESIGN.md, PRODUCT.md e `design.json` **não** foram modificados nesta aprovação.
+- Status: **FASE 1 CONCLUÍDA COM LIMITAÇÕES** (teclado virtual real). O contrato de produto segue aprovado.
+- DESIGN.md, PRODUCT.md e `design.json` **não** foram modificados.

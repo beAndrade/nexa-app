@@ -1,11 +1,11 @@
 # Technical Design — Nexa Mobile List Pattern v1 · Fase 1
 
 **Tipo:** Technical Design (especificação técnica)  
-**Status:** Architecture Review concluída — pronto para Sprint Planning  
-**Implementação:** ainda **não** iniciada  
+**Status:** FASE 1 CONCLUÍDA COM LIMITAÇÕES  
+**Implementação:** MLP1-01 a MLP1-07 no código. Validação MLP1-08 em 30/09/2026: build de desenvolvimento verde, 19 specs da fase verdes, browser em 390×844, 375×812 e 1280×800. Limitação: teclado virtual real não reproduzido no browser embutido.  
 **Contrato de produto:** [Nexa Mobile List Pattern v1](../mobile-list-pattern-v1.md)
 
-Este documento transforma as decisões aprovadas do padrão de produto em especificação técnica concreta para a **FASE 1 — Fundamentos compartilhados**. Não altera código, DESIGN.md, PRODUCT.md nem `design.json`.
+Este documento é a especificação técnica da **FASE 1 — Fundamentos compartilhados**. O desenho abaixo permanece. O resultado da implementação está no status do cabeçalho e no checklist da seção 10. DESIGN.md, PRODUCT.md e `design.json` não foram alterados.
 
 ---
 
@@ -359,39 +359,39 @@ Agenda Hub, Serviços, demais listas: **sem** migração de padrão nesta fase.
 
 ### Touch
 
-- [ ] ≤767: busca, toolbar-btn, pager hit ≥44
-- [ ] ≥768: 32px / pager atual preservados
-- [ ] Override Avaliações removido sem regressão
-- [ ] Clientes: busca 44; header actions hidden com bottom nav
+- [x] ≤767: busca, toolbar-btn, pager hit ≥44
+- [x] ≥768: 32px / pager atual preservados
+- [x] Override Avaliações removido sem regressão
+- [x] Clientes: busca 44; header actions hidden com bottom nav
 
 ### Filter Sheet
 
-- [ ] Clientes e Avaliações usam component compartilhado
-- [ ] Fullscreen, R→L, scrim, close, scroll, safe-area
-- [ ] Domínio preservado; desktop aside intacto
-- [ ] Clientes: warn bar + fechar ao entrar seleção
+- [x] Clientes e Avaliações usam component compartilhado
+- [x] Fullscreen, R→L, scrim, close, scroll, safe-area
+- [x] Domínio preservado; desktop aside intacto
+- [x] Clientes: warn bar + fechar ao entrar seleção
 
 ### Selection helpers + Clientes
 
-- [ ] Enter/exit/select all/parity
-- [ ] Conjunto filtrado; slot active
-- [ ] Destroy/resize limpam owner e modo
+- [x] Enter/exit/select all/parity
+- [x] Conjunto filtrado; slot active
+- [x] Destroy/resize limpam owner e modo
 
 ### Action Popover (Clientes)
 
-- [ ] Abre do slot Ações; active; acima da bar
-- [ ] Outside, ESC, após item
-- [ ] Danger styling; a11y menu
-- [ ] Sem toast-stub como único comportamento
-- [ ] Agenda Hub inalterada
+- [x] Abre do slot Ações; active; acima da bar
+- [x] Outside, ESC, após item
+- [x] Danger styling; a11y menu
+- [x] Sem toast-stub como único comportamento
+- [x] Agenda Hub inalterada
 
 ### Keyboard awareness
 
-- [ ] Teclado aberto: bar não inutiliza input (busca e/ou sheet)
-- [ ] Sem overflow horizontal/vertical inesperado
-- [ ] Rotação / fechar teclado restaura layout
-- [ ] Fallback sem `visualViewport` não quebra
-- [ ] Smoke iOS Safari + Chrome Android
+- [ ] Teclado aberto: bar não inutiliza input (busca e/ou sheet) — limitação de ambiente; offset > 0 não foi medido com teclado virtual real
+- [x] Sem overflow horizontal/vertical inesperado (390, 375 e 1280, sem teclado)
+- [ ] Rotação / fechar teclado restaura layout — fechar teclado não reproduzido; offset 0 medido igual ao `bottom` anterior (nav 15px, popover 84.14px)
+- [x] Fallback sem `visualViewport` não quebra (spec)
+- [ ] Smoke iOS Safari + Chrome Android — não executado
 
 ---
 
