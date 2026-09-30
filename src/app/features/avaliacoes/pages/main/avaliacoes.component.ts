@@ -27,6 +27,7 @@ import {
 import { extractApiErrorMessage } from '../../../../core/utils/api-error-message';
 import { formatarTelefoneBrDeValor } from '../../../../core/utils/telefone-br';
 import { mediaQueryMin } from '../../../../styles/breakpoints';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
 import { SaasSelectComponent } from '../../../../shared/components/saas-select/saas-select.component';
 import { ClienteDrawerPeriodoFiltroComponent } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-drawer-periodo-filtro.component';
 import {
@@ -52,6 +53,7 @@ const STATUS_OPTIONS = [
     NgTemplateOutlet,
     TableEmptyComponent,
     SaasSelectComponent,
+    MobileFiltrosSheetComponent,
     ClienteDrawerPeriodoFiltroComponent,
   ],
   templateUrl: './avaliacoes.component.html',
@@ -225,6 +227,20 @@ export class AvaliacoesComponent {
 
   fecharFiltros(): void {
     this.filtrosAbertos.set(false);
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscapeFiltros(ev: KeyboardEvent): void {
+    if (!this.shellMobile() || !this.filtrosAbertos()) return;
+    if (
+      document.querySelector(
+        '.periodo-filtro__panel--sheet.periodo-filtro__panel--open',
+      )
+    ) {
+      return;
+    }
+    ev.preventDefault();
+    this.fecharFiltros();
   }
 
   onBuscaWrapClick(): void {

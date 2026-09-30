@@ -281,47 +281,12 @@
     }
   }
 
-  <div
-    class="avaliacoes-filtros-sheet-overlay"
-    [class.avaliacoes-filtros-sheet-overlay--open]="shellMobile() && filtrosAbertos()"
-    (click)="fecharFiltros()"
-    aria-hidden="true"
-  ></div>
-  <div
-    class="avaliacoes-filtros-sheet"
-    [class.avaliacoes-filtros-sheet--open]="shellMobile() && filtrosAbertos()"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Filtros"
-    [attr.aria-hidden]="shellMobile() && filtrosAbertos() ? null : 'true'"
+  <app-mobile-filtros-sheet
+    [open]="shellMobile() && filtrosAbertos()"
+    [closeOnEscape]="false"
+    title="Filtros"
+    (closed)="fecharFiltros()"
   >
-    <header class="avaliacoes-filtros-sheet__head">
-      <h2 class="avaliacoes-filtros-sheet__title">Filtros</h2>
-      <button
-        type="button"
-        class="avaliacoes-filtros-sheet__close"
-        (click)="fecharFiltros()"
-        aria-label="Fechar filtros"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
-      </button>
-    </header>
-
-    <div class="avaliacoes-filtros-sheet__body">
       <section class="avaliacoes-filtros-sheet__section">
         <h3 class="avaliacoes-filtros-sheet__label">Período</h3>
         <div class="avaliacoes-filtros-sheet__card">
@@ -372,6 +337,7 @@
 
       @if (temFiltroAtivo()) {
         <button
+          mobileFiltrosSheetFooter
           type="button"
           class="list-head__toolbar-btn list-head__toolbar-btn--link avaliacoes-filtros-sheet__limpar"
           (click)="limparFiltros(); fecharFiltros()"
@@ -379,6 +345,5 @@
           Limpar filtros
         </button>
       }
-    </div>
-  </div>
+  </app-mobile-filtros-sheet>
 </div>
