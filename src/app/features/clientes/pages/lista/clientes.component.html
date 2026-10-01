@@ -45,11 +45,10 @@
               class="list-head__busca-input"
               [(ngModel)]="busca"
               name="buscaClientes"
-              [placeholder]="buscaPlaceholder"
+              [placeholder]="shellBottomNavEligible ? 'Digite para buscar' : buscaPlaceholder"
               [class.list-head__busca-input--search-open]="buscaAberta"
               [class.list-head__busca-input--pulse-once-busca]="pulsoToolbarBusca"
               autocomplete="off"
-              (click)="$event.stopPropagation()"
               (input)="onBuscaInput()"
               (keydown.enter)="onBuscaEnter($event)"
               [attr.aria-expanded]="buscaAberta"
@@ -112,6 +111,62 @@
         </div>
       </div>
     </header>
+  </div>
+
+  <div
+    class="clientes-mobile-chips"
+    [class.clientes-mobile-chips--scrolling]="chipsScrollVisivel"
+    (scroll)="onChipsScroll()"
+  >
+    <button
+      type="button"
+      class="clientes-sort-chip"
+      (click)="onOrdenarNomeClick($event)"
+      [attr.aria-label]="'Ordenar por nome — ' + tooltipOrdenacaoNome()"
+    >
+      <span>Ordenando por Nome</span>
+      <svg
+        class="clientes-sort-chip__chev"
+        [class.clientes-sort-chip__chev--asc]="ordenacaoNome === 'asc'"
+        xmlns="http://www.w3.org/2000/svg"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
+    @for (badge of filtrosAtivosBadges(); track badge.id) {
+      <button
+        type="button"
+        class="clientes-filter-chip"
+        (click)="removerFiltroBadge(badge.id, $event)"
+        [attr.aria-label]="'Remover filtro ' + badge.label"
+      >
+        <span>{{ badge.label }}</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    }
   </div>
 
   <div
@@ -610,58 +665,6 @@
             </table>
           </div>
 
-          <div class="clientes-mobile-chips">
-            <button
-              type="button"
-              class="clientes-sort-chip"
-              (click)="onOrdenarNomeClick($event)"
-              [attr.aria-label]="'Ordenar por nome — ' + tooltipOrdenacaoNome()"
-            >
-              <span>Ordenando por Nome</span>
-              <svg
-                class="clientes-sort-chip__chev"
-                [class.clientes-sort-chip__chev--asc]="ordenacaoNome === 'asc'"
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-            @for (badge of filtrosAtivosBadges(); track badge.id) {
-              <button
-                type="button"
-                class="clientes-filter-chip"
-                (click)="removerFiltroBadge(badge.id, $event)"
-                [attr.aria-label]="'Remover filtro ' + badge.label"
-              >
-                <span>{{ badge.label }}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            }
-          </div>
-
           <div
             class="clientes-mobile-list"
             role="list"
@@ -992,14 +995,22 @@
       </section>
   </app-mobile-filtros-sheet>
 
-  @if (excluirModalAberto) {
+  @if (excluirModalMontado) {
     <div
       class="comandas-modal-overlay"
+      [class.clientes-excluir-overlay]="shellBottomNavEligible"
+      [class.clientes-excluir-overlay--open]="shellBottomNavEligible && excluirModalAberto"
+      [class.clientes-excluir-overlay--saindo]="shellBottomNavEligible && excluirModalSaindo"
       aria-hidden="true"
       (click)="fecharModalExcluirCliente()"
     ></div>
     <div
       class="comandas-modal"
+      [class.clientes-excluir-modal]="shellBottomNavEligible"
+      [class.clientes-excluir-modal--open]="shellBottomNavEligible && excluirModalAberto"
+      [class.clientes-excluir-modal--saindo]="shellBottomNavEligible && excluirModalSaindo"
+      [style.--clientes-ex-ox.px]="shellBottomNavEligible ? excluirModalOrigem.x : null"
+      [style.--clientes-ex-oy.px]="shellBottomNavEligible ? excluirModalOrigem.y : null"
       role="dialog"
       aria-modal="true"
       aria-labelledby="clientes-excluir-modal-title"

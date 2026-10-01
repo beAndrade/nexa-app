@@ -27,6 +27,8 @@ export interface MobileBottomNavAction {
   active?: boolean;
   /** Destaque âmbar (ex.: filtros aplicados). */
   warn?: boolean;
+  /** Feedback breve no ícone. Não atrasa o onClick. */
+  busy?: boolean;
   onClick: () => void;
 }
 

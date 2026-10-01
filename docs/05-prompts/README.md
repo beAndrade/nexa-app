@@ -27,6 +27,8 @@ EPIC / Phase-2 structured prompts live under:
 
 [Phase-2/](./Phase-2/)
 
+The official protocol for step 8, Validation, is [Phase-2/08-validation.md](./Phase-2/08-validation.md).
+
 Do not treat this README as the future prompt methodology (that work is intentionally postponed).
 
 ---

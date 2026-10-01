@@ -1113,4 +1113,67 @@ select.list-footer__per-page {
     height: var(--touch-min, 44px);
     min-height: var(--touch-min, 44px);
   }
+
+  .list-head__title-row {
+    padding: 10px 0 0;
+    row-gap: 8px;
+  }
+
+  /**
+   * Com a bottom nav, Filtrar/Novo saem do header.
+   * O input cobre a caixa inteira; badges ficam na linha de baixo da feature.
+   */
+  .list-head__actions--bottom-nav {
+    width: 100%;
+    margin-left: 0;
+
+    .list-head__busca-wrap,
+    .list-head__busca-wrap--open,
+    .list-head__busca-wrap:hover {
+      position: relative;
+      flex: 1 1 100%;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      margin-top: 0;
+      margin-left: 0;
+      padding: 0;
+      border-color: rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 9px rgba(83, 83, 83, 0.06);
+      cursor: text;
+    }
+
+    .list-head__busca-icon,
+    .list-head__busca-wrap:hover .list-head__busca-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      z-index: 1;
+      margin: 0;
+      color: #a8a29e;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .list-head__busca-label {
+      display: none;
+    }
+
+    .list-head__busca-input,
+    .list-head__busca-input.list-head__busca-input--search-open {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      max-width: none;
+      height: 100%;
+      min-height: 0;
+      opacity: 1;
+      margin: 0;
+      padding: 0 12px 0 36px;
+      border: 0;
+      line-height: 42px;
+      background: transparent;
+    }
+  }
 }

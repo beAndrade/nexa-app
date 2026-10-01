@@ -134,6 +134,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
 
   /** Viewport do shell ≤767px — Bottom Nav visível (template + registry). */
   shellBottomNavEligible = false;
+  private selecionarTudoBusy = false;
+  private selecionarTudoFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+  chipsScrollVisivel = false;
+  private chipsScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
   carregando = false;
   erro = '';
@@ -187,8 +191,17 @@ export class ClientesComponent implements OnInit, OnDestroy {
   selecionados = new Set<string>();
   excluindoId: string | null = null;
   excluirModalAberto = false;
+  /** Mantém o modal no DOM até a saída mobile terminar. */
+  excluirModalMontado = false;
+  /** Saída mobile: encolhe em direção ao popover. */
+  excluirModalSaindo = false;
+  /** Deslocamento do centro do popover até o centro da tela. */
+  excluirModalOrigem = { x: 0, y: 0 };
   clientePendenteExclusao: Cliente | null = null;
   excluindoClienteModal = false;
+  private readonly excluirModalSaidaMs = 200;
+  private excluirModalTimer: ReturnType<typeof setTimeout> | null = null;
+  private excluirModalRaf = 0;
 
   colunasMenuAberto = false;
   /** Mantém o menu no DOM durante a animação de fechamento. */
@@ -246,6 +259,9 @@ export class ClientesComponent implements OnInit, OnDestroy {
     shellDesktopMq.addEventListener('change', apply);
     this.destroyRef.onDestroy(() => {
       shellDesktopMq.removeEventListener('change', apply);
+      this.limparFeedbackSelecionarTudo();
+      this.limparChipsScroll();
+      this.limparAnimacaoExcluirCliente();
     });
   }
 
@@ -270,6 +286,8 @@ export class ClientesComponent implements OnInit, OnDestroy {
       );
       const acoes = actions.find((action) => action.id === 'acoes');
       if (acoes) acoes.active = this.acoesMenuAberto;
+      const selecionarTudo = actions.find((action) => action.id === 'selecionar-tudo');
+      if (selecionarTudo) selecionarTudo.busy = this.selecionarTudoBusy;
       this.shellUi.setMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER, actions);
       return;
     }
@@ -390,6 +408,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   sairModoSelecao(): void {
     this.modoSelecao = false;
     this.acoesMenuAberto = false;
+    this.limparFeedbackSelecionarTudo();
     this.selecionados.clear();
     this.syncShellBottomNavActions();
   }
@@ -408,12 +427,48 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   selecionarTodosMobile(): void {
-    this.toast.showLoading('Selecionando...');
     this.selecionados = selectAllIds(
       this.selecionados,
       this.filtrados().map((c) => c.id),
     );
+    this.dispararFeedbackSelecionarTudo();
     this.syncShellBottomNavActions();
+  }
+
+  /** Ícone gira ~250ms. A seleção já foi aplicada antes deste timer. */
+  private dispararFeedbackSelecionarTudo(): void {
+    this.limparFeedbackSelecionarTudo();
+    this.selecionarTudoBusy = true;
+    this.selecionarTudoFeedbackTimer = setTimeout(() => {
+      this.selecionarTudoFeedbackTimer = null;
+      this.selecionarTudoBusy = false;
+      if (this.modoSelecao) this.syncShellBottomNavActions();
+    }, 250);
+  }
+
+  private limparFeedbackSelecionarTudo(): void {
+    if (this.selecionarTudoFeedbackTimer != null) {
+      clearTimeout(this.selecionarTudoFeedbackTimer);
+      this.selecionarTudoFeedbackTimer = null;
+    }
+    this.selecionarTudoBusy = false;
+  }
+
+  onChipsScroll(): void {
+    this.chipsScrollVisivel = true;
+    if (this.chipsScrollTimer != null) clearTimeout(this.chipsScrollTimer);
+    this.chipsScrollTimer = setTimeout(() => {
+      this.chipsScrollTimer = null;
+      this.chipsScrollVisivel = false;
+    }, 1000);
+  }
+
+  private limparChipsScroll(): void {
+    if (this.chipsScrollTimer != null) {
+      clearTimeout(this.chipsScrollTimer);
+      this.chipsScrollTimer = null;
+    }
+    this.chipsScrollVisivel = false;
   }
 
   onAcoesSelecao(): void {
@@ -434,6 +489,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
       {
         id: 'excluir',
         label: 'Excluir',
+        icon: 'trash',
         danger: true,
         disabled: this.selecionados.size !== 1,
       },
@@ -680,13 +736,92 @@ export class ClientesComponent implements OnInit, OnDestroy {
     const id = c.id?.trim();
     if (!id || this.excluindoClienteModal) return;
     this.clientePendenteExclusao = c;
-    this.excluirModalAberto = true;
+    if (!this.shellBottomNavEligible) {
+      this.excluirModalMontado = true;
+      this.excluirModalAberto = true;
+      return;
+    }
+    this.excluirModalOrigem = this.medirOrigemPopoverAcoes();
+    this.limparAnimacaoExcluirCliente();
+    this.excluirModalSaindo = false;
+    this.excluirModalMontado = true;
+    this.excluirModalAberto = false;
+    this.excluirModalRaf = requestAnimationFrame(() => {
+      this.excluirModalRaf = requestAnimationFrame(() => {
+        this.excluirModalRaf = 0;
+        this.excluirModalAberto = true;
+      });
+    });
   }
 
   fecharModalExcluirCliente(): void {
     if (this.excluindoClienteModal) return;
+    if (!this.shellBottomNavEligible) {
+      this.descartarModalExcluirCliente();
+      return;
+    }
+    if (!this.excluirModalAberto) {
+      if (this.excluirModalRaf) this.descartarModalExcluirCliente();
+      return;
+    }
+    this.excluirModalOrigem = this.medirOrigemPopoverAcoes();
+    this.excluirModalSaindo = true;
     this.excluirModalAberto = false;
+    this.limparAnimacaoExcluirCliente();
+    this.excluirModalTimer = setTimeout(() => {
+      this.excluirModalTimer = null;
+      this.descartarModalExcluirCliente();
+    }, this.duracaoSaidaExcluirCliente());
+  }
+
+  private descartarModalExcluirCliente(): void {
+    this.limparAnimacaoExcluirCliente();
+    this.excluirModalAberto = false;
+    this.excluirModalSaindo = false;
+    this.excluirModalMontado = false;
     this.clientePendenteExclusao = null;
+  }
+
+  private duracaoSaidaExcluirCliente(): number {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return 120;
+    }
+    return this.excluirModalSaidaMs;
+  }
+
+  /** Centro do popover de Ações em relação ao centro da viewport. */
+  private medirOrigemPopoverAcoes(): { x: number; y: number } {
+    const menu = this.hostEl.nativeElement.querySelector(
+      '.mobile-list-actions-menu',
+    ) as HTMLElement | null;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    if (!menu) {
+      return { x: 0, y: Math.round(window.innerHeight * 0.28) };
+    }
+    const r = menu.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) {
+      return { x: 0, y: Math.round(window.innerHeight * 0.28) };
+    }
+    const fechado = !menu.classList.contains('mobile-list-actions-menu--open');
+    return {
+      x: Math.round(r.left + r.width / 2 - cx),
+      y: Math.round(r.top + r.height / 2 - cy - (fechado ? 8 : 0)),
+    };
+  }
+
+  private limparAnimacaoExcluirCliente(): void {
+    if (this.excluirModalTimer != null) {
+      clearTimeout(this.excluirModalTimer);
+      this.excluirModalTimer = null;
+    }
+    if (this.excluirModalRaf) {
+      cancelAnimationFrame(this.excluirModalRaf);
+      this.excluirModalRaf = 0;
+    }
   }
 
   confirmarExcluirCliente(): void {
@@ -703,8 +838,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
       next: () => {
         this.excluindoId = null;
         this.excluindoClienteModal = false;
-        this.excluirModalAberto = false;
-        this.clientePendenteExclusao = null;
+        this.descartarModalExcluirCliente();
         this.selecionados.delete(id);
         if (this.cadastroDrawer.clienteId === id) {
           this.cadastroDrawer.fechar();
@@ -1128,10 +1262,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
   @HostListener('document:keydown.escape', ['$event'])
   onEscape(ev: KeyboardEvent): void {
     if (ev.defaultPrevented) return;
-    if (this.excluirModalAberto) {
+    if (this.excluirModalAberto || this.excluirModalMontado) {
       ev.preventDefault();
       ev.stopImmediatePropagation();
-      if (!this.excluindoClienteModal) {
+      if (this.excluirModalAberto && !this.excluindoClienteModal) {
         this.fecharModalExcluirCliente();
       }
       return;

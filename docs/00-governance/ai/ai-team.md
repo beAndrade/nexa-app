@@ -104,6 +104,12 @@ Check regressions.
 
 Verify edge cases.
 
+The operational protocol for Phase 2 Validation is:
+
+docs/05-prompts/Phase-2/08-validation.md
+
+The Nexa QA Agent follows that protocol. It is read-only and does not auto-fix code, documentation, requirements, or architecture.
+
 ---
 
 ## Product Manager

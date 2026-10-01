@@ -1,4 +1,8 @@
-<nav class="shell-bottom-nav" aria-label="Navegação inferior">
+<nav
+  class="shell-bottom-nav"
+  (pointerdown)="aoPressionar($event)"
+  aria-label="Navegação inferior"
+>
   <button
     type="button"
     class="shell-bottom-nav__btn"
@@ -32,10 +36,15 @@
       [class.shell-bottom-nav__btn--accent]="action.accent"
       [class.shell-bottom-nav__btn--active]="action.active"
       [class.shell-bottom-nav__btn--warn]="action.warn"
+      [class.shell-bottom-nav__btn--acoes]="action.id === 'acoes'"
       (click)="executar(action, $event)"
       [attr.aria-label]="action.ariaLabel ?? action.label"
       [attr.aria-expanded]="action.active ?? null"
+      [attr.aria-busy]="action.busy ? 'true' : null"
     >
+      @if (action.busy) {
+        <span class="shell-bottom-nav__spinner" aria-hidden="true"></span>
+      } @else {
       @switch (action.icon) {
         @case ('calendar') {
           <svg
@@ -176,16 +185,15 @@
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="1.5"
             stroke-linecap="round"
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <circle cx="12" cy="12" r="1" />
-            <circle cx="19" cy="12" r="1" />
-            <circle cx="5" cy="12" r="1" />
+            <path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
           </svg>
         }
+      }
       }
       <span class="shell-bottom-nav__label">{{ action.label }}</span>
     </button>

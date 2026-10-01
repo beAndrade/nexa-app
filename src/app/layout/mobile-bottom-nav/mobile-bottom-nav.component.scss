@@ -35,6 +35,7 @@
   backdrop-filter: var(--shell-bottom-nav-filter);
   -webkit-backdrop-filter: var(--shell-bottom-nav-filter);
   box-shadow: var(--shell-bottom-nav-shadow);
+  transform-origin: center center;
   /* Clipa filhos ao pill; evita risco/divisor vazando no canto direito. */
   overflow: hidden;
 }
@@ -59,11 +60,7 @@
   cursor: pointer;
   font: inherit;
   box-sizing: border-box;
-}
-
-/* Divisor só entre Menu e ações contextuais — sozinho não deixa risco à direita. */
-.shell-bottom-nav > .shell-bottom-nav__btn:first-child:not(:last-child) {
-  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  appearance: none;
 }
 
 .shell-bottom-nav__btn--accent,
@@ -109,6 +106,31 @@
   color: inherit;
 }
 
+.shell-bottom-nav__spinner {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: shell-bottom-nav-spin 0.45s linear infinite;
+}
+
+@keyframes shell-bottom-nav-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-bottom-nav__spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.55;
+  }
+}
+
 .shell-bottom-nav__label {
   display: block;
   max-width: 100%;
@@ -127,4 +149,12 @@
 .shell-bottom-nav__btn--accent .shell-bottom-nav__label,
 .shell-bottom-nav__btn--active .shell-bottom-nav__label {
   color: var(--color-primary);
+}
+
+.shell-bottom-nav__btn--acoes {
+  color: #efaf41;
+
+  .shell-bottom-nav__label {
+    color: #efaf41;
+  }
 }

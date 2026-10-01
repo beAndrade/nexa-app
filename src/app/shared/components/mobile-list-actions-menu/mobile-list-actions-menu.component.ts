@@ -18,6 +18,8 @@ export interface MobileListActionMenuItem {
   ariaLabel?: string;
   danger?: boolean;
   disabled?: boolean;
+  /** Lixeira já usada nas ações de linha. Ausente = só o texto. */
+  icon?: 'trash';
 }
 
 /**

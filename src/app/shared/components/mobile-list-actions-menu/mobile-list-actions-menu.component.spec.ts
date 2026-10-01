@@ -30,7 +30,13 @@ class HostComponent {
   items: MobileListActionMenuItem[] = [
     { id: 'arquivar', label: 'Arquivar' },
     { id: 'off', label: 'Indisponível', disabled: true },
-    { id: 'remover', label: 'Remover', danger: true, ariaLabel: 'Remover item' },
+    {
+      id: 'remover',
+      label: 'Remover',
+      danger: true,
+      ariaLabel: 'Remover item',
+      icon: 'trash',
+    },
   ];
 }
 
@@ -73,7 +79,8 @@ describe('MobileListActionsMenuComponent', () => {
     expect(panel.getAttribute('role')).toBe('menu');
     expect(items.length).toBe(3);
     expect(document.activeElement).toBe(items[0]);
-    expect(menuCssIncludes('min-height: 44px')).toBe(true);
+    expect(menuCssIncludes('width: 105px')).toBe(true);
+    expect(menuCssIncludes('height: 40px')).toBe(true);
     expect(menuCssIncludes('930')).toBe(true);
     expect(menuCssIncludes('0.18s')).toBe(true);
     expect(menuCssIncludes('prefers-reduced-motion')).toBe(true);
@@ -130,6 +137,8 @@ describe('MobileListActionsMenuComponent', () => {
     expect(host.lastItem).toBeNull();
     expect(host.closedCount).toBe(0);
 
+    expect(buttons[2].querySelector('svg')).not.toBeNull();
+    expect(buttons[0].querySelector('svg')).toBeNull();
     buttons[2].click();
     fixture.detectChanges();
     expect(host.lastItem?.id).toBe('remover');
