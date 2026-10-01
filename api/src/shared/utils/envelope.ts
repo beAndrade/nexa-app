@@ -1,4 +1,16 @@
-export type ApiError = { code: string; message: string };
+export type ApiErrorClienteRef = {
+  id_cliente: string;
+  nome_exibido: string;
+};
+
+export type ApiError = {
+  code: string;
+  message: string;
+  /** Campo do formulário (validação ou duplicidade). */
+  field?: string | null;
+  /** Cliente conflitante em duplicidade de CPF/celular. */
+  cliente?: ApiErrorClienteRef | null;
+};
 
 export type ApiResponse<T> = {
   ok: boolean;
@@ -13,6 +25,13 @@ export function ok<T>(data: T): ApiResponse<T> {
 export function fail<T = null>(
   code: string,
   message: string,
+  extras?: {
+    field?: string | null;
+    cliente?: ApiErrorClienteRef | null;
+  },
 ): ApiResponse<T> {
-  return { ok: false, data: null, error: { code, message } };
+  const error: ApiError = { code, message };
+  if (extras?.field !== undefined) error.field = extras.field;
+  if (extras?.cliente !== undefined) error.cliente = extras.cliente;
+  return { ok: false, data: null, error };
 }

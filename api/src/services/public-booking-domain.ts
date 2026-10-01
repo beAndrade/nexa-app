@@ -9,6 +9,17 @@ import {
 import { createAtendimento } from './atendimentos-domain';
 import { allocNextClienteClId, listServicosForApi } from './queries';
 import {
+  isCelularCadastroValido,
+  normalizarTelefoneBrDigitos,
+} from './clientes-cadastro-normalize';
+import {
+  assertClienteCadastroUnico,
+  ClienteCadastroError,
+  duplicateErrorFromPg23505,
+  findClienteByCelularNormalizado,
+  inspectPgUniqueViolation,
+} from './clientes-unicidade';
+import {
   addMinutesToParts,
   formatSqlLocalDateTime,
   parseSqlLocalDateTime,
@@ -195,39 +206,49 @@ export async function listSlotsDisponiveisPublic(
   return { slots, duracao_minutos: duracao };
 }
 
-function telefoneDigitos(raw: string): string {
-  return raw.replace(/\D/g, '');
-}
-
 async function resolverOuCriarCliente(
   db: Db,
   nome: string,
   telefone: string,
   email?: string,
 ): Promise<string> {
-  const tel = telefone.trim();
-  const dig = telefoneDigitos(tel);
-  if (!dig || dig.length < 10) {
-    throw new Error('Telefone inválido. Informe DDD + número.');
+  const celular = normalizarTelefoneBrDigitos(telefone);
+  if (!isCelularCadastroValido(celular)) {
+    throw new ClienteCadastroError({
+      httpStatus: 400,
+      code: 'VALIDATION',
+      field: 'celular',
+      message: 'Informe um celular válido.',
+    });
   }
 
-  const rows = await db.select().from(clientes);
-  for (const c of rows) {
-    const cDig = telefoneDigitos(String(c.telefone || c.celular || ''));
-    if (cDig && cDig === dig) {
-      return c.idCliente;
+  // Mesmo celular já cadastrado: reutiliza o id (lookup, não merge de conflito).
+  const existente = await findClienteByCelularNormalizado(db, celular);
+  if (existente) return existente.id_cliente;
+
+  await assertClienteCadastroUnico(db, { celular });
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const id = await allocNextClienteClId(db);
+    try {
+      await db.insert(clientes).values({
+        idCliente: id,
+        nomeExibido: nome.trim(),
+        celular,
+        email: email?.trim() || null,
+        statusOperacional: 'ativo',
+        statusModo: 'ativo',
+      });
+      return id;
+    } catch (e) {
+      const info = inspectPgUniqueViolation(e);
+      if (!info.is23505) throw e;
+      const dup = await duplicateErrorFromPg23505(db, e, { celular });
+      if (dup) throw dup;
+      // PK — retry
     }
   }
-
-  const id = await allocNextClienteClId(db);
-  await db.insert(clientes).values({
-    idCliente: id,
-    nomeExibido: nome.trim(),
-    telefone: tel,
-    celular: tel,
-    email: email?.trim() || null,
-  });
-  return id;
+  throw new Error('Não foi possível gerar ID de cliente único.');
 }
 
 export async function criarAgendamentoPublico(

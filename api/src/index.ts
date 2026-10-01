@@ -92,8 +92,14 @@ import {
   listServicosForApi,
   sincronizarNomeClienteEmAtendimentos,
 } from './services/queries';
-import { columnPatchFromClienteBody } from './services/clientes-cadastro-normalize';
-import { assertClienteCadastroUnico } from './services/clientes-unicidade';
+import { parseClienteCadastroBody } from './services/clientes-cadastro-normalize';
+import type { ClienteCadastroBody } from './services/clientes-cadastro-normalize';
+import {
+  assertClienteCadastroUnico,
+  ClienteCadastroError,
+  duplicateErrorFromPg23505,
+  inspectPgUniqueViolation,
+} from './services/clientes-unicidade';
 import {
   createServico,
   deleteServico,
@@ -173,31 +179,40 @@ const fornecedorPatchBodySchema = t.Object({
   cidade: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
+const nullableStr = t.Optional(t.Union([t.String(), t.Null()]));
+
+/** Body POST/PATCH cadastro — null/'' limpa opcional; telefone/status_modo/id ignorados na handler. */
 const clienteCadastroBodySchema = t.Object({
   nome: t.String(),
-  telefone: t.Optional(t.String()),
-  notas: t.Optional(t.String()),
-  apelido: t.Optional(t.String()),
-  email: t.Optional(t.String()),
-  celular: t.Optional(t.String()),
-  telefoneFixo: t.Optional(t.String()),
-  aniversario: t.Optional(t.String()),
-  cnpj: t.Optional(t.String()),
-  cpf: t.Optional(t.String()),
-  rg: t.Optional(t.String()),
+  telefone: nullableStr,
+  notas: nullableStr,
+  apelido: nullableStr,
+  email: nullableStr,
+  celular: nullableStr,
+  telefoneFixo: nullableStr,
+  aniversario: nullableStr,
+  cnpj: nullableStr,
+  cpf: nullableStr,
+  rg: nullableStr,
   fotoUrl: t.Optional(t.Union([t.String(), t.Null()])),
-  notificacoesAtivo: t.Optional(t.Boolean()),
-  descontoPadraoTexto: t.Optional(t.String()),
-  descontoPadraoModo: t.Optional(t.String()),
-  cep: t.Optional(t.String()),
-  logradouro: t.Optional(t.String()),
-  enderecoNumero: t.Optional(t.String()),
-  complemento: t.Optional(t.String()),
-  bairro: t.Optional(t.String()),
-  estado: t.Optional(t.String()),
-  cidade: t.Optional(t.String()),
-  instagram: t.Optional(t.String()),
-  facebook: t.Optional(t.String()),
+  notificacoesAtivo: t.Optional(t.Union([t.Boolean(), t.Null()])),
+  descontoPadraoTexto: nullableStr,
+  descontoPadraoModo: nullableStr,
+  cep: nullableStr,
+  logradouro: nullableStr,
+  enderecoNumero: nullableStr,
+  complemento: nullableStr,
+  bairro: nullableStr,
+  estado: nullableStr,
+  cidade: nullableStr,
+  instagram: nullableStr,
+  facebook: nullableStr,
+  statusOperacional: nullableStr,
+  status_operacional: nullableStr,
+  statusModo: nullableStr,
+  status_modo: nullableStr,
+  idCliente: nullableStr,
+  id_cliente: nullableStr,
 });
 
 /** Campos explícitos — TypeBox remove chaves não listadas (ex.: comissão por tamanho). */
@@ -246,8 +261,6 @@ const cabeloWriteBodySchema = t.Object({
   metodo: t.Optional(t.Union([t.String(), t.Null()])),
   valor_base: t.Optional(t.Union([t.String(), t.Null()])),
 });
-
-const nullableStr = t.Optional(t.Union([t.String(), t.Null()]));
 
 /** POST/PATCH produtos — o front envia `null` em campos vazios (moeda, %, texto). */
 const produtoWriteBodySchema = t.Object(
@@ -981,7 +994,7 @@ const app = new Elysia({ adapter: node() })
   })
   .post(
     '/api/public/agendamentos',
-    async ({ body }) => {
+    async ({ body, set }) => {
       try {
         const b = body as {
           nome?: string;
@@ -1007,14 +1020,23 @@ const app = new Elysia({ adapter: node() })
         });
         return ok(result);
       } catch (e) {
+        if (e instanceof ClienteCadastroError) {
+          set.status = e.httpStatus;
+          return fail(e.code, e.message, {
+            field: e.field,
+            cliente: e.cliente,
+          });
+        }
         const msg = e instanceof Error ? e.message : String(e);
         if (
           /inválid|obrigatório|não encontrado|não disponível|não está mais/i.test(
             msg,
           )
         ) {
+          set.status = 400;
           return fail('VALIDATION', msg);
         }
+        set.status = 500;
         return fail('SERVER', msg);
       }
     },
@@ -1122,9 +1144,12 @@ const app = new Elysia({ adapter: node() })
   .get('/api/clientes', async () => ok({ items: await listClientesNormalized(db) }))
   .get(
     '/api/clientes/:id',
-    async ({ params }) => {
+    async ({ params, set }) => {
       const item = await getClienteById(db, params.id);
-      if (!item) return fail('NOT_FOUND', 'Cliente não encontrado');
+      if (!item) {
+        set.status = 404;
+        return fail('NOT_FOUND', 'Cliente não encontrado');
+      }
       return ok({ item });
     },
     { params: t.Object({ id: t.String() }) },
@@ -1182,83 +1207,177 @@ const app = new Elysia({ adapter: node() })
   )
   .post(
     '/api/clientes',
-    async ({ body }) => {
-      const nome = String(body.nome || '').trim();
-      if (!nome) return fail('VALIDATION', 'Nome do cliente é obrigatório');
-      try {
-        await assertClienteCadastroUnico(db, { ...body, nome });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return fail('VALIDATION', msg);
+    async ({ body, set }) => {
+      const raw = body as ClienteCadastroBody & {
+        status_operacional?: string | null;
+      };
+      const bodyNorm: ClienteCadastroBody = {
+        ...raw,
+        statusOperacional:
+          raw.statusOperacional ?? raw.status_operacional ?? undefined,
+      };
+      const parsed = parseClienteCadastroBody(bodyNorm, 'create');
+      if ('field' in parsed) {
+        set.status = 400;
+        return fail('VALIDATION', parsed.message, { field: parsed.field });
       }
-      const telefone =
-        body.telefone != null ? String(body.telefone).trim() || null : null;
-      const cadastroPatch = columnPatchFromClienteBody(body);
+
+      try {
+        await assertClienteCadastroUnico(db, {
+          cpf: parsed.patch.cpf ?? null,
+          celular: parsed.patch.celular ?? null,
+        });
+      } catch (e) {
+        if (e instanceof ClienteCadastroError) {
+          set.status = e.httpStatus;
+          return fail(e.code, e.message, {
+            field: e.field,
+            cliente: e.cliente,
+          });
+        }
+        throw e;
+      }
+
+      const { nomeExibido: _n, ...cadastroCols } = parsed.patch;
+      void _n;
 
       for (let attempt = 0; attempt < 8; attempt++) {
         const id = await allocNextClienteClId(db);
         try {
           await db.insert(clientes).values({
             idCliente: id,
-            nomeExibido: nome,
-            telefone,
-            ...cadastroPatch,
+            nomeExibido: parsed.nome,
+            ...cadastroCols,
+            statusOperacional: 'ativo',
+            statusModo: 'ativo',
           });
           const item = await getClienteById(db, id);
           if (!item) {
+            set.status = 500;
             return fail(
               'SERVER',
-              'Cliente criado mas não foi possível carregar o registo.',
+              'Cliente criado mas não foi possível carregar o registro.',
             );
           }
           return ok(item);
         } catch (e) {
-          const code =
-            e && typeof e === 'object' && 'code' in e
-              ? String((e as { code?: string }).code)
-              : '';
-          if (code === '23505') continue;
+          const info = inspectPgUniqueViolation(e);
+          if (info.is23505) {
+            const dup = await duplicateErrorFromPg23505(db, e, {
+              cpf: parsed.patch.cpf ?? null,
+              celular: parsed.patch.celular ?? null,
+            });
+            if (dup) {
+              set.status = 409;
+              return fail(dup.code, dup.message, {
+                field: dup.field,
+                cliente: dup.cliente,
+              });
+            }
+            // PK id_cliente — retry de alocação
+            continue;
+          }
           const msg = e instanceof Error ? e.message : String(e);
+          set.status = 500;
           return fail('SERVER', msg);
         }
       }
+      set.status = 500;
       return fail('SERVER', 'Não foi possível gerar ID de cliente único.');
     },
     { body: clienteCadastroBodySchema },
   )
   .patch(
     '/api/clientes/:id',
-    async ({ params, body }) => {
-      const nome = String(body.nome || '').trim();
-      if (!nome) return fail('VALIDATION', 'Nome exibido é obrigatório');
+    async ({ params, body, set }) => {
       const id = params.id.trim();
+      const raw = body as ClienteCadastroBody & {
+        status_operacional?: string | null;
+      };
+      const bodyNorm: ClienteCadastroBody = {
+        ...raw,
+        statusOperacional:
+          raw.statusOperacional ?? raw.status_operacional ?? undefined,
+      };
+      const parsed = parseClienteCadastroBody(bodyNorm, 'update');
+      if ('field' in parsed) {
+        set.status = 400;
+        return fail('VALIDATION', parsed.message, { field: parsed.field });
+      }
+
+      const existing = await getClienteById(db, id);
+      if (!existing) {
+        set.status = 404;
+        return fail('NOT_FOUND', 'Cliente não encontrado');
+      }
+
       try {
-        await assertClienteCadastroUnico(db, { ...body, nome }, {
+        await assertClienteCadastroUnico(db, {
+          cpf: parsed.patch.cpf ?? null,
+          celular: parsed.patch.celular ?? null,
           excludeClienteId: id,
         });
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return fail('VALIDATION', msg);
+        if (e instanceof ClienteCadastroError) {
+          set.status = e.httpStatus;
+          return fail(e.code, e.message, {
+            field: e.field,
+            cliente: e.cliente,
+          });
+        }
+        throw e;
       }
 
-      const patchPayload = {
-        nomeExibido: nome,
-        telefone:
-          body.telefone != null ? String(body.telefone).trim() || null : null,
-        ...columnPatchFromClienteBody(body, { partial: true }),
+      const patchPayload: Record<string, unknown> = {
+        ...parsed.patch,
+        updatedAt: new Date(),
       };
+      // status_modo do body é ignorado; deriva de status_operacional
+      if (parsed.statusOperacional === 'inativo') {
+        patchPayload.statusOperacional = 'inativo';
+        patchPayload.statusModo = 'inativo_manual';
+      } else if (parsed.statusOperacional === 'ativo') {
+        patchPayload.statusOperacional = 'ativo';
+        patchPayload.statusModo = 'ativo';
+      }
 
-      const updated = await db
-        .update(clientes)
-        .set(patchPayload)
-        .where(eq(clientes.idCliente, id))
-        .returning();
-      if (!updated.length) return fail('NOT_FOUND', 'Cliente não encontrado');
+      try {
+        const updated = await db
+          .update(clientes)
+          .set(patchPayload)
+          .where(eq(clientes.idCliente, id))
+          .returning();
+        if (!updated.length) {
+          set.status = 404;
+          return fail('NOT_FOUND', 'Cliente não encontrado');
+        }
+      } catch (e) {
+        const dup = await duplicateErrorFromPg23505(db, e, {
+          cpf: parsed.patch.cpf ?? null,
+          celular: parsed.patch.celular ?? null,
+          excludeClienteId: id,
+        });
+        if (dup) {
+          set.status = 409;
+          return fail(dup.code, dup.message, {
+            field: dup.field,
+            cliente: dup.cliente,
+          });
+        }
+        const msg = e instanceof Error ? e.message : String(e);
+        set.status = 500;
+        return fail('SERVER', msg);
+      }
 
-      await sincronizarNomeClienteEmAtendimentos(db, id, nome);
+      if (parsed.nome !== existing.nome) {
+        await sincronizarNomeClienteEmAtendimentos(db, id, parsed.nome);
+      }
 
       const item = await getClienteById(db, id);
-      if (!item) return fail('NOT_FOUND', 'Cliente não encontrado');
+      if (!item) {
+        set.status = 404;
+        return fail('NOT_FOUND', 'Cliente não encontrado');
+      }
       return ok(item);
     },
     {
