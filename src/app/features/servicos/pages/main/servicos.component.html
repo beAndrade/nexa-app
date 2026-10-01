@@ -5,7 +5,10 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Serviços</h1>
         </div>
-        <div class="list-head__actions list-head__actions--servicos">
+        <div
+          class="list-head__actions list-head__actions--servicos"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -41,7 +44,7 @@
               class="list-head__busca-input"
               [(ngModel)]="busca"
               name="buscaServicos"
-              [placeholder]="buscaPlaceholder"
+              [placeholder]="shellBottomNavEligible ? 'Digite para buscar' : buscaPlaceholder"
               [class.list-head__busca-input--search-open]="buscaAberta"
               [class.list-head__busca-input--pulse-once-busca]="pulsoToolbarBusca"
               autocomplete="off"
@@ -107,6 +110,36 @@
       </div>
     </header>
   </div>
+
+  @if (shellBottomNavEligible && aba === 'servicos' && chipsFiltrosMobile().length) {
+    <div class="servicos-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="servicos-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
 
   <div
     class="list-layout"
@@ -271,6 +304,26 @@
       </nav>
 
       <div class="servicos-aba-painel" [hidden]="aba !== 'megahair'">
+        @if (shellBottomNavEligible) {
+          <div
+            class="servicos-megahair-faixa"
+            role="radiogroup"
+            aria-label="Catálogos de Megahair"
+          >
+            @for (item of megahairCatalogos; track item.id) {
+              <button
+                type="button"
+                class="servicos-megahair-faixa__item"
+                [class.servicos-megahair-faixa__item--ativo]="megahairSub === item.id"
+                role="radio"
+                [attr.aria-checked]="megahairSub === item.id"
+                (click)="onMegahairSubChange(item.id)"
+              >
+                {{ item.label }}
+              </button>
+            }
+          </div>
+        }
         <app-servicos-megahair-panel
           [subAba]="megahairSub"
           [busca]="busca"
@@ -284,7 +337,7 @@
 
       @if (!erro) {
         <div class="list-table-card">
-          <div class="table-wrap" role="region" aria-label="Lista de serviços">
+          <div class="table-wrap servicos-desktop-table" role="region" aria-label="Lista de serviços">
             <table class="list-table servicos-table">
               <colgroup>
                 <col class="servicos-table__col-check" />
@@ -670,6 +723,53 @@
             </table>
           </div>
 
+          <div class="servicos-mobile-list" aria-label="Lista de serviços">
+            @if (carregando) {
+              <p class="servicos-mobile-list__busy">Carregando…</p>
+            } @else if (paginaItens().length === 0) {
+              <div class="servicos-mobile-list__empty">
+                <app-table-empty label="Nenhum serviço encontrado" />
+              </div>
+            } @else {
+              @for (s of paginaItens(); track s.id) {
+                <button
+                  type="button"
+                  class="servicos-mobile-card"
+                  [class.servicos-mobile-card--selecao]="modoSelecao"
+                  [class.servicos-mobile-card--selected]="modoSelecao && estaSelecionado(s.id)"
+                  (click)="onMobileCardClick(s, $event)"
+                  [attr.aria-label]="
+                    modoSelecao
+                      ? (estaSelecionado(s.id) ? 'Desmarcar ' : 'Selecionar ') + rotuloServico(s)
+                      : 'Editar serviço ' + rotuloServico(s)
+                  "
+                  [attr.aria-pressed]="modoSelecao ? estaSelecionado(s.id) : null"
+                >
+                  <span
+                    class="servicos-mobile-card__check"
+                    [class.servicos-mobile-card__check--on]="estaSelecionado(s.id)"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="servicos-mobile-card__body">
+                    <span class="servicos-mobile-card__top">
+                      <span class="servicos-mobile-card__nome">{{ rotuloServico(s) }}</span>
+                      @if (servicoInativo(s)) {
+                        <span class="servicos-mobile-card__badge">Inativo</span>
+                      }
+                      <span class="servicos-mobile-card__duracao">{{ duracaoExibicao(s) }}</span>
+                    </span>
+                    @if (valorExibicao(s) != null) {
+                      <span class="servicos-mobile-card__preco">
+                        {{ valorPrefixo(s) }}{{ valorExibicao(s)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                      </span>
+                    }
+                    <span class="servicos-mobile-card__categoria">{{ categoriaServico(s) }}</span>
+                  </span>
+                </button>
+              }
+            }
+          </div>
+
           <footer class="list-footer">
             <span class="list-footer__total">{{ totalFiltrado() }} no total</span>
             <div class="list-footer__pager">
@@ -774,14 +874,22 @@
   </div>
 </div>
 
-@if (excluirModalAberto && excluirAlvo) {
+@if ((excluirModalMontado || excluirModalAberto) && excluirAlvo) {
   <div
     class="comandas-modal-overlay"
+    [class.servicos-excluir-overlay]="shellBottomNavEligible"
+    [class.servicos-excluir-overlay--open]="shellBottomNavEligible && excluirModalAberto"
+    [class.servicos-excluir-overlay--saindo]="shellBottomNavEligible && excluirModalSaindo"
     aria-hidden="true"
     (click)="fecharExcluir()"
   ></div>
   <div
     class="comandas-modal"
+    [class.servicos-excluir-modal]="shellBottomNavEligible"
+    [class.servicos-excluir-modal--open]="shellBottomNavEligible && excluirModalAberto"
+    [class.servicos-excluir-modal--saindo]="shellBottomNavEligible && excluirModalSaindo"
+    [style.--servicos-ex-ox.px]="shellBottomNavEligible ? excluirModalOrigem.x : null"
+    [style.--servicos-ex-oy.px]="shellBottomNavEligible ? excluirModalOrigem.y : null"
     role="dialog"
     aria-modal="true"
     aria-labelledby="servicos-excluir-title"
@@ -817,3 +925,92 @@
     </div>
   </div>
 }
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && aba === 'servicos' && filtrosAbertos"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section class="servicos-filtros-card servicos-filtros-card--sheet">
+    <h3 class="servicos-filtros-card__title">Status</h3>
+    <div class="servicos-filtros-card__body">
+      <label class="servicos-filtros-check">
+        <input
+          type="checkbox"
+          name="svc_sheet_mostra_sim"
+          [checked]="filtroMostraSim"
+          (change)="toggleFiltroMostra('sim', $event)"
+        />
+        Ativos
+      </label>
+      <label class="servicos-filtros-check">
+        <input
+          type="checkbox"
+          name="svc_sheet_mostra_nao"
+          [checked]="filtroMostraNao"
+          (change)="toggleFiltroMostra('nao', $event)"
+        />
+        Inativos
+      </label>
+    </div>
+  </section>
+
+  <section class="servicos-filtros-card servicos-filtros-card--sheet">
+    <h3 class="servicos-filtros-card__title">Tipo</h3>
+    <div class="servicos-filtros-card__body">
+      <label class="servicos-filtros-check">
+        <input
+          type="checkbox"
+          name="svc_sheet_tipo_fixo"
+          [checked]="filtroTipoFixo"
+          (change)="toggleFiltroTipo('fixo', $event)"
+        />
+        Preço fixo
+      </label>
+      <label class="servicos-filtros-check">
+        <input
+          type="checkbox"
+          name="svc_sheet_tipo_tamanho"
+          [checked]="filtroTipoTamanho"
+          (change)="toggleFiltroTipo('tamanho', $event)"
+        />
+        Por tamanho
+      </label>
+    </div>
+  </section>
+
+  <section class="servicos-filtros-card servicos-filtros-card--sheet">
+    <h3 class="servicos-filtros-card__title">Categorias</h3>
+    <div class="servicos-filtros-card__body">
+      <label class="servicos-filtros-check">
+        <input
+          type="checkbox"
+          name="svc_sheet_cat_todas"
+          [checked]="todasCategoriasSelecionadas()"
+          (change)="toggleTodasCategorias($event)"
+        />
+        Selecionar tudo
+      </label>
+      @for (c of categoriasDisponiveis(); track c) {
+        <label class="servicos-filtros-check">
+          <input
+            type="checkbox"
+            [name]="'svc_sheet_cat_' + c"
+            [checked]="categoriaFiltroMarcada(c)"
+            (change)="toggleFiltroCategoria(c, $event)"
+          />
+          {{ c }}
+        </label>
+      }
+    </div>
+  </section>
+</app-mobile-filtros-sheet>
+
+<app-mobile-list-actions-menu
+  [open]="shellBottomNavEligible && aba === 'servicos' && acoesMenuAberto"
+  [items]="acoesMenuItens()"
+  anchor="acoes"
+  (openChange)="onAcoesMenuOpenChange($event)"
+  (itemSelect)="onItemAcaoSelecao($event)"
+/>

@@ -12,13 +12,26 @@ import {
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
 import type { Servico } from '../../../../core/models/api.models';
 import { valorMonetarioParaNumero } from '../../../../core/utils/atendimento-display';
 import { formataMoedaBrl } from '../../../../core/utils/brl-digit-input';
 import { lerServicoTexto } from '../../../../core/utils/servico-campos';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 import { ServicoCadastroDrawerService } from '../../../../shared/servico-cadastro-drawer/servico-cadastro-drawer.service';
+import {
+  areAllSelected,
+  buildSelectionBottomNavActions,
+  selectAllIds,
+  toggleId,
+} from '../../../../shared/mobile-list-selection/mobile-list-selection';
 import { UiTipTriggerComponent } from '../../../../shared/ui-tip-trigger/ui-tip-trigger.component';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import {
+  MobileListActionMenuItem,
+  MobileListActionsMenuComponent,
+} from '../../../../shared/components/mobile-list-actions-menu/mobile-list-actions-menu.component';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import { tooltipOrdenacaoProximoClique } from '../../../../shared/table-sort-tip.util';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
@@ -29,12 +42,23 @@ import {
 
 export type ServicosAba = 'servicos' | 'megahair';
 
+const MEGAHAIR_CATALOGOS: { id: MegahairSubAba; label: string }[] = [
+  { id: 'mega', label: 'Mega' },
+  { id: 'pacote', label: 'Pacote' },
+  { id: 'pacote_queratina', label: 'Pacote Adesivo+Queratina' },
+  { id: 'cabelo', label: 'Cabelo' },
+];
+
+const SERVICOS_BOTTOM_NAV_OWNER = 'servicos';
+
 @Component({
   selector: 'app-servicos',
   standalone: true,
   imports: [
     FlipDropdownPanelDirective,
     TableEmptyComponent,
+    MobileFiltrosSheetComponent,
+    MobileListActionsMenuComponent,
     FormsModule,
     CurrencyPipe,
     UiTipTriggerComponent,
@@ -46,9 +70,25 @@ export type ServicosAba = 'servicos' | 'megahair';
 export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly api = inject(SheetsApiService);
   private readonly drawer = inject(ServicoCadastroDrawerService);
+  private readonly shellUi = inject(AppShellUiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
   private salvoSub: Subscription | null = null;
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (!this.shellBottomNavEligible && this.modoSelecao) {
+      this.modoSelecao = false;
+      this.acoesMenuAberto = false;
+      this.selecionados.clear();
+      this.limparFeedbackSelecionarTudo();
+    }
+    this.syncShellBottomNavActions();
+    if (this.shellBottomNavEligible && this.aba === 'megahair') {
+      this.rolarFaixaMegahair();
+    }
+  };
 
   @ViewChild('tabsNav') private tabsNav?: ElementRef<HTMLElement>;
   @ViewChild(ServicosMegahairPanelComponent)
@@ -56,6 +96,7 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
 
   aba: ServicosAba = 'servicos';
   megahairSub: MegahairSubAba = 'mega';
+  readonly megahairCatalogos = MEGAHAIR_CATALOGOS;
   tabsIndicatorLeft = 0;
   tabsIndicatorWidth = 0;
 
@@ -88,6 +129,10 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
   perPageMenuAberto = false;
 
   selecionados = new Set<string>();
+  /** Seleção mobile. O checkbox da tabela desktop continua por página. */
+  modoSelecao = false;
+  acoesMenuAberto = false;
+  shellBottomNavEligible = false;
 
   /** Coluna activa e direcção (padrão Nome asc). */
   ordenacaoColuna:
@@ -100,12 +145,21 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
   ordenacaoDir: 'asc' | 'desc' = 'asc';
 
   excluirModalAberto = false;
+  excluirModalMontado = false;
+  excluirModalSaindo = false;
+  excluirModalOrigem = { x: 0, y: 0 };
+  private readonly excluirModalSaidaMs = 200;
+  private excluirModalTimer: ReturnType<typeof setTimeout> | null = null;
+  private excluirModalRaf = 0;
+  private selecionarTudoBusy = false;
+  private selecionarTudoFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
   excluindo = false;
   excluirAlvo: Servico | null = null;
   excluirErro = '';
 
   ngOnInit(): void {
     this.aplicarDeepLinkAbasSeHouver();
+    this.setupShellBottomNav();
     this.carregar();
     this.salvoSub = this.drawer.salvo$.subscribe((item) =>
       this.aplicarServicoSalvo(item),
@@ -156,10 +210,14 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
 
   definirAba(aba: ServicosAba): void {
     if (this.aba === aba) return;
+    if (this.modoSelecao) this.sairModoSelecao();
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
     this.aba = aba;
     this.busca = '';
     this.atualizarPlaceholderBusca();
     this.sincronizarIndicadorTabs();
+    this.syncShellBottomNavActions();
+    if (aba === 'megahair') this.rolarFaixaMegahair();
   }
 
   onMegahairSubChange(sub: MegahairSubAba): void {
@@ -167,6 +225,28 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.megahairSub = sub;
     this.busca = '';
     this.atualizarPlaceholderBusca();
+    this.rolarFaixaMegahair();
+  }
+
+  /** Mantém o catálogo ativo dentro da faixa, sem rolar a página. */
+  private rolarFaixaMegahair(): void {
+    if (!this.shellBottomNavEligible || typeof window === 'undefined') return;
+    const reduzir =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    requestAnimationFrame(() => {
+      const faixa = this.hostEl.nativeElement.querySelector(
+        '.servicos-megahair-faixa',
+      ) as HTMLElement | null;
+      const ativo = faixa?.querySelector(
+        '.servicos-megahair-faixa__item--ativo',
+      ) as HTMLElement | null;
+      if (!faixa || !ativo) return;
+      const alvo = ativo.offsetLeft - (faixa.clientWidth - ativo.offsetWidth) / 2;
+      faixa.scrollTo({
+        left: Math.max(0, alvo),
+        behavior: reduzir ? 'auto' : 'smooth',
+      });
+    });
   }
 
   private atualizarPlaceholderBusca(): void {
@@ -189,8 +269,206 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(SERVICOS_BOTTOM_NAV_OWNER);
+    this.limparFeedbackSelecionarTudo();
+    this.limparAnimacaoExcluir();
     this.salvoSub?.unsubscribe();
     this.salvoSub = null;
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Menu fica no shell. Aba Serviços: Filtro | Selecionar | Novo.
+   * Aba Megahair: só Novo. Em seleção de Serviços: Cancelar | Selecionar tudo | Ações.
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(SERVICOS_BOTTOM_NAV_OWNER);
+      return;
+    }
+    if (this.modoSelecao) {
+      const actions = buildSelectionBottomNavActions(this.todosFiltradosSelecionados(), {
+        onCancel: () => this.sairModoSelecao(),
+        onSelectAll: () => this.selecionarTodosMobile(),
+        onActions: () => this.onAcoesSelecao(),
+        selectAllAriaLabel: 'Selecionar todos os serviços filtrados',
+      });
+      const acoes = actions.find((action) => action.id === 'acoes');
+      if (acoes) acoes.active = this.acoesMenuAberto;
+      const selecionarTudo = actions.find((action) => action.id === 'selecionar-tudo');
+      if (selecionarTudo) selecionarTudo.busy = this.selecionarTudoBusy;
+      this.shellUi.setMobileBottomNavActions(SERVICOS_BOTTOM_NAV_OWNER, actions);
+      return;
+    }
+    if (this.aba === 'megahair') {
+      this.shellUi.setMobileBottomNavActions(SERVICOS_BOTTOM_NAV_OWNER, [
+        {
+          id: 'novo',
+          label: 'Novo',
+          ariaLabel: 'Novo',
+          icon: 'plus',
+          accent: true,
+          onClick: () => this.abrirNovo(),
+        },
+      ]);
+      return;
+    }
+    this.shellUi.setMobileBottomNavActions(SERVICOS_BOTTOM_NAV_OWNER, [
+      {
+        id: 'filtro',
+        label: 'Filtro',
+        ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: this.filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+      {
+        id: 'selecionar',
+        label: 'Selecionar',
+        ariaLabel: 'Selecionar serviços',
+        icon: 'check',
+        active: false,
+        onClick: () => this.entrarModoSelecao(),
+      },
+      {
+        id: 'novo',
+        label: 'Novo',
+        ariaLabel: 'Novo serviço',
+        icon: 'plus',
+        accent: true,
+        onClick: () => this.abrirNovo(),
+      },
+    ]);
+  }
+
+  /** Abaixo de 768, na aba Serviços, Filtro abre o sheet. */
+  private onFiltroMobile(): void {
+    if (this.aba !== 'servicos') return;
+    this.filtrosAbertos = !this.filtrosAbertos;
+    this.syncShellBottomNavActions();
+  }
+
+  fecharFiltros(): void {
+    if (!this.filtrosAbertos) return;
+    this.filtrosAbertos = false;
+    this.syncShellBottomNavActions();
+  }
+
+  entrarModoSelecao(): void {
+    if (this.aba !== 'servicos') return;
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
+    this.modoSelecao = true;
+    this.syncShellBottomNavActions();
+  }
+
+  sairModoSelecao(): void {
+    this.modoSelecao = false;
+    this.acoesMenuAberto = false;
+    this.limparFeedbackSelecionarTudo();
+    this.selecionados.clear();
+    this.syncShellBottomNavActions();
+  }
+
+  todosFiltradosSelecionados(): boolean {
+    return areAllSelected(
+      this.filtrados().map((s) => String(s.id)),
+      this.selecionados,
+    );
+  }
+
+  selecionarTodosMobile(): void {
+    this.selecionados = selectAllIds(
+      this.selecionados,
+      this.filtrados().map((s) => String(s.id)),
+    );
+    this.dispararFeedbackSelecionarTudo();
+    this.syncShellBottomNavActions();
+  }
+
+  /** Ícone gira ~250ms. A seleção já foi aplicada antes deste timer. */
+  private dispararFeedbackSelecionarTudo(): void {
+    this.limparFeedbackSelecionarTudo();
+    this.selecionarTudoBusy = true;
+    this.selecionarTudoFeedbackTimer = setTimeout(() => {
+      this.selecionarTudoFeedbackTimer = null;
+      this.selecionarTudoBusy = false;
+      if (this.modoSelecao) this.syncShellBottomNavActions();
+    }, 250);
+  }
+
+  private limparFeedbackSelecionarTudo(): void {
+    if (this.selecionarTudoFeedbackTimer != null) {
+      clearTimeout(this.selecionarTudoFeedbackTimer);
+      this.selecionarTudoFeedbackTimer = null;
+    }
+    this.selecionarTudoBusy = false;
+  }
+
+  private onAcoesSelecao(): void {
+    this.acoesMenuAberto = !this.acoesMenuAberto;
+    this.syncShellBottomNavActions();
+  }
+
+  acoesMenuItens(): MobileListActionMenuItem[] {
+    const um = this.selecionados.size === 1;
+    return [
+      {
+        id: 'editar',
+        label: 'Editar',
+        ariaLabel: 'Editar serviço selecionado',
+        disabled: !um,
+      },
+      {
+        id: 'excluir',
+        label: 'Excluir',
+        ariaLabel: 'Excluir serviço selecionado',
+        icon: 'trash',
+        danger: true,
+        disabled: !um,
+      },
+    ];
+  }
+
+  onAcoesMenuOpenChange(open: boolean): void {
+    if (open || !this.acoesMenuAberto) return;
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
+  }
+
+  onItemAcaoSelecao(item: MobileListActionMenuItem): void {
+    if (this.selecionados.size !== 1) return;
+    const id = [...this.selecionados][0];
+    const servico = this.itens.find((s) => String(s.id) === id);
+    if (!servico) return;
+    if (item.id === 'editar') {
+      this.sairModoSelecao();
+      this.abrirEditar(servico);
+      return;
+    }
+    if (item.id === 'excluir') this.pedirExcluir(servico);
+  }
+
+  onMobileCardClick(s: Servico, ev: Event): void {
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.selecionados = toggleId(this.selecionados, String(s.id));
+      this.syncShellBottomNavActions();
+      return;
+    }
+    this.abrirEditar(s);
+  }
+
+  servicoInativo(s: Servico): boolean {
+    return s['mostra_no_site'] === false;
   }
 
   /**
@@ -212,6 +490,7 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
           .sort((a, b) => a.localeCompare(b, 'pt-BR'));
         this.carregando = false;
         this.selecionados.clear();
+        this.syncShellBottomNavActions();
         if (opts?.focarId) {
           this.irParaServicoNaLista(opts.focarId);
         } else {
@@ -427,6 +706,7 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
     ev?.stopPropagation();
     this.dispararPulsoToolbar('filtro');
     this.filtrosAbertos = !this.filtrosAbertos;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   private dispararPulsoToolbar(which: 'busca' | 'filtro'): void {
@@ -503,6 +783,57 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.pagina = 1;
   }
 
+  /** Chips só dos eixos fora do padrão. A ordem segue Status, Tipo, Categorias. */
+  chipsFiltrosMobile(): { id: string; label: string }[] {
+    const chips: { id: string; label: string }[] = [];
+    if (this.filtroMostraSim && !this.filtroMostraNao) {
+      chips.push({ id: 'status', label: 'Status: Ativos' });
+    } else if (!this.filtroMostraSim && this.filtroMostraNao) {
+      chips.push({ id: 'status', label: 'Status: Inativos' });
+    }
+    if (this.filtroTipoFixo && !this.filtroTipoTamanho) {
+      chips.push({ id: 'tipo', label: 'Tipo: Preço fixo' });
+    } else if (!this.filtroTipoFixo && this.filtroTipoTamanho) {
+      chips.push({ id: 'tipo', label: 'Tipo: Por tamanho' });
+    }
+    if (this.filtroCategorias !== null) {
+      if (this.filtroCategorias.size === 0) {
+        chips.push({ id: 'cat-nenhuma', label: 'Categoria: nenhuma' });
+      } else {
+        for (const cat of this.categoriasDisponiveis()) {
+          if (!this.filtroCategorias.has(cat)) continue;
+          chips.push({ id: `cat:${cat}`, label: `Categoria: ${cat}` });
+        }
+      }
+    }
+    return chips;
+  }
+
+  removerChipFiltro(id: string, ev: Event): void {
+    ev.stopPropagation();
+    if (id === 'status') {
+      this.filtroMostraSim = true;
+      this.filtroMostraNao = true;
+      this.pagina = 1;
+      return;
+    }
+    if (id === 'tipo') {
+      this.filtroTipoFixo = true;
+      this.filtroTipoTamanho = true;
+      this.pagina = 1;
+      return;
+    }
+    if (id === 'cat-nenhuma') {
+      this.filtroCategorias = null;
+      this.pagina = 1;
+      return;
+    }
+    if (id.startsWith('cat:')) {
+      const falso = { target: { checked: false } } as unknown as Event;
+      this.toggleFiltroCategoria(id.slice(4), falso);
+    }
+  }
+
   get filtroAlgumAtivo(): boolean {
     if (this.aba === 'megahair') {
       return this.megahairSub !== 'mega';
@@ -535,7 +866,7 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (this.perPageMenuAberto) this.perPageMenuAberto = false;
-    else if (this.filtrosAbertos) this.filtrosAbertos = false;
+    else if (this.filtrosAbertos) this.fecharFiltros();
     else if (this.buscaAberta) this.buscaAberta = false;
   }
 
@@ -558,14 +889,94 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
   pedirExcluir(s: Servico): void {
     this.excluirAlvo = s;
     this.excluirErro = '';
-    this.excluirModalAberto = true;
+    if (!this.shellBottomNavEligible) {
+      this.excluirModalSaindo = false;
+      this.excluirModalMontado = true;
+      this.excluirModalAberto = true;
+      return;
+    }
+    this.excluirModalOrigem = this.medirOrigemPopoverAcoes();
+    this.limparAnimacaoExcluir();
+    this.excluirModalSaindo = false;
+    this.excluirModalMontado = true;
+    this.excluirModalAberto = false;
+    this.excluirModalRaf = requestAnimationFrame(() => {
+      this.excluirModalRaf = requestAnimationFrame(() => {
+        this.excluirModalRaf = 0;
+        this.excluirModalAberto = true;
+      });
+    });
   }
 
   fecharExcluir(): void {
     if (this.excluindo) return;
+    if (!this.shellBottomNavEligible) {
+      this.descartarModalExcluir();
+      return;
+    }
+    if (!this.excluirModalAberto) {
+      if (this.excluirModalRaf) this.descartarModalExcluir();
+      return;
+    }
+    this.excluirModalOrigem = this.medirOrigemPopoverAcoes();
+    this.excluirModalSaindo = true;
     this.excluirModalAberto = false;
+    this.limparAnimacaoExcluir();
+    this.excluirModalTimer = setTimeout(() => {
+      this.excluirModalTimer = null;
+      this.descartarModalExcluir();
+    }, this.duracaoSaidaExcluir());
+  }
+
+  private descartarModalExcluir(): void {
+    this.limparAnimacaoExcluir();
+    this.excluirModalAberto = false;
+    this.excluirModalSaindo = false;
+    this.excluirModalMontado = false;
     this.excluirAlvo = null;
     this.excluirErro = '';
+  }
+
+  private duracaoSaidaExcluir(): number {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return 120;
+    }
+    return this.excluirModalSaidaMs;
+  }
+
+  /** Centro do popover de Ações em relação ao centro da viewport. */
+  private medirOrigemPopoverAcoes(): { x: number; y: number } {
+    const menu = this.hostEl.nativeElement.querySelector(
+      '.mobile-list-actions-menu',
+    ) as HTMLElement | null;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    if (!menu) {
+      return { x: 0, y: Math.round(window.innerHeight * 0.28) };
+    }
+    const r = menu.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) {
+      return { x: 0, y: Math.round(window.innerHeight * 0.28) };
+    }
+    const fechado = !menu.classList.contains('mobile-list-actions-menu--open');
+    return {
+      x: Math.round(r.left + r.width / 2 - cx),
+      y: Math.round(r.top + r.height / 2 - cy - (fechado ? 8 : 0)),
+    };
+  }
+
+  private limparAnimacaoExcluir(): void {
+    if (this.excluirModalTimer != null) {
+      clearTimeout(this.excluirModalTimer);
+      this.excluirModalTimer = null;
+    }
+    if (this.excluirModalRaf) {
+      cancelAnimationFrame(this.excluirModalRaf);
+      this.excluirModalRaf = 0;
+    }
   }
 
   confirmarExcluir(): void {
@@ -576,7 +987,7 @@ export class ServicosComponent implements OnInit, OnDestroy, AfterViewInit {
     this.api.deleteServico(String(s.id)).subscribe({
       next: () => {
         this.excluindo = false;
-        this.fecharExcluir();
+        this.descartarModalExcluir();
         this.carregar();
       },
       error: (e: Error) => {

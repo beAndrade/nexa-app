@@ -62,6 +62,19 @@
     visibility 0s;
 }
 
+/** Um item continua na caixa de 40px. Dois ou mais crescem sem cortar o rótulo. */
+.mobile-list-actions-menu:has(> .mobile-list-actions-menu__item:nth-child(2)) {
+  height: auto;
+  width: max-content;
+  min-width: 105px;
+}
+
+.mobile-list-actions-menu:has(> .mobile-list-actions-menu__item:nth-child(2))
+  .mobile-list-actions-menu__item {
+  height: auto;
+  min-height: 40px;
+}
+
 .mobile-list-actions-menu__item {
   display: flex;
   align-items: center;
