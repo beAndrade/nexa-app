@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -51,39 +52,70 @@ export const metodoPagamentoComandaEnum = pgEnum('metodo_pagamento_comanda', [
   'a_receber_cartao',
 ]);
 
-export const clientes = pgTable('clientes', {
-  idCliente: text('id_cliente').primaryKey(),
-  nomeExibido: text('nome_exibido').notNull(),
-  telefone: text('telefone'),
-  /** Saldo de crédito pré-pago (ex.: excesso ao faturar). */
-  creditoSaldo: numeric('credito_saldo', { precision: 14, scale: 2 })
-    .notNull()
-    .default('0'),
-  apelido: text('apelido'),
-  email: text('email'),
-  celular: text('celular'),
-  telefoneFixo: text('telefone_fixo'),
-  /** Data de aniversário como texto DD/MM/AAAA (alinhado à UI). */
-  aniversario: text('aniversario'),
-  cnpj: text('cnpj'),
-  cpf: text('cpf'),
-  rg: text('rg'),
-  fotoUrl: text('foto_url'),
-  notificacoesAtivo: boolean('notificacoes_ativo').notNull().default(true),
-  descontoPadraoTexto: text('desconto_padrao_texto'),
-  descontoPadraoModo: text('desconto_padrao_modo'),
-  cep: text('cep'),
-  logradouro: text('logradouro'),
-  enderecoNumero: text('endereco_numero'),
-  complemento: text('complemento'),
-  bairro: text('bairro'),
-  estado: text('estado'),
-  cidade: text('cidade'),
-  /** Handle ou path após instagram.com/ */
-  instagram: text('instagram'),
-  /** Handle ou path após facebook.com/ */
-  facebook: text('facebook'),
-});
+export const clientes = pgTable(
+  'clientes',
+  {
+    idCliente: text('id_cliente').primaryKey(),
+    nomeExibido: text('nome_exibido').notNull(),
+    telefone: text('telefone'),
+    /** Saldo de crédito pré-pago (ex.: excesso ao faturar). */
+    creditoSaldo: numeric('credito_saldo', { precision: 14, scale: 2 })
+      .notNull()
+      .default('0'),
+    apelido: text('apelido'),
+    email: text('email'),
+    celular: text('celular'),
+    telefoneFixo: text('telefone_fixo'),
+    /** Data de aniversário como texto DD/MM/AAAA (alinhado à UI). */
+    aniversario: text('aniversario'),
+    cnpj: text('cnpj'),
+    cpf: text('cpf'),
+    rg: text('rg'),
+    fotoUrl: text('foto_url'),
+    notificacoesAtivo: boolean('notificacoes_ativo').notNull().default(true),
+    descontoPadraoTexto: text('desconto_padrao_texto'),
+    descontoPadraoModo: text('desconto_padrao_modo'),
+    cep: text('cep'),
+    logradouro: text('logradouro'),
+    enderecoNumero: text('endereco_numero'),
+    complemento: text('complemento'),
+    bairro: text('bairro'),
+    estado: text('estado'),
+    cidade: text('cidade'),
+    /** Handle ou path após instagram.com/ */
+    instagram: text('instagram'),
+    /** Handle ou path após facebook.com/ */
+    facebook: text('facebook'),
+    /** Valor efetivo: ativo | inativo. Lista/filtros leem só esta coluna. */
+    statusOperacional: text('status_operacional').notNull().default('ativo'),
+    /** Controle: ativo | inativo_manual | inativo_automatico. */
+    statusModo: text('status_modo').notNull().default('ativo'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check(
+      'clientes_status_combinacao_chk',
+      sql`(
+        (${t.statusModo} = 'ativo' AND ${t.statusOperacional} = 'ativo')
+        OR (${t.statusModo} = 'inativo_manual' AND ${t.statusOperacional} = 'inativo')
+        OR (${t.statusModo} = 'inativo_automatico' AND ${t.statusOperacional} = 'inativo')
+      )`,
+    ),
+    /** CC-03 / TD §5: unicidade só para celular com exatamente 11 dígitos persistidos. */
+    uniqueIndex('clientes_celular_11_uidx')
+      .on(t.celular)
+      .where(sql`${t.celular} IS NOT NULL AND char_length(${t.celular}) = 11`),
+    /** CC-03 / TD §6: unicidade só para CPF com exatamente 11 dígitos persistidos. */
+    uniqueIndex('clientes_cpf_11_uidx')
+      .on(t.cpf)
+      .where(sql`${t.cpf} IS NOT NULL AND char_length(${t.cpf}) = 11`),
+  ],
+);
 
 /** Extrato de crédito pré-pago do cliente (entrada/saída por comanda, etc.). */
 export const clienteCreditoMovimentos = pgTable(

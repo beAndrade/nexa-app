@@ -512,6 +512,20 @@
       "when": 1775780000000,
       "tag": "0071_avaliacao_solicitacoes_whatsapp_aberto_em_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1775790000000,
+      "tag": "0072_clientes_status_e_classificacao_telefone",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1775800000000,
+      "tag": "0073_clientes_celular_cpf_unique_idx",
+      "breakpoints": true
     }
   ]
 }

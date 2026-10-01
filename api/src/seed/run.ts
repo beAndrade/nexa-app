@@ -38,6 +38,46 @@ function pick(
   return '';
 }
 
+/** Só dígitos; remove prefixo 55 quando o tamanho bater (seção 11 do Technical Design). */
+function digitosTelefoneLegado(valor: string): string {
+  const raw = valor.replace(/\D/g, '');
+  if (raw.length === 13 && raw.startsWith('55')) return raw.slice(2);
+  if (raw.length === 12 && raw.startsWith('55')) return raw.slice(2);
+  return raw;
+}
+
+function destinoVazio(valor: string | null | undefined): boolean {
+  return valor == null || valor.trim() === '';
+}
+
+/**
+ * Classifica `Telefone` da planilha (seção 11): 11 dígitos com 3º=9 → celular;
+ * 10 dígitos → telefone_fixo; outro tamanho não copia. Destino já preenchido não sobrescreve.
+ */
+function classificarTelefonePlanilha(
+  telefonePlanilha: string | null | undefined,
+  celularAtual: string | null | undefined,
+  telefoneFixoAtual: string | null | undefined,
+): { celular: string | null; telefoneFixo: string | null } {
+  let celular = celularAtual?.trim() ? celularAtual.trim() : null;
+  let telefoneFixo = telefoneFixoAtual?.trim()
+    ? telefoneFixoAtual.trim()
+    : null;
+
+  if (!telefonePlanilha?.trim()) {
+    return { celular, telefoneFixo };
+  }
+
+  const digits = digitosTelefoneLegado(telefonePlanilha);
+  if (digits.length === 11 && digits[2] === '9') {
+    if (destinoVazio(celular)) celular = digits;
+  } else if (digits.length === 10) {
+    if (destinoVazio(telefoneFixo)) telefoneFixo = digits;
+  }
+
+  return { celular, telefoneFixo };
+}
+
 /** Host/porta/base para o utilizador bater certo com `db:migrate` (senha omitida). */
 function resumoDatabaseUrlParaLog(raw: string): string {
   const semSenha = raw.replace(/:\/\/([^/:]+):([^@]+)@/, '://$1:****@');
@@ -159,10 +199,20 @@ export async function seedFromXlsx(options?: { truncate?: boolean }) {
       const id = pick(row, ['ID Cliente']);
       const nome = pick(row, ['Nome Exibido']);
       if (!id?.trim() || !nome?.trim()) continue;
+      const celularPlanilha = pick(row, ['Celular']) || null;
+      const telefoneFixoPlanilha =
+        pick(row, ['Telefone Fixo', 'Telefone_Fixo', 'telefone_fixo']) || null;
+      const telefoneLegado = pick(row, ['Telefone']) || null;
+      const classificado = classificarTelefonePlanilha(
+        telefoneLegado,
+        celularPlanilha,
+        telefoneFixoPlanilha,
+      );
       await db.insert(clientes).values({
         idCliente: id.trim(),
         nomeExibido: nome.trim(),
-        telefone: pick(row, ['Telefone']) || null,
+        celular: classificado.celular,
+        telefoneFixo: classificado.telefoneFixo,
       });
     }
   }
