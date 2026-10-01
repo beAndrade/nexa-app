@@ -242,15 +242,30 @@ Opcional. Quando informado, 10 dígitos (DDD + número fixo) ou 11 dígitos comp
 
 ### Unicidade e índice
 
-Índice único parcial, criado só depois da normalização e do relatório de duplicatas da seção 11:
+Regra única. A prosa desta seção já deixava valor sem 11 dígitos fora do índice, no mesmo desenho do CPF da seção 6. O SQL anterior, `UNIQUE (celular) WHERE celular IS NOT NULL`, incluía todo texto não nulo (máscara, outro tamanho e string vazia) e não era a mesma regra. O predicado abaixo é o único. Texto, SQL, relatório e portão usam este predicado. Não é regra nova de produto: a unicidade continua sendo a do celular normalizado.
+
+**Normalização.** Na gravação, e no legado cujo resultado tenha 11 dígitos, `celular` persiste só dígitos. Máscara, espaço e prefixo `+55` no tamanho esperado não são outro número.
+
+**Elegível para unicidade.** `celular` não nulo com exatamente 11 dígitos já persistidos. Null não entra. String vazia, texto ainda mascarado e qualquer outro tamanho não entram.
+
+**Predicado do índice**, criado só depois da normalização e do relatório da seção 11:
 
 ```text
-UNIQUE (celular) WHERE celular IS NOT NULL
+UNIQUE (celular) WHERE celular IS NOT NULL AND char_length(celular) = 11
 ```
 
-Vários null são permitidos no Postgres. O índice não inclui `telefone_fixo` nem `telefone`.
+Vários null são permitidos no Postgres. O índice não inclui `telefone_fixo` nem `telefone`. String vazia, máscara e tamanho diferente de 11 ficam fora do índice. Dois textos iguais fora desse predicado não impedem a criação do índice e não são apagados, fundidos nem eleitos como vencedor.
 
-A checagem na aplicação continua, para devolver o outro cliente. O índice é a barreira de corrida.
+**Relatório que antecede o índice.** Somente leitura, antes de qualquer índice. Lista, sem gravar:
+
+- grupos com o mesmo `celular` de exatamente 11 dígitos, no texto já persistido e na projeção da normalização desta seção (máscaras distintas que viram os mesmos 11 dígitos);
+- grupos com o mesmo CPF de exatamente 11 dígitos;
+- grupos de `celular` não nulo com o mesmo texto persistido, inclusive máscara, tamanho diferente de 11 e string vazia;
+- cada `celular` ou `cpf` que não tenha 11 dígitos.
+
+Só os dois primeiros grupos violam o predicado e bloqueiam o índice. Os outros entram no relatório para o portão ficar visível. Não autorizam limpeza, merge, exclusão nem escolha de vencedor.
+
+A checagem na aplicação continua, para devolver o outro cliente, e compara celular já normalizado para 11 dígitos. O índice é a barreira de corrida.
 
 ### NULL e registros antigos
 
@@ -592,7 +607,7 @@ Erro sem campo: “Não foi possível salvar. Tente de novo.” O formulário n�
 
 ### Duplicidade
 
-`409`. Não é unicidade de nome. Nome repetido é permitido.
+`409`. Não é unicidade de nome. Nome repetido é permitido. O envelope em `api/src/shared/utils/envelope.ts` hoje só carrega `code` e `message`. Este 409 estende o erro com `field` e `cliente`. O frontend precisa conservar os dois ao ler o corpo; sem `cliente.id_cliente`, “Ver cliente” não tem destino.
 
 ```json
 {
@@ -647,6 +662,8 @@ Não entram no formulário: crédito, desconto, notificação, dívida, avaliaç
 ### Validação e submit
 
 A mesma ordem da API: obrigatórios, formatos, CPF se preenchido, celular, duplicidade. Máscara é apresentação; colar com ou sem pontuação é válido se o valor normalizado for válido. Duplicidade compara o valor normalizado.
+
+A pré-checagem em `src/app/core/utils/clientes-unicidade.ts` segue este contrato: não exige nome único e não lê a coluna `telefone` como celular. Compara CPF e celular normalizados.
 
 Um salvamento por vez. O botão principal indica que está salvando e não aceita outro clique. Cancelar não dispara segundo salvamento. Durante o salvamento, fechar não descarta a operação no meio.
 
@@ -716,9 +733,18 @@ Não sobrescreve `celular` nem `telefone_fixo` já preenchidos. Se o destino já
 
 Cliente sem celular depois disso continua sem celular.
 
+### Outros escritores de cliente
+
+Dois caminhos gravam cliente sem passar por `POST /api/clientes`. Eles seguem esta seção e a seção 5. Não há regra nova de conflito.
+
+- `api/src/services/public-booking-domain.ts` deixa de gravar `telefone`. Persiste `celular` já normalizado. Duplicidade usa o 409 da seção 9. Não escolhe vencedor.
+- `api/src/seed/run.ts` deixa de inserir `telefone`. O telefone da planilha passa pela tabela de classificação acima. Destino já preenchido não é sobrescrito.
+
+Enquanto um desses caminhos gravar `telefone`, o portão do `DROP` não fecha.
+
 ### Duplicatas já existentes
 
-A migration que cria os índices únicos não escolhe vencedor e não apaga cliente. Antes do índice, um relatório lista grupos com o mesmo CPF de 11 dígitos ou o mesmo celular de 11 dígitos. Se existir grupo, essa migration de índice falha de propósito e não é reaplicada até os dados ficarem únicos. A limpeza é operacional, fora deste desenho, e não é merge automático.
+A migration que cria os índices únicos não escolhe vencedor e não apaga cliente. O predicado é o da seção 5: `char_length(celular) = 11` e `char_length(cpf) = 11`. Se existir grupo dentro desse predicado, a migration de índice falha de propósito e não é reaplicada até os dados ficarem únicos. Valor fora do predicado permanece, fora do índice. A limpeza é operacional, fora deste desenho, e não é merge automático.
 
 ### Relatório da migration de dados
 
@@ -729,7 +755,8 @@ A migration de cópia e normalização emite contagem, sem alterar o que não so
 - `telefone` não classificado ou em conflito com destino já preenchido;
 - `celular` que não ficou com 11 dígitos;
 - CPF que não ficou com 11 dígitos;
-- grupos duplicados de CPF e de celular.
+- grupos duplicados de CPF e de celular com 11 dígitos (predicado do índice);
+- grupos de `celular` não nulo com o mesmo texto persistido fora desse predicado (máscara, outro tamanho, string vazia). Estes não bloqueiam o índice.
 
 ### O que a migration não faz
 
@@ -744,12 +771,12 @@ A migration de cópia e normalização emite contagem, sem alterar o que não so
 
 Ordem segura. Cada passo só segue com o anterior estável.
 
-1. **Preparação.** Relatório somente leitura de duplicatas de CPF/celular, de `telefone` não classificável e de `celular`/`cpf` fora de 11 dígitos. Nada é gravado.
-2. **Banco.** Migration de colunas novas, backfill de status e timestamps, classificação de `telefone`, normalização de dígitos. Índices únicos numa migration seguinte, somente com o relatório de duplicatas vazio. `telefone` ainda existe, já ignorada pela aplicação que virá.
-3. **API.** POST, PATCH, GET, DELETE, unicidade, job de inatividade. DELETE novo no ar antes de qualquer troca de FK. Deploy da API que ainda não apaga filhos.
+1. **Preparação.** Relatório somente leitura da seção 5: duplicatas de CPF e de celular com 11 dígitos (texto persistido e projeção da normalização), grupos de `celular` não nulo com o mesmo texto (máscara, outro tamanho, string vazia), `telefone` não classificável e `celular`/`cpf` fora de 11 dígitos. Nada é gravado. Só grupo dentro do predicado do índice bloqueia o passo do índice.
+2. **Banco.** Migration de colunas novas, backfill de status e timestamps, classificação de `telefone`, normalização de dígitos. O seed deixa de inserir `telefone` e classifica o telefone da planilha por esta seção 11. Índices únicos numa migration seguinte, somente com o predicado da seção 5 sem duplicata. Valor fora do predicado não bloqueia o índice e não é apagado. `telefone` ainda existe.
+3. **API.** POST, PATCH, GET, DELETE, unicidade, job de inatividade. O agendamento público deixa de gravar `telefone` e persiste `celular` normalizado. DELETE novo no ar antes de qualquer troca de FK. A rota `/clientes/:id/editar` hoje envia `nome` e `telefone`; ela fica incompatível com este PATCH até o formulário único do passo 5. O passo 3 não é unidade pronta para uso dessa rota.
 4. **FKs.** `CASCADE` e `SET NULL` das relações da seção 8 passam a `NO ACTION`.
 5. **Frontend.** Formulário único, rotas, lista, filtros, duplicidade, confirmação de saída, exclusão. Quem envia WhatsApp a partir do cliente usa `celular`.
-6. **Remoção do legado.** API já não lê nem grava `telefone`. O `DROP COLUMN telefone` só roda quando não restar linha com `telefone` não nulo que não tenha sido copiado para o destino classificado. Enquanto houver linha no relatório de não classificados ou de conflito, a coluna permanece, invisível para o cadastro.
+6. **Remoção do legado.** API, agendamento público e seed já não leem nem gravam `telefone`. O `DROP COLUMN telefone` só roda quando não restar telefone não classificado, conflito, ou valor que a migration não tenha copiado, e quando não restar escritor da coluna. Enquanto o portão não estiver limpo, a coluna permanece, invisível para o cadastro. Não se cria regra nova para limpar o que ficou.
 7. **Validação e QA.** Cenários da seção 13, no protocolo de Validation já existente. Esta etapa de desenho não executa QA.
 
 Até o passo 5, cliente antigo sem celular continua abrindo. A partir do passo 5, salvá-lo pelo cadastro exige celular. Leitura e lista não exigem.
@@ -785,8 +812,9 @@ Não se criam testes nesta tarefa. A implementação futura cobre as camadas aba
 ### Banco
 
 - vários `celular` null convivem;
-- índice único recusa o segundo celular e o segundo CPF;
-- migration não cria o índice se o relatório de duplicatas não estiver vazio;
+- índice único recusa o segundo celular de 11 dígitos e o segundo CPF de 11 dígitos;
+- celular sem 11 dígitos, máscara e string vazia ficam fora do índice e não bloqueiam a criação;
+- migration não cria o índice se houver grupo dentro do predicado da seção 5;
 - FK `NO ACTION` recusa `DELETE` direto do pai quando há filho;
 - `telefone` de 11 dígitos com nono dígito 9 não cai em `telefone_fixo` quando vira celular;
 - `telefone` de 10 dígitos não cai em `celular`;
@@ -868,13 +896,13 @@ Não reabrir:
 | Job na API, na subida e no máximo uma vez por dia civil | Não há agendador no banco. A lista não varre comandas. |
 | `status_operacional` mais `status_modo` (`ativo`, `inativo_manual`, `inativo_automatico`) | O valor efetivo não distingue bloqueio manual de inatividade automática. Ativo manual e estado normal compartilham `status_modo = ativo`, porque os dois podem cair na regra dos 6 meses. |
 | Job só atualiza `status_modo = ativo` e grava `inativo_automatico`; não grava `ativo` | Inativo manual fica fora do `WHERE`. Comanda nova não escreve no cliente, então não promove Inativo manual nem Inativo automático. |
-| `celular` e `cpf` persistem só dígitos; índice único parcial | A comparação ignora máscara e vários null continuam válidos. |
+| Índice de `celular`: `WHERE celular IS NOT NULL AND char_length(celular) = 11` | A prosa e o índice de CPF já deixavam fora o valor sem 11 dígitos. O SQL `WHERE celular IS NOT NULL` sozinho não era essa regra. Máscara, outro tamanho e string vazia ficam de fora e não bloqueiam o índice. |
 | Celular válido tem 11 dígitos e o terceiro é `9` | Separa celular de fixo na validação e na leitura do legado. |
 | PATCH de cadastro exige celular; GET não exige | Casa “salvamento futuro” com “sem backfill da base”. |
 | Chave ausente não anula; vazio explícito anula opcional | Corrige o PATCH atual, que zera `telefone` quando o campo não vem. |
 | Exclusão em transação com `FOR UPDATE` e depois FKs `NO ACTION` | A API deixa de apagar filhos antes de o banco passar a impedir `CASCADE` e `SET NULL`. |
 | `created_at` antigo = instante da migration | Não há data histórica. A limitação fica escrita na seção 11. |
-| `telefone` some da API primeiro e do banco só com o relatório limpo | Evita copiar fixo para celular e evita apagar número não classificado. |
+| `telefone` some da API, do seed e do agendamento público antes do `DROP` | O portão não fecha enquanto algum escritor gravar a coluna ou restar valor não copiado. |
 | Formulário único reutilizado; rotas viram hospedeiras | É o contrato de UX das duas rotas e do drawer. |
 | “Ver cliente” com dirty passa pela confirmação de saída | É navegação para fora do formulário sujo. |
 
@@ -884,8 +912,8 @@ Não há pergunta de desenho em aberto.
 
 Dois portões dependem dos dados reais e já têm estratégia. Não são regra de produto por decidir:
 
-- índice único de CPF e de celular só é criado se não houver duplicata depois da normalização; ninguém é apagado por este desenho;
-- `DROP` de `telefone` só ocorre quando não restar valor não copiado.
+- índice único de CPF e de celular só é criado se não houver duplicata dentro do predicado da seção 5 (`char_length` = 11) depois da normalização; valor fora do predicado não bloqueia o índice; ninguém é apagado por este desenho;
+- `DROP` de `telefone` só ocorre quando não restar valor não copiado e quando API, seed e agendamento público já não gravarem a coluna.
 
 Enquanto esses portões não passarem, o cadastro novo já funciona sem o índice (a API recusa duplicidade) e sem ler `telefone`.
 
@@ -895,17 +923,17 @@ Enquanto esses portões não passarem, o cadastro novo já funciona sem o índic
 
 Não implementar a partir deste arquivo até uma etapa própria de implementação.
 
-1. Relatório somente leitura da seção 12, passo 1.
-2. Atualizar `api/src/db/schema.ts` e gerar a migration de colunas, backfill, classificação de `telefone` e normalização. Não dropar `telefone`. Não recriar `observacoes`.
-3. Migration seguinte dos índices únicos, condicionada ao relatório de duplicatas vazio.
-4. API: normalização, validação, unicidade com corpo `DUPLICATE`, POST, PATCH com ausente versus limpo, GET sem `telefone`, remoção da unicidade de nome.
+1. Relatório somente leitura da seção 12, passo 1, com o predicado da seção 5. Sem update, delete, índice, `DROP`, merge ou escolha de vencedor.
+2. Atualizar `api/src/db/schema.ts` e gerar a migration de colunas, backfill, classificação de `telefone` e normalização. O seed classifica o telefone da planilha e deixa de inserir `telefone`. Não dropar `telefone`. Não recriar `observacoes`.
+3. Migration seguinte dos índices únicos, condicionada ao predicado da seção 5 sem duplicata de 11 dígitos. Valor fora do predicado não libera limpeza nem bloqueia o índice.
+4. API: normalização, validação, unicidade com corpo `DUPLICATE` (`field` e `cliente` no envelope), POST, PATCH com ausente versus limpo, GET sem `telefone`, remoção da unicidade de nome. O agendamento público persiste `celular` normalizado e deixa de gravar `telefone`. A rota `/clientes/:id/editar` que envia `telefone` não fica pronta para uso até o formulário único.
 5. Trocar `deleteClienteById` pelo DELETE da seção 8, ainda sem apagar filhos.
 6. Job de inatividade, com o predicado da seção 7: só linhas `status_modo = ativo`, gravando `inativo_automatico`, sem promover a Ativo.
 7. Migration das FKs para `NO ACTION`.
-8. Formulário único e encaixe no drawer, em `/clientes/novo`, em `/clientes/:id/editar` e nos chamadores da agenda, comandas, financeiro e orçamentos.
-9. Lista: Todos, status operacional, Com celular / Sem celular só por `celular`, Aniversário, retirada dos filtros fora do contrato, confirmação de saída, “Ver cliente”, exclusão.
-10. WhatsApp pré-preenchido com `celular` onde o chamador usa o telefone do cliente.
-11. `DROP` de `telefone` somente com o portão da seção 11 limpo.
+8. Formulário único e encaixe no drawer, em `/clientes/novo`, em `/clientes/:id/editar` e nos chamadores da agenda, comandas, financeiro e orçamentos. A pré-checagem deixa de exigir nome único e de ler `telefone` como celular.
+9. Lista: Todos, status operacional, Com celular / Sem celular só por `celular`, Aniversário, retirada dos filtros fora do contrato, confirmação de saída, “Ver cliente” com `field` e `cliente.id_cliente` conservados na leitura do erro, exclusão.
+10. WhatsApp pré-preenchido com `celular` no utilitário de telefone e nos chamadores que hoje leem `telefone`. `notificacoes_ativo` continua preferência de envio.
+11. `DROP` de `telefone` somente com o portão da seção 11 limpo: sem não classificado, sem conflito, sem valor não copiado e sem escritor da coluna.
 12. Testes da seção 13 e Validation.
 
 ### Correspondência com o contrato
