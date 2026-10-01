@@ -569,9 +569,16 @@
   white-space: nowrap;
 }
 
+.servicos-mobile-card__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
 .servicos-mobile-card__preco,
 .servicos-mobile-card__categoria {
-  display: block;
   min-width: 0;
   overflow: hidden;
   font-size: 12px;
@@ -581,11 +588,16 @@
 }
 
 .servicos-mobile-card__preco {
+  flex: 0 0 auto;
+  max-width: 50%;
   color: #44403c;
 }
 
 .servicos-mobile-card__categoria {
+  flex: 1 1 auto;
+  margin-left: auto;
   color: #a8a29e;
+  text-align: right;
 }
 
 @media (max-width: 767px) {

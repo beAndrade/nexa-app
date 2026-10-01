@@ -574,3 +574,14 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 
 ---
 
+# Product note — Mobile List Pattern · Fase 2 (2026-10-01)
+
+**Services Mobile Catalog** (primeira implementação real de domínio do Mobile List Pattern v1): IMPLEMENTADO → VALIDADO → APROVADO.
+
+- Fechamento: `docs/06-product-evolution/mobile-list-pattern-v1/fase-2-servicos.md`
+- QA: `docs/03-development/audits/2026-10-01-servicos-mobile-catalog-qa.md` — APPROVED
+- ISS-01 (Low/backlog): slot Filtro sem `warn` — não bloqueia
+- EPIC-01 Mobile Foundation e o Pattern v1 **permanecem abertos** (Fase 3 / demais listas / demais frentes do EPIC)
+
+---
+

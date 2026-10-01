@@ -758,12 +758,14 @@
                       }
                       <span class="servicos-mobile-card__duracao">{{ duracaoExibicao(s) }}</span>
                     </span>
-                    @if (valorExibicao(s) != null) {
-                      <span class="servicos-mobile-card__preco">
-                        {{ valorPrefixo(s) }}{{ valorExibicao(s)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
-                      </span>
-                    }
-                    <span class="servicos-mobile-card__categoria">{{ categoriaServico(s) }}</span>
+                    <span class="servicos-mobile-card__meta">
+                      @if (valorExibicao(s) != null) {
+                        <span class="servicos-mobile-card__preco">
+                          {{ valorPrefixo(s) }}{{ valorExibicao(s)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                        </span>
+                      }
+                      <span class="servicos-mobile-card__categoria">{{ categoriaServico(s) }}</span>
+                    </span>
                   </span>
                 </button>
               }

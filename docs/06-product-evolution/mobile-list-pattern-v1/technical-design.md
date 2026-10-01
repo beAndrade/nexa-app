@@ -21,7 +21,9 @@ O [Nexa Mobile List Pattern v1](../mobile-list-pattern-v1.md) está **APROVADO P
 - touch hit area ≥44×44px;
 - keyboard-awareness da Bottom Navigation (requisito de UX **e** critério de Done da Fase 1).
 
-A Fase 1 cria a **base compartilhada** para que as telas de lista adotem o padrão sem duplicar lógica ou CSS. A Fase 2 (Serviços) e a Fase 3 (migração ampla) ficam **fora** deste design.
+A Fase 1 cria a **base compartilhada** para que as telas de lista adotem o padrão sem duplicar lógica ou CSS. A Fase 2 (Serviços) e a Fase 3 (migração ampla) ficam **fora** deste design técnico — este arquivo não especifica Serviços.
+
+**Atualização de estado (2026-10-01):** a Fase 2 — Services Mobile Catalog foi **IMPLEMENTADA → VALIDADA → APROVADA**. Fechamento: [fase-2-servicos.md](./fase-2-servicos.md). Este TD da Fase 1 permanece; não foi reescrito para inventar decisões novas de Serviços.
 
 **Princípio técnico:** não criar um “framework mobile” paralelo ao Soft Steel / Shell First. Reutilizar o que existe; abstrair só padrões reais identificados em ≥2 features.
 
@@ -336,7 +338,7 @@ Keyboard: AppShell detecta; bar reage; busca utilizável
 4. Action Popover → Clientes modo seleção.
 5. Keyboard awareness → AppShell + bottom-nav; validação Done.
 
-Agenda Hub, Serviços, demais listas: **sem** migração de padrão nesta fase.
+Agenda Hub, Serviços, demais listas: **sem** migração de padrão nesta fase (Fase 1). Serviços foi entregue depois, na Fase 2 — [fase-2-servicos.md](./fase-2-servicos.md).
 
 ---
 
@@ -476,7 +478,7 @@ Keyboard awareness ────── independente p/ desenvolver; acoplado ao D
 | F2 | Estratégia exata hide vs offset da bar no teclado | **DEFERRED** (escolha na implementação) | Critério de aceite é UX; dois caminhos técnicos válidos |
 | F3 | Focus trap completo no Filter Sheet | **DEFERRED** | v1: dialog + ESC + close; trap rígido se QA exigir |
 | F4 | Confirmação destrutiva genérica no Popover | **DEFERRED** | Feature-owned |
-| F5 | Card-stack / migração Serviços | **DEFERRED** | Fase 2+ |
+| F5 | Card-stack / migração Serviços | **DONE** (Fase 2 · 2026-10-01) | Entrega aprovada — ver [fase-2-servicos.md](./fase-2-servicos.md). ISS-01 Low/backlog não reabre F5. |
 
 ### 13.7 Critérios — Fase 1 tecnicamente pronta
 
@@ -495,15 +497,15 @@ A Fase 1 está **tecnicamente pronta** quando **todos** forem verdadeiros:
 
 ## 14. Sprint Boundary (resumo executivo)
 
-| Inclui | Não inclui |
+| Inclui | Não inclui (boundary da Fase 1) |
 |--------|------------|
-| Fundamentos compartilhados (popover, filter sheet, touch, selection helpers) | Serviços / Profissionais / Comandas / Orçamentos |
+| Fundamentos compartilhados (popover, filter sheet, touch, selection helpers) | Serviços / Profissionais / Comandas / Orçamentos *(Serviços: feito na Fase 2 — [fase-2-servicos.md](./fase-2-servicos.md))* |
 | Clientes como consumer do Popover | Migração completa de Avaliações (além do filter chrome) |
-| Clientes + Avaliações no Filter Sheet chrome | Cards de domínio novos |
-| Keyboard awareness (Done) | Redesign / card-stack das listas |
+| Clientes + Avaliações no Filter Sheet chrome | Cards de domínio novos *(card-stack de Serviços: Fase 2)* |
+| Keyboard awareness (Done) | Redesign / card-stack das demais listas |
 | | Regras de negócio novas |
 
-**Próximo passo após este documento:** Sprint Planning da Fase 1 (implementação). Este TD não autoriza código por si só além do planejamento.
+**Próximo passo histórico deste documento:** Sprint Planning da Fase 1. **Estado atual:** Fase 1 concluída com limitações; Fase 2 Serviços aprovada.
 
 ---
 

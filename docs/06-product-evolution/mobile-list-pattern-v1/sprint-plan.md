@@ -667,4 +667,6 @@ A Fase 1 está concluída quando:
 
 ## Próximo passo
 
-A Fase 1 está **CONCLUÍDA COM LIMITAÇÕES**. A onda seguinte (Serviços, Profissionais, Comandas, Orçamentos e as outras listas) continua fora deste sprint. O teclado virtual real fica como evidência pendente, sem rework do offset.
+A Fase 1 está **CONCLUÍDA COM LIMITAÇÕES**. O teclado virtual real fica como evidência pendente, sem rework do offset.
+
+**Atualização (2026-10-01):** a Fase 2 — **Services Mobile Catalog** foi concluída e **APROVADA** (fora deste sprint plan). Ver [fase-2-servicos.md](./fase-2-servicos.md). Ondas seguintes ainda abertas: Profissionais, Comandas, Orçamentos e demais listas (Fase 3+).

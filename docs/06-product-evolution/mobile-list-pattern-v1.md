@@ -1,14 +1,14 @@
 # Nexa Mobile List Pattern v1
 
-**Status:** FASE 1 CONCLUÍDA COM LIMITAÇÕES
+**Status:** FASE 1 CONCLUÍDA COM LIMITAÇÕES · FASE 2 (SERVIÇOS) APROVADA
 
 **Tipo:** especificação de produto / contrato de UX. O contrato abaixo permanece; o que muda nesta revisão é o estado real da implementação.
 
-**Implementação:** Fase 1 entregue em Clientes e Avaliações (MLP1-01 a MLP1-07). Fundações shared: touch ≥44 no `list-page-shell`, filter sheet, selection helpers, action popover e keyboard awareness no AppShell. A limitação é o teclado virtual real: o browser de validação não abre teclado, então o estado sem teclado foi medido (offset 0) e o offset positivo ficou na fórmula CSS e no spec. Não é defeito de implementação.
+**Implementação:** Fase 1 entregue em Clientes e Avaliações (MLP1-01 a MLP1-07). Fundações shared: touch ≥44 no `list-page-shell`, filter sheet, selection helpers, action popover e keyboard awareness no AppShell. Fase 2 — **Services Mobile Catalog** implementada, validada e **APROVADA** (ver [fase-2-servicos.md](./mobile-list-pattern-v1/fase-2-servicos.md)). A limitação da Fase 1 (teclado virtual real) permanece: o browser de validação não abre teclado; offset 0 medido; offset positivo na fórmula CSS e no spec. Não é defeito de implementação.
 
 **Escopo:** experiência MOBILE (≤767px / `shellMobile`) das **telas de lista** do Nexa. Desktop permanece com `list-table` + toolbar/aside, salvo menção explícita.
 
-**Referência visual de origem:** mockups da lista de Serviços (estados normal, filtros, seleção, selecionar tudo, menu Ações). O contrato extrai o **padrão** de interação e composição — não o copy nem o domínio de Serviços.
+**Referência visual de origem:** mockups da lista de Serviços (estados normal, filtros, seleção, selecionar tudo, menu Ações). O contrato extrai o **padrão** de interação e composição — não o copy nem o domínio de Serviços. Serviços passou a ter implementação própria do padrão; Clientes continua referência da Fase 1.
 
 **Relação com o Design System:** consolida e expande Soft Steel / Shell First / Contextual Mobile Bottom Navigation. **Não** substitui DESIGN.md, PRODUCT.md nem `design.json` nesta etapa.
 
@@ -30,9 +30,35 @@ O contrato das seções seguintes não foi reescrito. Este bloco registra o que 
 
 - Teclado virtual real (iOS Safari e Chrome Android) não foi exercitado. Sem `visualViewport`, o offset é 0. O sheet continua `100dvh`, sem padding de teclado.
 
-**Próximas ondas, fora da Fase 1**
+---
 
-Serviços, Profissionais, Fornecedores, Categorias, Marcas, Comandas, Orçamentos, Transações, Comissões e as demais listas.
+## Estado real — Fase 2 (Serviços)
+
+**Status da entrega:** IMPLEMENTADO → VALIDADO → APROVADO  
+**Documento de fechamento:** [fase-2-servicos.md](./mobile-list-pattern-v1/fase-2-servicos.md)  
+**QA:** [2026-10-01-servicos-mobile-catalog-qa.md](../03-development/audits/2026-10-01-servicos-mobile-catalog-qa.md) — disposition **APPROVED**
+
+**Nesta fase**
+
+- Lista mobile de Serviços usa card-stack (não tabela). Desktop preserva tabela, filtros/radios e drawer.
+- Card: nome + `Inativo` (só se `mostra_no_site === false`) + duração; segunda linha preço + categoria.
+- Busca instantânea; Mobile Filter Sheet; chips de filtros; faixa Megahair na aba correspondente.
+- Bottom nav contextual (Filtro · Selecionar · Novo); modo seleção; select-all dos filtrados em memória; Action Popover; exclusão unitária com modal mobile; sem bulk delete; paginação; drawer criar/editar.
+- Consome as fundações shared da Fase 1. Clientes permanece referência; Serviços é a primeira implementação real de domínio do padrão.
+
+**Gates**
+
+- Architecture Review: concluída após refinamento R1 (sem pendência bloqueante).
+- Design & UX: APPROVED FOR QA (limitações visuais não bloqueantes: textos longos, no-price, badge Inativo e modal desktop não exercitados).
+- QA: APPROVED — shared 13/13 PASS; build development PASS. Sem `servicos*.spec.ts` (não é defeito).
+
+**Backlog não bloqueante**
+
+- ISS-01 (Low): slot Filtro sem `warn` quando há filtro ativo (`active` só com sheet aberto). Chips cobrem a indicação. Não é requisito de fechamento do Pattern nem da entrega.
+
+**Próximas ondas (Fase 3+; Pattern ainda aberto)**
+
+Profissionais, Fornecedores, Categorias, Marcas, Comandas, Orçamentos, Transações, Comissões e as demais listas. O EPIC Mobile Foundation **não** está concluído só por causa de Serviços.
 
 ---
 
@@ -289,33 +315,31 @@ Forçar o layout de `list-table` desktop no viewport estreito.
 | Agenda Hub | Referência de menu contextual; não forçar card-stack de lista |
 | Avaliações | Médio — bar Buscar+Filtros; Filtrar sai do header |
 | Sheets de filtros (Clientes/Avaliações) | Alto valor — unificar contrato visual |
-| Serviços | Primeira implementação real do padrão |
+| Serviços | Primeira implementação real do padrão — **APROVADA** (Fase 2) |
 
 ---
 
-## 17. Implementação futura (ordem aprovada)
+## 17. Ordem de implementação (aprovada)
 
-A implementação **ainda não começou**. Quando iniciar, seguir esta ordem:
-
-### FASE 1 — Fundamentos compartilhados
+### FASE 1 — Fundamentos compartilhados — **CONCLUÍDA COM LIMITAÇÕES**
 
 1. Popover Ações compartilhado.
 2. Contrato visual compartilhado dos filtros mobile.
 3. Touch chrome do `list-page-shell` ≤767.
 4. Helpers/estado compartilhado de seleção e sincronização da Bottom Navigation.
 
-### FASE 2 — Primeira implementação real
+### FASE 2 — Primeira implementação real — **APROVADA**
 
-1. **Serviços.**
+1. **Serviços** — IMPLEMENTADO → VALIDADO → APROVADO. Detalhe: [fase-2-servicos.md](./mobile-list-pattern-v1/fase-2-servicos.md). ISS-01 Low/backlog não bloqueia.
 
-### FASE 3 — Migração progressiva
+### FASE 3 — Migração progressiva — **PENDENTE**
 
-1. Clientes — fechar gap do popover Ações.
+1. Clientes — fechar gap do popover Ações (se ainda houver dívida residual além do já entregue na Fase 1).
 2. Profissionais.
 3. Comandas.
 4. Orçamentos.
 5. Demais catálogos.
-6. Avaliações.
+6. Avaliações (além do chrome de filtros já na Fase 1).
 7. Financeiro.
 
 ---
@@ -367,7 +391,8 @@ A implementação **ainda não começou**. Quando iniciar, seguir esta ordem:
 
 ## Validação documental
 
-- Este arquivo continua sendo o **contrato** do padrão. O estado da Fase 1 está na seção Estado real.
+- Este arquivo continua sendo o **contrato** do padrão. O estado da Fase 1 e da Fase 2 (Serviços) está nas seções Estado real.
 - Terminologia oficial: **Nexa Mobile List Pattern v1**.
-- Status: **FASE 1 CONCLUÍDA COM LIMITAÇÕES** (teclado virtual real). O contrato de produto segue aprovado.
+- Status: **FASE 1 CONCLUÍDA COM LIMITAÇÕES** (teclado virtual real) · **FASE 2 (SERVIÇOS) APROVADA**. O contrato de produto segue aprovado. O Pattern como um todo permanece aberto até a Fase 3 / demais listas.
+- ISS-01 e limitações visuais de Serviços **não** são bloqueios do Pattern.
 - DESIGN.md, PRODUCT.md e `design.json` **não** foram modificados.
