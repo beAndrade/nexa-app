@@ -1363,13 +1363,18 @@ col.clientes-table__col-check {
       color: #ff4d4f;
       font-weight: 500;
       border-left-width: 1px;
+      border-left-style: solid;
+      border-left-color: #d6d6d6;
       border-bottom-right-radius: 14px;
+      box-shadow: none;
 
       &:hover:not(:disabled) {
         color: #ff4d4f;
         border-width: 1px 0 0 1px;
         border-style: solid;
         border-color: #d6d6d6;
+        border-left-color: #d6d6d6;
+        box-shadow: none;
       }
     }
   }
