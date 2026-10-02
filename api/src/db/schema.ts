@@ -124,7 +124,7 @@ export const clienteCreditoMovimentos = pgTable(
     id: serial('id').primaryKey(),
     clienteId: text('cliente_id')
       .notNull()
-      .references(() => clientes.idCliente, { onDelete: 'cascade' }),
+      .references(() => clientes.idCliente, { onDelete: 'no action' }),
     idAtendimento: text('id_atendimento'),
     dataMov: date('data_mov').notNull(),
     valor: numeric('valor', { precision: 14, scale: 2 }).notNull(),
@@ -835,7 +835,7 @@ export const avaliacaoSolicitacoes = pgTable(
       { onDelete: 'set null' },
     ),
     clienteId: text('cliente_id').references(() => clientes.idCliente, {
-      onDelete: 'set null',
+      onDelete: 'no action',
     }),
     telefone: text('telefone').notNull(),
     googleReviewUrl: text('google_review_url').notNull(),
@@ -917,7 +917,7 @@ export const whatsappLogs = pgTable(
     id: serial('id').primaryKey(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     clienteId: text('cliente_id').references(() => clientes.idCliente, {
-      onDelete: 'set null',
+      onDelete: 'no action',
     }),
     telefone: text('telefone').notNull(),
     tipo: whatsappMessageTipoEnum('tipo').notNull(),

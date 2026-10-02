@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-06 fechadas; CC-07 liberada e não iniciada  
+**Status:** Em execução — CC-01 a CC-07 fechadas documentalmente; CC-08 aguarda Commit da CC-07 e ainda não iniciada  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -23,8 +23,8 @@ O [Sprint Planning do Epic](./05-sprint-planning.md) descreve a fundação mobil
 | CC-04 | API de cadastro | ✅ Concluída |
 | CC-05 | Exclusão protegida | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-05.md) |
 | CC-06 | Job de inatividade | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-06.md) |
-| CC-07 | FKs NO ACTION | ⏳ Próxima unidade liberada — **não iniciada** |
-| CC-08 | Formulário único | 🔒 Aguardando |
+| CC-07 | FKs NO ACTION | ✅ Concluída (docs) — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-07.md); **commit pendente** |
+| CC-08 | Formulário único | ⏳ Próxima unidade — **não iniciada** (aguardar Commit CC-07) |
 | CC-09 | Lista, filtros e exclusão na UI | 🔒 Aguardando |
 | CC-10 | WhatsApp usa celular | 🔒 Aguardando |
 | CC-11 | Remover coluna telefone | 🔒 Aguardando |
@@ -533,6 +533,9 @@ Uma execução do job na base de desenvolvimento produz só `inativo_automatico`
 
 ## CC-07 — FKs NO ACTION
 
+**Estado (2026-10-02):** ✅ Documentation UPDATED — Implementation · AR APPROVED · QA APPROVED · [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-07.md).  
+**Commit:** pendente. **Próxima:** CC-08 após o Commit; ainda não iniciada. CC-09–CC-12 aguardam.
+
 ### Objective
 
 O banco passa a impedir o `DELETE` do pai que a API já promete não fazer.
@@ -564,13 +567,15 @@ CC-05 estável em produção ou na base alvo. Não inverter a ordem.
 
 ### Acceptance Criteria
 
-- [ ] `DELETE` direto do cliente com filho nessas três tabelas é recusado pelo banco.
-- [ ] A API de CC-05 continua respondendo 409 antes disso, com os filhos intactos.
-- [ ] Cliente sem relação ainda pode ser excluído pela API.
+- [x] `DELETE` direto do cliente com filho nessas três tabelas é recusado pelo banco.
+- [x] A API de CC-05 continua respondendo 409 antes disso, com os filhos intactos.
+- [x] Cliente sem relação ainda pode ser excluído pela API.
 
 ### Manual Validation
 
 Tentar `DELETE` SQL do pai com um movimento de crédito, uma solicitação de avaliação e um log de WhatsApp. Os três falham. A API no cliente sem relação ainda exclui.
+
+Validação QA (2026-10-02): `information_schema` 5/5 NO ACTION; DELETE SQL controlado (crédito, avaliação, WhatsApp, atendimentos, comandas) → `23503` com filhos intactos; cliente livre deletável; ROLLBACK limpo. Residual MINOR Low em `ensureSchemaPatches` — não bloqueia.
 
 ### Build / Test
 
@@ -583,6 +588,8 @@ Tentar `DELETE` SQL do pai com um movimento de crédito, uma solicitação de av
 ### Definition of Done
 
 As três FKs estão `NO ACTION` e a API nova já não apaga filhos.
+
+**DoD CC-07 (2026-10-02):** atendido no código/BD/docs. Commit da unidade ainda pendente.
 
 ### Suggested Commit
 

@@ -526,6 +526,13 @@
       "when": 1775800000000,
       "tag": "0073_clientes_celular_cpf_unique_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1775810000000,
+      "tag": "0074_clientes_fks_no_action",
+      "breakpoints": true
     }
   ]
 }
