@@ -1387,15 +1387,30 @@ const app = new Elysia({ adapter: node() })
   )
   .delete(
     '/api/clientes/:id',
-    async ({ params }) => {
+    async ({ params, set }) => {
       const id = String(params.id || '').trim();
-      if (!id) return fail('VALIDATION', 'id é obrigatório');
+      if (!id) {
+        set.status = 400;
+        return fail('VALIDATION', 'id é obrigatório');
+      }
       try {
-        const removed = await deleteClienteById(db, id);
-        if (!removed) return fail('NOT_FOUND', 'Cliente não encontrado');
+        const result = await deleteClienteById(db, id);
+        if (result.status === 'not_found') {
+          set.status = 404;
+          return fail('NOT_FOUND', 'Cliente não encontrado');
+        }
+        if (result.status === 'has_related') {
+          set.status = 409;
+          return fail(
+            'HAS_RELATED',
+            `Este cliente tem registros relacionados (${result.tipo}) e não pode ser excluído.`,
+            { tipo: result.tipo },
+          );
+        }
         return ok({ ok: true });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
+        set.status = 500;
         return fail('SERVER', msg);
       }
     },

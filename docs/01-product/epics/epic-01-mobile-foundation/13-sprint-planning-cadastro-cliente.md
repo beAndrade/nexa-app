@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Draft — ajustes do Architecture Review incorporados; não autoriza código por si só  
+**Status:** Em execução — CC-01 a CC-06 fechadas; CC-07 liberada e não iniciada  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -12,6 +12,25 @@
 - [Technical Design](./12-technical-design-cadastro-cliente.md)
 
 O [Sprint Planning do Epic](./05-sprint-planning.md) descreve a fundação mobile e não é o plano desta feature. Architecture Review é o passo seguinte do ciclo e não faz parte deste arquivo. QA roda depois da implementação, pelo agente `.cursor/agents/nexa-qa.md`.
+
+### Progresso de execução (atualizado 2026-10-02)
+
+| ID | Nome | Estado |
+|----|------|--------|
+| CC-01 | Auditoria somente leitura | ✅ Concluída |
+| CC-02 | Colunas, backfill e classificação | ✅ Concluída |
+| CC-03 | Índices únicos parciais | ✅ Concluída |
+| CC-04 | API de cadastro | ✅ Concluída |
+| CC-05 | Exclusão protegida | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-05.md) |
+| CC-06 | Job de inatividade | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-06.md) |
+| CC-07 | FKs NO ACTION | ⏳ Próxima unidade liberada — **não iniciada** |
+| CC-08 | Formulário único | 🔒 Aguardando |
+| CC-09 | Lista, filtros e exclusão na UI | 🔒 Aguardando |
+| CC-10 | WhatsApp usa celular | 🔒 Aguardando |
+| CC-11 | Remover coluna telefone | 🔒 Aguardando |
+| CC-12 | Testes do desenho | 🔒 Aguardando |
+
+A feature Cadastro de Cliente **não** está completa. Este quadro só registra progresso por unidade; o contrato das seções abaixo permanece o plano aprovado.
 
 ---
 
@@ -381,6 +400,10 @@ POST, PATCH e GET seguem a seção 9 na base já migrada por CC-02. Duplicidade 
 
 ## CC-05 — Exclusão protegida
 
+**Estado (2026-10-02):** ✅ Concluída — Implementation · AR (ciclo) · QA APPROVED · Documentation Updated.  
+**Fechamento:** [2026-10-02-cadastro-cliente-cc-05.md](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-05.md).  
+**Próxima:** CC-06 liberada, não iniciada. CC-07–CC-12 aguardam.
+
 ### Objective
 
 Trocar `deleteClienteById` pelo DELETE da seção 8, antes de qualquer mudança de FK.
@@ -406,14 +429,16 @@ CC-04, para o deploy da API nova acontecer antes de CC-07. A API antiga apaga fi
 
 ### Acceptance Criteria
 
-- [ ] Cliente sem as cinco relações é excluído e a resposta é 200.
-- [ ] Cada uma das cinco relações, sozinha, responde 409 e deixa o filho intacto, inclusive com pagamento pendente.
-- [ ] Não existe `DELETE` de atendimento, comanda, crédito, avaliação ou WhatsApp neste fluxo.
-- [ ] Id inexistente responde 404.
+- [x] Cliente sem as cinco relações é excluído e a resposta é 200.
+- [x] Cada uma das cinco relações, sozinha, responde 409 e deixa o filho intacto, inclusive com pagamento pendente.
+- [x] Não existe `DELETE` de atendimento, comanda, crédito, avaliação ou WhatsApp neste fluxo.
+- [x] Id inexistente responde 404.
 
 ### Manual Validation
 
 Cinco clientes de ensaio, um por relação, mais um sem relação. Conferir que as linhas filhas continuam depois do 409.
+
+Validação funcional/API desta unidade: **11/11 PASS** (ver fechamento). Concorrência DELETE × INSERT do TD não exercitada — limitação não bloqueante.
 
 ### Build / Test
 
@@ -426,6 +451,8 @@ API no ar. Testes automatizados em CC-12.
 ### Definition of Done
 
 `deleteClienteById` não apaga filhos e o 409 está no ar, com as FKs ainda como estão hoje.
+
+**DoD CC-05 (2026-10-02):** atendido. Documentação de fechamento registrada; FKs `NO ACTION` seguem em CC-07.
 
 ### Suggested Commit
 
