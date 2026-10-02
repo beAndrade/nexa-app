@@ -462,6 +462,9 @@ API no ar. Testes automatizados em CC-12.
 
 ## CC-06 — Job de inatividade
 
+**Estado (2026-10-02):** ✅ Concluída — Implementation · AR APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED · [Documentation](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-06.md).  
+**Próxima:** CC-07 liberada, não iniciada. CC-08–CC-12 aguardam.
+
 ### Objective
 
 Gravar Inativo automático só onde a seção 7 permite.
@@ -494,17 +497,19 @@ CC-02 (colunas de status e `created_at`). CC-04, para o PATCH manual continuar s
 
 ### Acceptance Criteria
 
-- [ ] Ativo com última comanda finalizada há mais de 6 meses, paga ou pendente, vira `inativo_automatico`.
-- [ ] Cobrança ainda aberta não conta, mesmo com pagamento.
-- [ ] Orçamento não conta.
-- [ ] Sem comanda, o relógio começa em `created_at`.
-- [ ] `inativo_manual` permanece depois de comanda nova.
-- [ ] `inativo_automatico` permanece depois de comanda nova; a referência reinicia e o cliente não volta a Ativo.
-- [ ] O job não executa `SET` para `ativo`.
+- [x] Ativo com última comanda finalizada há mais de 6 meses, paga ou pendente, vira `inativo_automatico`.
+- [x] Cobrança ainda aberta não conta, mesmo com pagamento.
+- [x] Orçamento não conta.
+- [x] Sem comanda, o relógio começa em `created_at`.
+- [x] `inativo_manual` permanece depois de comanda nova.
+- [x] `inativo_automatico` permanece depois de comanda nova; a referência reinicia e o cliente não volta a Ativo.
+- [x] O job não executa `SET` para `ativo`.
 
 ### Manual Validation
 
 Cinco fichas de ensaio cobrindo os casos acima, mais uma execução repetida no mesmo dia civil que não reprocessa.
+
+Validação controlada (2026-10-02): `npx tsx scripts/validate-cc06-inatividade.ts` — PASS (predicado + smoke SQL com ROLLBACK). Startup/restart ao vivo da API não observado nesta rodada — limitação não bloqueante.
 
 ### Build / Test
 
@@ -517,6 +522,8 @@ API sobe e o job roda uma vez. Suíte em CC-12.
 ### Definition of Done
 
 Uma execução do job na base de desenvolvimento produz só `inativo_automatico` a partir de `status_modo = ativo`, e uma segunda execução no mesmo dia não repete o write.
+
+**DoD CC-06 (2026-10-02):** atendido. Documentação de fechamento registrada; FKs `NO ACTION` seguem em CC-07.
 
 ### Suggested Commit
 

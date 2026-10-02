@@ -77,3 +77,4 @@ Salon owners and professionals live on WhatsApp and the phone floor. If agenda, 
 - [Design System ROADMAP](../../../src/app/design-system/documentation/ROADMAP.md)
 - [PDR-001 — Smart Booking Philosophy](../../01-product/pdr/PDR-001-smart-booking-philosophy.md)
 - [Mobile List Pattern v1](../mobile-list-pattern-v1.md) — Fase 1 concluída com limitações; **Fase 2 Serviços aprovada** ([fechamento](../mobile-list-pattern-v1/fase-2-servicos.md)). O EPIC permanece aberto.
+- [Cadastro de Cliente](../../01-product/epics/epic-01-mobile-foundation/10-cadastro-cliente.md) — em andamento: **CC-01–CC-06 ✅**; CC-07 ⏳ liberada (não iniciada); CC-08–CC-12 🔒. Fechamento CC-06: [2026-10-02-cadastro-cliente-cc-06.md](../../03-development/audits/2026-10-02-cadastro-cliente-cc-06.md). Feature e EPIC **permanecem abertos**.

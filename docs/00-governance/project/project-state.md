@@ -585,3 +585,27 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 
 ---
 
+# Current Work — Cadastro de Cliente (2026-10-02)
+
+**Feature:** Cadastro de Cliente (EPIC-01 — Mobile Foundation)  
+**Estado da feature:** em andamento — **não** completa.
+
+| Unidade | Estado |
+|---------|--------|
+| CC-01 Relatório somente leitura | ✅ |
+| CC-02 Colunas, backfill, classificação | ✅ |
+| CC-03 Índices únicos parciais | ✅ |
+| CC-04 API de cadastro (GET/POST/PATCH) | ✅ |
+| CC-05 DELETE protegido | ✅ |
+| CC-06 Job de inatividade | ✅ — DOCUMENTATION UPDATED |
+| CC-07 FKs NO ACTION | ⏳ próxima unidade liberada — **não iniciada** |
+| CC-08–CC-12 | 🔒 aguardando |
+
+**Fechamento CC-05:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-05.md`  
+**Fechamento CC-06:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-06.md`  
+**Gates CC-06:** Implementation concluída · Architecture Review APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED · Documentation atualizada · sem achados / rework / bloqueio.
+
+Contrato canônico (inalterado neste passo): Product Definition, UX Flow, Technical Design e Sprint Planning em `docs/01-product/epics/epic-01-mobile-foundation/10–13-*-cadastro-cliente.md`.
+
+---
+

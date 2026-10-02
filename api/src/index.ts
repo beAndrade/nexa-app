@@ -100,6 +100,7 @@ import {
   duplicateErrorFromPg23505,
   inspectPgUniqueViolation,
 } from './services/clientes-unicidade';
+import { iniciarJobInatividadeClientes } from './services/clientes-inatividade.service';
 import {
   createServico,
   deleteServico,
@@ -4122,5 +4123,11 @@ function rodarBaixaAutomaticaCartao(): void {
 }
 rodarBaixaAutomaticaCartao();
 setInterval(rodarBaixaAutomaticaCartao, BAIXA_CARTAO_INTERVALO_MS).unref();
+
+/**
+ * Inatividade automática de clientes (CC-06 / TD §7):
+ * na subida e no máximo uma vez por dia civil America/Sao_Paulo.
+ */
+iniciarJobInatividadeClientes(db);
 
 export type App = typeof app;
