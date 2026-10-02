@@ -61,7 +61,7 @@ export class ClienteOrcamentosTabComponent {
 
   enviarWhatsapp(row: ClienteOrcamentoHistoricoLinha): void {
     const tel =
-      this.d.cadastroCelular.trim() || this.d.cadastroTelefone.trim();
+      this.d.cadastroCelular.trim() || this.d.cadastroTelefoneFixo.trim();
     if (!telefoneBrDigitos(tel)) {
       this.toast.show('Cliente sem telefone para WhatsApp.');
       return;

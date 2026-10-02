@@ -85,7 +85,7 @@
       <button
         type="button"
         class="cliente-footer-btn cliente-footer-btn--ghost"
-        [disabled]="d.salvando"
+        [disabled]="d.salvando || d.carregandoFormulario"
         (click)="onFechar()"
       >
         Cancelar
@@ -93,7 +93,7 @@
       <button
         type="button"
         class="cliente-footer-btn cliente-footer-btn--primary"
-        [disabled]="d.salvando"
+        [disabled]="d.salvando || d.carregandoFormulario"
         (click)="d.salvar()"
       >
         {{ d.salvando ? 'Salvando…' : 'Salvar' }}

@@ -1,39 +1,30 @@
 <div class="toolbar">
-  <h1>Editar cliente</h1>
-  <a routerLink="/clientes" class="link-back">← Voltar à lista</a>
+  <div class="toolbar__head">
+    <a
+      routerLink="/clientes"
+      class="btn-back-hero"
+      aria-label="Voltar à lista"
+      title="Voltar à lista"
+      (click)="onVoltar($event)"
+    >
+      <svg
+        class="btn-back-hero__svg"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+      </svg>
+    </a>
+    <h1>Editar cliente</h1>
+  </div>
 </div>
 
-@if (carregando) {
-  <p class="hint">Carregando dados do cliente…</p>
-}
-
-@if (erro && !carregando) {
-  <p class="alert" role="alert">{{ erro }}</p>
-}
-
-@if (!carregando && !erro) {
-  <p class="hint">ID: <code>{{ clienteId }}</code></p>
-
-  <form [formGroup]="form" (ngSubmit)="salvar()" class="form">
-    <label>
-      <span>Nome exibido</span>
-      <input type="text" formControlName="nome" required autocomplete="name" />
-    </label>
-
-    <label>
-      <span>Telefone</span>
-      <input
-        type="tel"
-        formControlName="telefone"
-        autocomplete="tel"
-        appTelefoneBrMask
-        placeholder="(00) 00000-0000"
-        maxlength="15"
-      />
-    </label>
-
-    <button type="submit" class="btn primary" [disabled]="salvando">
-      {{ salvando ? 'Salvando…' : 'Salvar alterações' }}
-    </button>
-  </form>
-}
+<div class="clientes-pagina-form">
+  <app-cliente-cadastro-form [mostrarRodape]="true" />
+</div>

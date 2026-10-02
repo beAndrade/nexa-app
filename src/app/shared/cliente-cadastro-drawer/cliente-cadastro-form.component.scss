@@ -104,3 +104,51 @@
     pointer-events: none;
   }
 }
+
+.cliente-cadastro-form__loading {
+  padding: 24px 16px;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 14px;
+}
+
+.cliente-cadastro-form__save-erro {
+  margin: 8px 16px 0;
+  color: #ff4d4f;
+  font-size: 14px;
+}
+
+.cliente-field__ver-cliente {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #3f769d;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  text-align: left;
+
+  &:hover {
+    color: #2f5e7e;
+    text-decoration: underline;
+  }
+}
+
+.cliente-status-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+
+  &__value {
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.75);
+  }
+}
+
+.cliente-drawer-footer .cliente-footer-btn {
+  min-height: 44px;
+  min-width: 44px;
+}

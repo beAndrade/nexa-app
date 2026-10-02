@@ -1,92 +1,46 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import {
-  FormBuilder,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { SheetsApiService } from '../../../../core/services/sheets-api.service';
-import { TelefoneBrMaskDirective } from '../../../../core/directives/telefone-br-mask.directive';
-import { formatarTelefoneBrDeValor } from '../../../../core/utils/telefone-br';
-import {
-  CLIENTE_SALVO_TOAST_MSG,
-} from '../../../../shared/cliente-cadastro-drawer/cliente-cadastro-drawer.service';
-import { AppToastService } from '../../../../shared/app-toast/app-toast.service';
+import { Observable } from 'rxjs';
+import { ClienteCadastroDrawerService } from '../../../../shared/cliente-cadastro-drawer/cliente-cadastro-drawer.service';
+import { ClienteCadastroFormComponent } from '../../../../shared/cliente-cadastro-drawer/cliente-cadastro-form.component';
 
 @Component({
   selector: 'app-clientes-editar',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, TelefoneBrMaskDirective],
+  imports: [RouterLink, ClienteCadastroFormComponent],
   templateUrl: './clientes-editar.component.html',
   styleUrl: '../novo/clientes-novo.component.scss',
 })
-export class ClientesEditarComponent implements OnInit {
-  private readonly api = inject(SheetsApiService);
-  private readonly fb = inject(FormBuilder);
-  private readonly route = inject(ActivatedRoute);
+export class ClientesEditarComponent implements OnInit, OnDestroy {
+  private readonly apiRoute = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly toast = inject(AppToastService);
-
-  clienteId = '';
-  carregando = true;
-  salvando = false;
-  erro = '';
-
-  readonly form = this.fb.nonNullable.group({
-    nome: ['', Validators.required],
-    telefone: [''],
-  });
+  readonly d = inject(ClienteCadastroDrawerService);
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id')?.trim() ?? '';
+    const id = this.apiRoute.snapshot.paramMap.get('id')?.trim() ?? '';
     if (!id) {
       void this.router.navigate(['/clientes']);
       return;
     }
-    this.clienteId = id;
-    this.api.getCliente(id).subscribe({
-      next: (c) => {
-        this.form.patchValue({
-          nome: c.nome,
-          telefone: formatarTelefoneBrDeValor(c.telefone ?? c.celular),
-        });
-        this.carregando = false;
-      },
-      error: (e: Error) => {
-        this.erro =
-          e.message ||
-          'Não foi possível carregar o cliente. Verifique o ID ou a planilha.';
-        this.carregando = false;
-      },
+    this.d.iniciarPaginaEdicao(id, () => {
+      void this.router.navigate(['/clientes']);
     });
   }
 
-  salvar(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
+  ngOnDestroy(): void {
+    if (this.d.exibicao === 'pagina') {
+      this.d.encerrarPagina();
     }
-    const v = this.form.getRawValue();
-    this.salvando = true;
-    this.erro = '';
-    this.api
-      .updateCliente({
-        cliente_id: this.clienteId,
-        nome: v.nome,
-        telefone: v.telefone || undefined,
-      })
-      .subscribe({
-        next: () => {
-          this.salvando = false;
-          this.toast.show(CLIENTE_SALVO_TOAST_MSG);
-          void this.router.navigate(['/clientes']);
-        },
-        error: (e: Error) => {
-          this.erro =
-            e.message ||
-            'Não foi possível salvar. Verifique a internet e tente de novo.';
-          this.salvando = false;
-        },
-      });
+  }
+
+  onVoltar(ev: Event): void {
+    ev.preventDefault();
+    this.d.pedirFechar(() => {
+      void this.router.navigate(['/clientes']);
+    });
+  }
+
+  canDeactivate(): Observable<boolean> | boolean {
+    return this.d.canDeactivatePagina();
   }
 }

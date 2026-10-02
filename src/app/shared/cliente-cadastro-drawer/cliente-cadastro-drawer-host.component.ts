@@ -175,9 +175,16 @@ export class ClienteCadastroDrawerHostComponent implements OnInit, OnDestroy {
       return;
     }
     if (!this.d.aberto) return;
+    if (this.d.salvando) return;
+    if (this.d.saidaDirtyConfirmAberta) {
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      this.d.continuarEditandoSaida();
+      return;
+    }
     ev.preventDefault();
     ev.stopImmediatePropagation();
-    this.d.fechar();
+    this.d.pedirFechar();
   }
 
   @HostListener('document:click', ['$event'])

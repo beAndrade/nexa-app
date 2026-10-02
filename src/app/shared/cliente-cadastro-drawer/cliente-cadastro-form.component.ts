@@ -1,7 +1,6 @@
 import {
   Component,
   EventEmitter,
-  HostListener,
   Input,
   Output,
   ViewEncapsulation,
@@ -29,20 +28,18 @@ export class ClienteCadastroFormComponent {
   /** Voltar ao Painel quando embutido no drawer de perfil. */
   @Output() voltar = new EventEmitter<void>();
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(ev: MouseEvent): void {
-    const t = ev.target as HTMLElement | null;
-    if (this.d.descontoDropdownAberto && !t?.closest?.('.cliente-discount')) {
-      this.d.descontoDropdownAberto = false;
-    }
-  }
-
   onCancelar(): void {
     if (this.d.exibicao === 'embutido') {
-      this.d.desanexarEmbutido();
-      this.voltar.emit();
+      this.d.pedirFechar(() => {
+        this.d.desanexarEmbutido();
+        this.voltar.emit();
+      });
       return;
     }
-    this.d.fechar();
+    if (this.d.exibicao === 'pagina') {
+      this.d.pedirFechar(() => this.d.cancelarPagina());
+      return;
+    }
+    this.d.pedirFechar();
   }
 }

@@ -254,7 +254,7 @@ export class ClienteDebitosTabComponent {
 
   enviarWhatsappDebito(row: ClienteDebitoLinhaUi): void {
     const cel = telefoneBrDigitos(this.d.cadastroCelular);
-    const fixo = telefoneBrDigitos(this.d.cadastroTelefone);
+    const fixo = telefoneBrDigitos(this.d.cadastroTelefoneFixo);
     const digitos = cel.length >= 10 ? cel : fixo;
     if (digitos.length < 10) {
       this.toast.show('Cliente sem telefone válido para WhatsApp.');

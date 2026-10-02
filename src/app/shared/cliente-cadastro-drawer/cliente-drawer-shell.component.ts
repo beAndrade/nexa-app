@@ -41,9 +41,9 @@ export class ClienteDrawerShellComponent {
 
   onFechar(): void {
     if (this.empilhada()) {
-      this.fecharPainel.emit();
+      this.d.pedirFechar(() => this.fecharPainel.emit());
       return;
     }
-    this.d.fechar();
+    this.d.pedirFechar();
   }
 }

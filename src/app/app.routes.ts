@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { clienteCadastroCanDeactivateGuard } from './features/clientes/guards/cliente-cadastro-can-deactivate.guard';
 
 /** /pacotes → Serviços aba Megahair. */
 const redirectPacotesToMegahair: CanActivateFn = () =>
@@ -123,6 +124,7 @@ export const routes: Routes = [
         (m) => m.ClientesNovoComponent,
       ),
     canActivate: [authGuard],
+    canDeactivate: [clienteCadastroCanDeactivateGuard],
     title: 'Novo Cliente',
   },
   {
@@ -132,6 +134,7 @@ export const routes: Routes = [
         (m) => m.ClientesEditarComponent,
       ),
     canActivate: [authGuard],
+    canDeactivate: [clienteCadastroCanDeactivateGuard],
     title: 'Editar Cliente',
   },
   {

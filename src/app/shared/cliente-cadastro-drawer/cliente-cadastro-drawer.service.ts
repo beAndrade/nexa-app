@@ -1,5 +1,14 @@
 import { ApplicationRef, Injectable, inject } from '@angular/core';
-import { Subscription, catchError, finalize, forkJoin, of, take } from 'rxjs';
+import { Router } from '@angular/router';
+import {
+  Observable,
+  Subscription,
+  catchError,
+  finalize,
+  forkJoin,
+  of,
+  take,
+} from 'rxjs';
 import { SheetsApiService } from '../../core/services/sheets-api.service';
 import {
   Cliente,
@@ -20,7 +29,7 @@ import {
   formatarTelefoneFixoBr,
   telefoneBrDigitos,
 } from '../../core/utils/telefone-br';
-import { extractApiErrorMessage } from '../../core/utils/api-error-message';
+import { extractApiErrorDetails } from '../../core/utils/api-error-message';
 import {
   agruparAtendimentosEmComandas,
   type ClienteComandaAbertaLinhaUi,
@@ -67,7 +76,8 @@ import {
   type DrawerOpenAnimHandle,
 } from '../drawer-panel-anim';
 
-export const CLIENTE_SALVO_TOAST_MSG = 'Cliente salvo com sucesso!';
+export const CLIENTE_SALVO_TOAST_MSG = 'Cliente salvo.';
+export const CLIENTE_ALTERADO_TOAST_MSG = 'Alterações salvas.';
 
 /** Reexport — fonte: `drawer-panel-anim.ts`. */
 export { DRAWER_ANIM_MS } from '../drawer-panel-anim';
@@ -106,14 +116,38 @@ export interface ClienteCashbackMovimento {
 export type CadastroClienteTouchKey =
   | 'nome'
   | 'celular'
-  | 'telefone'
+  | 'telefoneFixo'
   | 'email'
   | 'aniversario'
   | 'cnpj'
   | 'cpf'
   | 'rg';
 
-export type ClienteCadastroExibicao = 'drawer' | 'embutido';
+export type ClienteCadastroExibicao = 'drawer' | 'embutido' | 'pagina';
+
+type CadastroFormSnapshot = {
+  nome: string;
+  apelido: string;
+  celular: string;
+  telefoneFixo: string;
+  email: string;
+  aniversario: string;
+  cnpj: string;
+  cpf: string;
+  rg: string;
+  fotoUrl: string;
+  fotoRemovida: boolean;
+  cep: string;
+  logradouro: string;
+  enderecoNumero: string;
+  complemento: string;
+  bairro: string;
+  estado: string;
+  cidade: string;
+  instagram: string;
+  facebook: string;
+  statusOperacional: 'ativo' | 'inativo';
+};
 
 export interface ClienteCadastroDrawerCallbacks {
   onSalvo?: (c: Cliente) => void;
@@ -135,6 +169,7 @@ export class ClienteCadastroDrawerService {
   private readonly api = inject(SheetsApiService);
   private readonly appRef = inject(ApplicationRef);
   private readonly toast = inject(AppToastService);
+  private readonly router = inject(Router);
 
   aberto = false;
   panelOpen = false;
@@ -151,7 +186,8 @@ export class ClienteCadastroDrawerService {
   cadastroNome = '';
   cadastroApelido = '';
   cadastroCelular = '';
-  cadastroTelefone = '';
+  /** Telefone fixo (nunca a coluna legada `telefone`). */
+  cadastroTelefoneFixo = '';
   cadastroEmail = '';
   cadastroAniversario = '';
   cadastroCnpj = '';
@@ -167,12 +203,17 @@ export class ClienteCadastroDrawerService {
   cadastroCidade = '';
   cadastroInstagram = '';
   cadastroFacebook = '';
+  /** Status operacional editável só na edição; criação fica Ativo. */
+  cadastroStatusOperacional: 'ativo' | 'inativo' = 'ativo';
   secaoEnderecoAberta = false;
   secaoRedesAberta = false;
-  secaoConfiguracoesAberta = true;
+  secaoStatusAberta = true;
   descontoDropdownAberto = false;
+  /** @deprecated Fora do formulário de cadastro (CC-08); mantido para abas legadas. */
   descontoPadraoModo = 'Na comanda';
+  /** @deprecated Fora do formulário de cadastro (CC-08). */
   descontoPadraoTexto = '';
+  /** @deprecated Fora do formulário de cadastro (CC-08). */
   notificacoesAtivo = true;
 
   clienteId: string | null = null;
@@ -247,12 +288,17 @@ export class ClienteCadastroDrawerService {
   saveErro = '';
   salvando = false;
   notificacoesToggleLiqArmed = false;
+  /** Confirmação de saída com formulário dirty. */
+  saidaDirtyConfirmAberta = false;
+  /** Cliente conflitante do último 409 DUPLICATE (para «Ver cliente»). */
+  duplicadoClienteId: string | null = null;
+  duplicadoClienteNome = '';
 
   cadastroSubmetido = false;
   private cadastroTouch: Record<CadastroClienteTouchKey, boolean> = {
     nome: false,
     celular: false,
-    telefone: false,
+    telefoneFixo: false,
     email: false,
     aniversario: false,
     cnpj: false,
@@ -268,10 +314,13 @@ export class ClienteCadastroDrawerService {
   private pageScrollLockAtivo = false;
   private saveSub: Subscription | null = null;
   private clientesIndiceUnicidade: Cliente[] | null = null;
-  private duplicadoCampo: ClienteDuplicadoCampo | null = null;
+  duplicadoCampo: ClienteDuplicadoCampo | null = null;
   /** Foto ao carregar o formulário; usado para persistir remoção no PATCH. */
   private cadastroFotoUrlInicial = '';
   private cadastroFotoRemovida = false;
+  private formSnapshot: CadastroFormSnapshot | null = null;
+  private saidaDirtyResolver: ((descartar: boolean) => void) | null = null;
+  private paginaCancelarHandler: (() => void) | null = null;
 
   private static readonly FOTO_URL_MAX_CHARS = 520_000;
 
@@ -296,7 +345,9 @@ export class ClienteCadastroDrawerService {
     this.modo = 'novo';
     this.clienteId = null;
     this.drawerNome = 'Novo cliente';
+    this.carregandoFormulario = false;
     this.preencherFormularioVazio(nomeInicial);
+    this.capturarSnapshot();
     this.abaAtiva = 'Cadastro';
     this.abrirPainel();
     this.prefetchClientesParaUnicidade();
@@ -317,11 +368,100 @@ export class ClienteCadastroDrawerService {
     this.notificacoesToggleLiqArmed = false;
     this.modo = 'perfil';
     this.clienteId = cid;
+    this.carregandoFormulario = true;
     this.preencherFormularioVazio(options?.nomeLista ?? '');
     this.abaAtiva = this.resolverAbaInicial(options?.abaInicial);
     this.abrirPainel();
     this.carregarCliente(cid);
     this.prefetchClientesParaUnicidade();
+  }
+
+  /**
+   * Hospeda o mesmo formulário em `/clientes/novo` (sem drawer).
+   */
+  iniciarPaginaNovo(onCancelar: () => void): void {
+    this.exibicao = 'pagina';
+    this.embutidoAtivo = false;
+    this.paginaCancelarHandler = onCancelar;
+    this.callbacks = {
+      onSalvo: () => onCancelar(),
+    };
+    this.saveErro = '';
+    this.salvando = false;
+    this.modo = 'novo';
+    this.clienteId = null;
+    this.drawerNome = 'Novo cliente';
+    this.carregandoFormulario = false;
+    this.aberto = false;
+    this.panelOpen = false;
+    this.preencherFormularioVazio('');
+    this.capturarSnapshot();
+    this.abaAtiva = 'Cadastro';
+    this.prefetchClientesParaUnicidade();
+  }
+
+  /**
+   * Hospeda o mesmo formulário em `/clientes/:id/editar` (sem drawer).
+   */
+  iniciarPaginaEdicao(clienteId: string, onCancelar: () => void): void {
+    const cid = clienteId.trim();
+    if (!cid) {
+      onCancelar();
+      return;
+    }
+    this.exibicao = 'pagina';
+    this.embutidoAtivo = false;
+    this.paginaCancelarHandler = onCancelar;
+    this.callbacks = {
+      onSalvo: () => onCancelar(),
+    };
+    this.saveErro = '';
+    this.salvando = false;
+    this.modo = 'perfil';
+    this.clienteId = cid;
+    this.carregandoFormulario = true;
+    this.aberto = false;
+    this.panelOpen = false;
+    this.preencherFormularioVazio('');
+    this.abaAtiva = 'Cadastro';
+    this.carregarCliente(cid);
+    this.prefetchClientesParaUnicidade();
+  }
+
+  cancelarPagina(): void {
+    const h = this.paginaCancelarHandler;
+    this.encerrarPagina();
+    h?.();
+  }
+
+  encerrarPagina(): void {
+    if (this.exibicao !== 'pagina') return;
+    this.saveSub?.unsubscribe();
+    this.saveSub = null;
+    this.paginaCancelarHandler = null;
+    this.callbacks = null;
+    this.exibicao = 'drawer';
+    this.clienteId = null;
+    this.saveErro = '';
+    this.salvando = false;
+    this.carregandoFormulario = false;
+    this.duplicadoCampo = null;
+    this.duplicadoClienteId = null;
+    this.duplicadoClienteNome = '';
+    this.formSnapshot = null;
+    this.resetValidacao();
+  }
+
+  /** Guarda de rota: confirma se dirty. */
+  canDeactivatePagina(): Observable<boolean> {
+    if (this.salvando) return of(false);
+    if (!this.isDirty()) return of(true);
+    return new Observable<boolean>((sub) => {
+      this.abrirConfirmacaoSaidaDirty((descartar) => {
+        sub.next(descartar);
+        sub.complete();
+      });
+    });
   }
 
   /**
@@ -493,13 +633,69 @@ export class ClienteCadastroDrawerService {
     this.saveErro = '';
     this.salvando = false;
     this.duplicadoCampo = null;
+    this.duplicadoClienteId = null;
+    this.duplicadoClienteNome = '';
+    this.formSnapshot = null;
     this.resetValidacao();
     this.callbacks = null;
+  }
+
+  /** Fecha com confirmação se dirty; durante salvamento não fecha. */
+  pedirFechar(aposConfirmado?: () => void): void {
+    if (this.salvando) return;
+    const agir = () => {
+      if (aposConfirmado) {
+        aposConfirmado();
+        return;
+      }
+      this.fechar();
+    };
+    if (!this.isDirty()) {
+      agir();
+      return;
+    }
+    this.abrirConfirmacaoSaidaDirty((descartar) => {
+      if (descartar) agir();
+    });
+  }
+
+  continuarEditandoSaida(): void {
+    const r = this.saidaDirtyResolver;
+    this.saidaDirtyConfirmAberta = false;
+    this.saidaDirtyResolver = null;
+    r?.(false);
+    this.appRef.tick();
+  }
+
+  confirmarDescartarSaida(): void {
+    const r = this.saidaDirtyResolver;
+    this.saidaDirtyConfirmAberta = false;
+    this.saidaDirtyResolver = null;
+    r?.(true);
+    this.appRef.tick();
+  }
+
+  private abrirConfirmacaoSaidaDirty(
+    resolver: (descartar: boolean) => void,
+  ): void {
+    this.saidaDirtyResolver = resolver;
+    this.saidaDirtyConfirmAberta = true;
+    this.appRef.tick();
+  }
+
+  isDirty(): boolean {
+    if (!this.formSnapshot) return false;
+    const cur = this.capturarEstadoAtual();
+    return JSON.stringify(cur) !== JSON.stringify(this.formSnapshot);
   }
 
   fechar(): void {
     if (this.embutidoAtivo) {
       this.desanexarEmbutido();
+      return;
+    }
+    if (this.exibicao === 'pagina') {
+      this.cancelarPagina();
       return;
     }
     if (!this.aberto) return;
@@ -511,6 +707,8 @@ export class ClienteCadastroDrawerService {
     this.ocultarClienteNavLockTooltip();
     this.openAnim?.cancel();
     this.openAnim = null;
+    this.saidaDirtyConfirmAberta = false;
+    this.saidaDirtyResolver = null;
     beginDrawerCloseAnimation({
       setPanelOpen: (open) => {
         this.panelOpen = open;
@@ -1008,45 +1206,61 @@ export class ClienteCadastroDrawerService {
   erroCampo(campo: CadastroClienteTouchKey): string | null {
     if (!this.cadastroTouch[campo] && !this.cadastroSubmetido) return null;
     if (this.duplicadoCampo === campo) {
-      return this.saveErro || 'Valor já cadastrado para outro cliente';
+      return (
+        this.saveErro ||
+        (campo === 'cpf'
+          ? 'CPF já cadastrado para outro cliente.'
+          : 'Celular já cadastrado para outro cliente.')
+      );
     }
     switch (campo) {
       case 'nome':
-        return this.cadastroNome.trim() ? null : 'Campo obrigatório';
+        return this.cadastroNome.trim() ? null : 'Informe o nome.';
       case 'celular': {
         const d = telefoneBrDigitos(this.cadastroCelular);
-        if (d.length === 0) return null;
-        return d.length === 11 ? null : 'Celular deve ter 11 dígitos';
+        if (d.length === 0) return 'Informe o celular.';
+        if (d.length !== 11 || d[2] !== '9') {
+          return 'Informe um celular válido.';
+        }
+        return null;
       }
-      case 'telefone': {
-        const d = telefoneBrDigitos(this.cadastroTelefone);
+      case 'telefoneFixo': {
+        const d = telefoneBrDigitos(this.cadastroTelefoneFixo);
         if (d.length === 0) return null;
-        return d.length === 10 ? null : 'Telefone deve ter 10 dígitos';
+        if (d.length !== 10 && d.length !== 11) {
+          return 'Informe um telefone fixo válido.';
+        }
+        return null;
       }
-      case 'email':
-        return emailBrValido(this.cadastroEmail) ? null : 'E-mail inválido';
+      case 'email': {
+        const t = this.cadastroEmail.trim();
+        if (!t) return null;
+        return emailBrValido(this.cadastroEmail) ? null : 'Informe um e-mail válido.';
+      }
       case 'aniversario': {
         const d = ClienteCadastroDrawerService.apenasDigitos(
           this.cadastroAniversario,
         );
         if (d.length === 0) return null;
-        if (d.length !== 8 || !dataDdMmYyyyValida(d)) return 'Data inválida';
+        if (d.length !== 8 || !dataDdMmYyyyValida(d)) {
+          return 'Informe uma data válida.';
+        }
         return null;
       }
       case 'cnpj': {
         const d = ClienteCadastroDrawerService.apenasDigitos(this.cadastroCnpj);
         if (d.length === 0) return null;
-        return d.length === 14 ? null : 'CNPJ inválido';
+        return d.length === 14 ? null : 'o valor não é válido';
       }
       case 'cpf': {
         const d = ClienteCadastroDrawerService.apenasDigitos(this.cadastroCpf);
         if (d.length === 0) return null;
-        return d.length === 11 ? null : 'CPF inválido';
+        return d.length === 11 ? null : 'Informe um CPF válido.';
       }
       case 'rg': {
         const d = ClienteCadastroDrawerService.apenasDigitos(this.cadastroRg);
         if (d.length === 0) return null;
-        return d.length === 9 ? null : 'RG inválido';
+        return d.length === 9 ? null : 'o valor não é válido';
       }
       default:
         return null;
@@ -1081,11 +1295,23 @@ export class ClienteCadastroDrawerService {
 
   onNomeChange(value: string): void {
     this.cadastroNome = value;
-    this.limparErroDuplicado('nome');
   }
 
-  onTelefoneChange(value: string): void {
-    this.cadastroTelefone = formatarTelefoneFixoBr(value);
+  onTelefoneFixoChange(value: string): void {
+    this.cadastroTelefoneFixo = formatarTelefoneFixoBr(value);
+  }
+
+  toggleStatusOperacional(ev: Event): void {
+    if (this.modo === 'novo') return;
+    this.pulseToggleVisual(ev);
+    this.cadastroStatusOperacional =
+      this.cadastroStatusOperacional === 'ativo' ? 'inativo' : 'ativo';
+  }
+
+  onStatusToggleKeydown(ev: KeyboardEvent): void {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    ev.preventDefault();
+    this.toggleStatusOperacional(ev);
   }
 
   toggleDescontoDropdown(ev: Event): void {
@@ -1143,15 +1369,17 @@ export class ClienteCadastroDrawerService {
   }
 
   salvar(): void {
-    if (this.salvando) return;
+    if (this.salvando || this.carregandoFormulario) return;
 
     this.saveErro = '';
     this.duplicadoCampo = null;
+    this.duplicadoClienteId = null;
+    this.duplicadoClienteNome = '';
     this.cadastroSubmetido = true;
     const campos: CadastroClienteTouchKey[] = [
       'nome',
       'celular',
-      'telefone',
+      'telefoneFixo',
       'email',
       'aniversario',
       'cnpj',
@@ -1160,12 +1388,13 @@ export class ClienteCadastroDrawerService {
     ];
     if (campos.some((k) => this.erroCampo(k) != null)) {
       this.saveErro = 'Corrija os campos destacados antes de salvar.';
+      this.focarPrimeiroCampoInvalido();
       return;
     }
 
     const nome = this.cadastroNome.trim();
-    const telefone = this.telefonePrioritarioParaApi().trim();
-    const cadastro = this.montarPayload(nome, telefone);
+    const celular = this.cadastroCelular.trim();
+    const cadastro = this.montarPayload(nome, celular);
     if (!cadastro) return;
 
     const dupLocal = this.clientesIndiceUnicidade
@@ -1179,6 +1408,7 @@ export class ClienteCadastroDrawerService {
       this.duplicadoCampo = dupLocal.campo;
       this.saveErro = dupLocal.message;
       this.cadastroTouch[dupLocal.campo] = true;
+      this.focarPrimeiroCampoInvalido();
       return;
     }
 
@@ -1186,8 +1416,10 @@ export class ClienteCadastroDrawerService {
     this.saveSub?.unsubscribe();
 
     const embutido = this.exibicao === 'embutido';
+    const pagina = this.exibicao === 'pagina';
     const callbacksSalvar = this.callbacks;
     const limpouFoto = this.cadastroFotoRemovida;
+    const eraCriacao = !this.clienteId;
 
     const finalizeFn = (): void => {
       this.salvando = false;
@@ -1222,7 +1454,7 @@ export class ClienteCadastroDrawerService {
             notificarSalvoEmbutido({
               id: cid,
               nome: this.cadastroNome.trim() || 'Cliente',
-              telefone: this.telefonePrioritarioParaApi() || null,
+              celular: this.cadastroCelular.trim() || null,
               fotoUrl: limpouFoto ? null : undefined,
             });
           },
@@ -1230,9 +1462,15 @@ export class ClienteCadastroDrawerService {
     };
 
     const onOk = (salvo?: Cliente): void => {
-      this.exibirToastClienteSalvoComSucesso();
+      this.exibirToastClienteSalvoComSucesso(eraCriacao);
+      this.capturarSnapshot();
       if (embutido) {
         concluirSalvoEmbutido(salvo);
+        return;
+      }
+      if (pagina) {
+        if (salvo) callbacksSalvar?.onSalvo?.(salvo);
+        else this.cancelarPagina();
         return;
       }
       if (salvo) {
@@ -1247,15 +1485,30 @@ export class ClienteCadastroDrawerService {
     };
 
     const onErr = (e: unknown): void => {
-      const msg = extractApiErrorMessage(
+      const details = extractApiErrorDetails(
         e,
-        'Não foi possível salvar o cliente. Tente novamente.',
+        'Não foi possível salvar. Tente de novo.',
       );
-      this.saveErro = msg;
-      this.duplicadoCampo = this.mapearDuplicadoCampo(msg);
-      if (this.duplicadoCampo) {
-        this.cadastroTouch[this.duplicadoCampo] = true;
+      this.saveErro = details.message;
+      const field = (details.field ?? '').trim().toLowerCase();
+      if (field === 'cpf' || field === 'celular') {
+        this.duplicadoCampo = field;
+        this.cadastroTouch[field] = true;
+      } else {
+        this.duplicadoCampo = this.mapearDuplicadoCampo(details.message);
+        if (this.duplicadoCampo) {
+          this.cadastroTouch[this.duplicadoCampo] = true;
+        }
       }
+      const ref = details.cliente;
+      if (ref?.id_cliente?.trim()) {
+        this.duplicadoClienteId = ref.id_cliente.trim();
+        this.duplicadoClienteNome = (ref.nome_exibido ?? '').trim();
+      } else {
+        this.duplicadoClienteId = null;
+        this.duplicadoClienteNome = '';
+      }
+      this.focarPrimeiroCampoInvalido();
       this.appRef.tick();
     };
 
@@ -1271,8 +1524,34 @@ export class ClienteCadastroDrawerService {
       .subscribe({ next: (salvo) => onOk(salvo), error: onErr });
   }
 
-  private exibirToastClienteSalvoComSucesso(): void {
-    this.toast.show(CLIENTE_SALVO_TOAST_MSG);
+  verClienteDuplicado(): void {
+    const id = (this.duplicadoClienteId ?? '').trim();
+    if (!id) return;
+    this.pedirFechar(() => {
+      if (this.exibicao === 'pagina') {
+        this.encerrarPagina();
+        void this.router.navigate(['/clientes', id, 'editar']);
+        return;
+      }
+      this.abrirEdicao(id, {
+        nomeLista: this.duplicadoClienteNome || undefined,
+      });
+    });
+  }
+
+  private exibirToastClienteSalvoComSucesso(criacao: boolean): void {
+    this.toast.show(
+      criacao ? CLIENTE_SALVO_TOAST_MSG : CLIENTE_ALTERADO_TOAST_MSG,
+    );
+  }
+
+  private focarPrimeiroCampoInvalido(): void {
+    queueMicrotask(() => {
+      const el = document.querySelector(
+        '.cliente-field--error input, .cliente-field--error textarea',
+      ) as HTMLElement | null;
+      el?.focus?.();
+    });
   }
 
   private prefetchClientesParaUnicidade(): void {
@@ -1294,12 +1573,13 @@ export class ClienteCadastroDrawerService {
     if (this.duplicadoCampo === campo) {
       this.duplicadoCampo = null;
       this.saveErro = '';
+      this.duplicadoClienteId = null;
+      this.duplicadoClienteNome = '';
     }
   }
 
   private mapearDuplicadoCampo(msg: string): ClienteDuplicadoCampo | null {
     const m = msg.toLowerCase();
-    if (m.includes('nome')) return 'nome';
     if (m.includes('celular')) return 'celular';
     if (m.includes('cpf')) return 'cpf';
     return null;
@@ -1308,7 +1588,7 @@ export class ClienteCadastroDrawerService {
   private abrirPainel(): void {
     this.secaoEnderecoAberta = false;
     this.secaoRedesAberta = false;
-    this.secaoConfiguracoesAberta = true;
+    this.secaoStatusAberta = true;
 
     this.cancelarPanelSettled();
     this.openAnim?.cancel();
@@ -1325,9 +1605,7 @@ export class ClienteCadastroDrawerService {
   }
 
   private carregarCliente(cid: string): void {
-    if (this.exibicao === 'embutido') {
-      this.carregandoFormulario = true;
-    }
+    this.carregandoFormulario = true;
     this.api.getCliente(cid).subscribe({
       next: (c) => {
         if (this.clienteId !== cid) return;
@@ -1337,6 +1615,7 @@ export class ClienteCadastroDrawerService {
           this.cadastroFotoUrl = '';
           this.cadastroFotoRemovida = true;
         }
+        this.capturarSnapshot();
         this.carregandoFormulario = false;
         if (this.abaAtiva === 'Painel') {
           this.carregarPainel(cid);
@@ -1365,11 +1644,13 @@ export class ClienteCadastroDrawerService {
         this.callbacksSidebarAtivos()?.onClienteCarregado?.(
           fotoRemovida ? { ...c, fotoUrl: null } : c,
         );
+        this.appRef.tick();
       },
       error: () => {
         if (this.clienteId === cid) {
           this.carregandoFormulario = false;
           this.saveErro = 'Não foi possível carregar os dados do cliente.';
+          this.appRef.tick();
         }
       },
     });
@@ -1381,7 +1662,7 @@ export class ClienteCadastroDrawerService {
     this.cadastroNome = nomeLista;
     this.cadastroApelido = '';
     this.cadastroCelular = '';
-    this.cadastroTelefone = '';
+    this.cadastroTelefoneFixo = '';
     this.cadastroEmail = '';
     this.cadastroAniversario = '';
     this.cadastroCnpj = '';
@@ -1399,9 +1680,14 @@ export class ClienteCadastroDrawerService {
     this.cadastroCidade = '';
     this.cadastroInstagram = '';
     this.cadastroFacebook = '';
+    this.cadastroStatusOperacional = 'ativo';
     this.descontoPadraoModo = 'Na comanda';
     this.descontoPadraoTexto = '';
     this.notificacoesAtivo = true;
+    this.duplicadoCampo = null;
+    this.duplicadoClienteId = null;
+    this.duplicadoClienteNome = '';
+    this.formSnapshot = null;
     this.resetValidacao();
     this.limparDadosAbasHistorico();
   }
@@ -1440,19 +1726,13 @@ export class ClienteCadastroDrawerService {
     this.cadastroNome = String(c.nome ?? '').trim();
     this.drawerNome = this.cadastroNome || this.drawerNome || 'Cliente';
 
+    // Nunca ler a coluna legada `telefone` como celular.
     const celStored = String(c.celular ?? '').trim();
+    this.cadastroCelular =
+      celStored.length > 0 ? formatarCelularBr(celStored) : '';
+
     const telStored = String(c.telefoneFixo ?? '').trim();
-    const apiTel = String(c.telefone ?? '').trim();
-
-    if (celStored.length > 0) {
-      this.cadastroCelular = formatarCelularBr(celStored);
-    } else if (apiTel.length > 0) {
-      this.cadastroCelular = formatarCelularBr(apiTel);
-    } else {
-      this.cadastroCelular = '';
-    }
-
-    this.cadastroTelefone =
+    this.cadastroTelefoneFixo =
       telStored.length > 0 ? formatarTelefoneFixoBr(telStored) : '';
 
     this.cadastroApelido = c.apelido ?? '';
@@ -1461,6 +1741,8 @@ export class ClienteCadastroDrawerService {
     this.cadastroCnpj = c.cnpj ?? '';
     this.cadastroCpf = c.cpf ?? '';
     this.cadastroRg = c.rg ?? '';
+    // Desconto/notificação: não fazem parte do formulário de cadastro (CC-08).
+    // Mantém valores em memória para abas/outros módulos sem gravar no payload.
     if (c.descontoPadraoModo?.trim()) {
       this.descontoPadraoModo = c.descontoPadraoModo;
     }
@@ -1470,6 +1752,10 @@ export class ClienteCadastroDrawerService {
     if (typeof c.notificacoesAtivo === 'boolean') {
       this.notificacoesAtivo = c.notificacoesAtivo;
     }
+    const st = String(c.statusOperacional ?? 'ativo')
+      .trim()
+      .toLowerCase();
+    this.cadastroStatusOperacional = st === 'inativo' ? 'inativo' : 'ativo';
     this.cadastroFotoUrl = c.fotoUrl?.trim() ?? '';
     this.cadastroFotoUrlInicial = this.cadastroFotoUrl;
     this.cadastroFotoRemovida = false;
@@ -1755,7 +2041,7 @@ export class ClienteCadastroDrawerService {
 
   private montarPayload(
     nome: string,
-    telefone: string,
+    celular: string,
   ): ClienteCadastroPayload | null {
     if (this.cadastroFotoRemovida) {
       this.cadastroFotoUrl = '';
@@ -1763,7 +2049,7 @@ export class ClienteCadastroDrawerService {
 
     const rawFoto = (this.cadastroFotoUrl ?? '').trim();
     const fotoInicial = (this.cadastroFotoUrlInicial ?? '').trim();
-    let fotoUrlPayload: string | undefined;
+    let fotoUrlPayload: string | null | undefined;
 
     if (this.cadastroFotoRemovida && this.clienteId) {
       fotoUrlPayload = '';
@@ -1781,45 +2067,82 @@ export class ClienteCadastroDrawerService {
     } else if (this.clienteId && fotoInicial.length > 0) {
       fotoUrlPayload = '';
     }
-    return {
+
+    const isEdit = !!this.clienteId;
+    const opt = (v: string): string | null | undefined => {
+      const t = v.trim();
+      if (isEdit) return t;
+      return t || undefined;
+    };
+
+    const payload: ClienteCadastroPayload = {
       nome,
-      telefone: telefone || undefined,
-      apelido: this.cadastroApelido.trim() || undefined,
-      email: this.cadastroEmail.trim() || undefined,
-      celular: this.cadastroCelular.trim() || undefined,
-      telefoneFixo: this.cadastroTelefone.trim() || undefined,
-      aniversario: this.cadastroAniversario.trim() || undefined,
-      cnpj: this.cadastroCnpj.trim() || undefined,
-      cpf: this.cadastroCpf.trim() || undefined,
-      rg: this.cadastroRg.trim() || undefined,
-      notificacoesAtivo: this.notificacoesAtivo,
-      descontoPadraoTexto: this.descontoPadraoTexto.trim() || undefined,
-      descontoPadraoModo: this.descontoPadraoModo || undefined,
+      celular,
+      apelido: opt(this.cadastroApelido) as string | null | undefined,
+      email: opt(this.cadastroEmail) as string | null | undefined,
+      telefoneFixo: opt(this.cadastroTelefoneFixo) as string | null | undefined,
+      aniversario: opt(this.cadastroAniversario) as string | null | undefined,
+      cnpj: opt(this.cadastroCnpj) as string | null | undefined,
+      cpf: opt(this.cadastroCpf) as string | null | undefined,
+      rg: opt(this.cadastroRg) as string | null | undefined,
       ...(fotoUrlPayload !== undefined ? { fotoUrl: fotoUrlPayload } : {}),
-      cep: this.cadastroCep.trim() || undefined,
-      logradouro: this.cadastroLogradouro.trim() || undefined,
-      enderecoNumero: this.cadastroEnderecoNumero.trim() || undefined,
-      complemento: this.cadastroComplemento.trim() || undefined,
-      bairro: this.cadastroBairro.trim() || undefined,
-      estado: this.cadastroEstado.trim() || undefined,
-      cidade: this.cadastroCidade.trim() || undefined,
-      instagram:
+      cep: opt(this.cadastroCep) as string | null | undefined,
+      logradouro: opt(this.cadastroLogradouro) as string | null | undefined,
+      enderecoNumero: opt(this.cadastroEnderecoNumero) as
+        | string
+        | null
+        | undefined,
+      complemento: opt(this.cadastroComplemento) as string | null | undefined,
+      bairro: opt(this.cadastroBairro) as string | null | undefined,
+      estado: opt(this.cadastroEstado) as string | null | undefined,
+      cidade: opt(this.cadastroCidade) as string | null | undefined,
+      instagram: opt(
         ClienteCadastroDrawerService.normalizarHandleRede(
           this.cadastroInstagram,
-        ) || undefined,
-      facebook:
+        ),
+      ) as string | null | undefined,
+      facebook: opt(
         ClienteCadastroDrawerService.normalizarHandleRede(
           this.cadastroFacebook,
-        ) || undefined,
+        ),
+      ) as string | null | undefined,
+    };
+
+    if (isEdit) {
+      payload.statusOperacional = this.cadastroStatusOperacional;
+    }
+
+    return payload;
+  }
+
+  private capturarEstadoAtual(): CadastroFormSnapshot {
+    return {
+      nome: this.cadastroNome.trim(),
+      apelido: this.cadastroApelido.trim(),
+      celular: this.cadastroCelular.trim(),
+      telefoneFixo: this.cadastroTelefoneFixo.trim(),
+      email: this.cadastroEmail.trim(),
+      aniversario: this.cadastroAniversario.trim(),
+      cnpj: this.cadastroCnpj.trim(),
+      cpf: this.cadastroCpf.trim(),
+      rg: this.cadastroRg.trim(),
+      fotoUrl: this.cadastroFotoUrl.trim(),
+      fotoRemovida: this.cadastroFotoRemovida,
+      cep: this.cadastroCep.trim(),
+      logradouro: this.cadastroLogradouro.trim(),
+      enderecoNumero: this.cadastroEnderecoNumero.trim(),
+      complemento: this.cadastroComplemento.trim(),
+      bairro: this.cadastroBairro.trim(),
+      estado: this.cadastroEstado.trim(),
+      cidade: this.cadastroCidade.trim(),
+      instagram: this.cadastroInstagram.trim(),
+      facebook: this.cadastroFacebook.trim(),
+      statusOperacional: this.cadastroStatusOperacional,
     };
   }
 
-  private telefonePrioritarioParaApi(): string {
-    const c = ClienteCadastroDrawerService.apenasDigitos(this.cadastroCelular);
-    const f = ClienteCadastroDrawerService.apenasDigitos(this.cadastroTelefone);
-    if (c.length > 0) return this.cadastroCelular.trim();
-    if (f.length > 0) return this.cadastroTelefone.trim();
-    return '';
+  private capturarSnapshot(): void {
+    this.formSnapshot = this.capturarEstadoAtual();
   }
 
   private static normalizarHandleRede(value: string): string {
@@ -1840,7 +2163,7 @@ export class ClienteCadastroDrawerService {
     this.cadastroTouch = {
       nome: false,
       celular: false,
-      telefone: false,
+      telefoneFixo: false,
       email: false,
       aniversario: false,
       cnpj: false,

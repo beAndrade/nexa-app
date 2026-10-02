@@ -5,6 +5,7 @@
       class="btn-back-hero"
       aria-label="Voltar à lista"
       title="Voltar à lista"
+      (click)="onVoltar($event)"
     >
       <svg
         class="btn-back-hero__svg"
@@ -24,50 +25,6 @@
   </div>
 </div>
 
-@if (erro) {
-  <p class="alert" role="alert">{{ erro }}</p>
-}
-
-<form [formGroup]="form" (ngSubmit)="salvar()" class="form">
-  <label>
-    <span>Nome exibido</span>
-    <input
-      type="text"
-      formControlName="nome"
-      autocomplete="name"
-      placeholder="Digite o nome do cliente"
-    />
-  </label>
-
-  <label>
-    <span>Celular</span>
-    <input
-      type="tel"
-      formControlName="telefone"
-      autocomplete="tel"
-      appCelularBrMask
-      placeholder="(00) 00000-0000"
-      maxlength="15"
-      [attr.aria-invalid]="
-        form.controls.telefone.touched && form.controls.telefone.invalid
-      "
-    />
-    @if (form.controls.telefone.touched && form.controls.telefone.invalid) {
-      @if (form.controls.telefone.errors?.['required']) {
-        <span class="field-error" role="alert">O celular é obrigatório.</span>
-      } @else if (form.controls.telefone.errors?.['celular11']) {
-        <span class="field-error" role="alert"
-          >Informe o celular com DDD: 11 números no total (ex.: (11) 98765-4321).</span
-        >
-      }
-    }
-  </label>
-
-  <button
-    type="submit"
-    class="btn primary"
-    [disabled]="salvando || form.invalid"
-  >
-    {{ salvando ? 'Salvando…' : 'Salvar cliente' }}
-  </button>
-</form>
+<div class="clientes-pagina-form">
+  <app-cliente-cadastro-form [mostrarRodape]="true" />
+</div>

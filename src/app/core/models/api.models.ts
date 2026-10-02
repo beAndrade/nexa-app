@@ -1,6 +1,16 @@
+/** Cliente conflitante em 409 DUPLICATE do cadastro. */
+export type ClienteDuplicadoRef = {
+  id_cliente: string;
+  nome_exibido?: string;
+};
+
 export interface ApiError {
   code: string;
   message: string;
+  /** Campo em conflito (ex.: `cpf`, `celular`) — 409 DUPLICATE. */
+  field?: string;
+  /** Cliente existente em conflito — 409 DUPLICATE. */
+  cliente?: ClienteDuplicadoRef | null;
 }
 
 export interface ApiResponse<T> {
@@ -13,7 +23,11 @@ export interface ApiResponse<T> {
 export interface Cliente {
   id: string;
   nome: string;
-  telefone: string | null;
+  /**
+   * Legado — a API de cadastro (CC-04+) não devolve nem grava no formulário.
+   * Mantido opcional só para consumidores antigos até CC-11.
+   */
+  telefone?: string | null;
   apelido?: string | null;
   email?: string | null;
   celular?: string | null;
@@ -39,6 +53,10 @@ export interface Cliente {
   creditoSaldo?: number;
   /** Saldo de cashback do cliente (quando existir na API). */
   cashbackSaldo?: number;
+  statusOperacional?: 'ativo' | 'inativo' | string | null;
+  statusModo?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 /** Linha do extrato de crédito (`GET /api/clientes/:id/credito-movimentos`). */
@@ -65,31 +83,33 @@ export type CriarClienteCreditoMovimentoResponse = {
   item: ClienteCreditoMovimento;
 };
 
-/** Body de `POST/PATCH /api/clientes`. */
+/**
+ * Body de `POST/PATCH /api/clientes` (formulário de cadastro).
+ * Nunca inclui a coluna legada `telefone`.
+ * Em PATCH, string vazia / null em opcional limpa a coluna; chave ausente não altera.
+ */
 export type ClienteCadastroPayload = {
   nome: string;
-  telefone?: string;
-  apelido?: string;
-  email?: string;
-  celular?: string;
-  telefoneFixo?: string;
-  aniversario?: string;
-  cnpj?: string;
-  cpf?: string;
-  rg?: string;
+  celular: string;
+  apelido?: string | null;
+  email?: string | null;
+  telefoneFixo?: string | null;
+  aniversario?: string | null;
+  cnpj?: string | null;
+  cpf?: string | null;
+  rg?: string | null;
   fotoUrl?: string | null;
-  notificacoesAtivo?: boolean;
-  descontoPadraoTexto?: string;
-  descontoPadraoModo?: string;
-  cep?: string;
-  logradouro?: string;
-  enderecoNumero?: string;
-  complemento?: string;
-  bairro?: string;
-  estado?: string;
-  cidade?: string;
-  instagram?: string;
-  facebook?: string;
+  cep?: string | null;
+  logradouro?: string | null;
+  enderecoNumero?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  estado?: string | null;
+  cidade?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  /** Só na edição — API deriva `status_modo`. */
+  statusOperacional?: 'ativo' | 'inativo';
 };
 
 /**
