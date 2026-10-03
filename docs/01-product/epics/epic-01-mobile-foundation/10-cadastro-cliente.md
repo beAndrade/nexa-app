@@ -40,26 +40,15 @@ Esta feature contempla:
 
 ### Cadastro
 
-Esta versão é um cadastro completo, não apenas um conjunto mínimo.
-
-Entram os campos definidos neste documento e os dados pessoais e de contato que o cadastro já possui hoje:
-
 - Nome.
-- Apelido.
 - Celular.
 - Telefone fixo.
 - E-mail.
 - CPF.
-- CNPJ.
-- RG.
 - Data de nascimento/aniversário.
 - Endereço.
 - Foto.
 - Redes sociais.
-- Observações.
-- Status.
-
-A classificação do que já existe no sistema, inclusive o que não entra nesta feature, está na seção 5.
 
 ### Operações
 
@@ -99,52 +88,26 @@ Não fazem parte desta feature, salvo quando necessários para integração com 
 
 Esses módulos podem utilizar o Cliente como entidade relacionada, mas possuem suas próprias regras e features.
 
-Também não são requisitos deste cadastro os dados já gravados no cliente que pertencem a esses domínios, como saldo de crédito, desconto padrão e preferência de notificação. A classificação está na seção 5.
-
 ---
 
 ## 5. Customer Data Model
 
-Esta versão descreve o cadastro completo do cliente, não um mínimo a ser completado depois.
-
-O modelo abaixo reúne os campos deste Product Definition e os dados pessoais e de contato que o cadastro já possui. Nenhum campo novo foi introduzido.
+O cliente deve possuir, no mínimo, os seguintes dados:
 
 | Campo | Obrigatório | Regra |
 |---|---:|---|
 | Nome | Sim | Deve ser preenchido |
-| Apelido | Não | Opcional. Parte do cadastro pessoal |
 | Celular | Sim | Deve possuir formato válido |
 | Telefone fixo | Não | Formato válido quando preenchido |
 | E-mail | Não | Formato válido quando preenchido |
 | CPF | Não | Formato válido quando preenchido e único |
-| CNPJ | Não | Opcional. Parte do cadastro. Sem unicidade nesta versão |
-| RG | Não | Opcional. Parte do cadastro. Sem unicidade nesta versão |
 | Data de nascimento | Não | Data válida |
 | Endereço | Não | Estrutura de endereço |
 | Foto | Não | Imagem válida |
 | Redes sociais | Não | Dados de contato social |
-| Observações | Não | Texto livre |
 | Status | Sim | Ativo/Inativo |
 | Data de criação | Sistema | Gerada automaticamente |
 | Data de atualização | Sistema | Atualizada automaticamente |
-
-### Classificação dos dados já existentes
-
-Parte do cadastro. Pessoais e de contato, já presentes no sistema, além das linhas da tabela:
-
-- Apelido, CNPJ e RG.
-- Endereço já gravado em cep, logradouro, número, complemento, bairro, cidade e estado. São a composição atual de Endereço, não campos novos. A estrutura detalhada continua no Technical Design.
-- Redes sociais já gravadas como Instagram e Facebook. São a composição atual de Redes sociais, não redes novas. A estrutura detalhada continua no Technical Design.
-
-Pertencente a outro domínio. Não são requisitos desta feature:
-
-- `credito_saldo` — crédito.
-- `desconto_padrao_texto` e `desconto_padrao_modo` — desconto na comanda, no domínio de vendas.
-- `notificacoes_ativo` — preferência de notificação. Não é o Status Ativo/Inativo deste cadastro.
-
-Legado que deve ser removido:
-
-- A coluna `telefone`, distinta de `celular` e de `telefone_fixo`. Esta versão usa Celular e Telefone fixo. A coluna `telefone` não é requisito do cadastro. O que fazer com valor já gravado nela fica no Technical Design.
 
 ---
 
@@ -250,18 +213,7 @@ A estrutura final dos campos deverá ser definida no Technical Design.
 
 ### 6.10 Observações
 
-Observações são opcionais.
-
-O sistema deve permitir armazenar informações livres relacionadas ao cliente.
-
-A informação deve ser preservada durante:
-
-- criação;
-- edição;
-- leitura;
-- atualização do cadastro.
-
-A remoção ou alteração das informações de Observações não pode ocorrer como efeito colateral de uma atualização de outros campos.
+Observações não fazem parte do contrato atual do Cadastro de Cliente. O campo foi removido e não deve ser recriado no formulário, API ou modelo de cadastro.
 
 ---
 
@@ -572,9 +524,9 @@ Um celular não pode pertencer a mais de um cliente.
 
 Um CPF não pode pertencer a mais de um cliente.
 
-### BR-07 — Observações preservadas
+### BR-07 — Observações fora do contrato
 
-Observações devem ser preservadas durante operações de criação, leitura e atualização.
+Observações não fazem parte do Cadastro de Cliente e não devem ser recriadas ou reintroduzidas como campo, regra, busca ou filtro.
 
 ### BR-08 — Inatividade automática
 
@@ -595,6 +547,22 @@ Clientes sem registros relacionados podem ser excluídos após confirmação exp
 ### BR-12 — Integridade
 
 A API deve aplicar as regras críticas de negócio independentemente das validações existentes na interface.
+
+### BR-13 — Paginação da lista
+
+A lista de clientes utiliza paginação server-side por offset. O tamanho padrão da página é 20, com opções 20, 50 e 100. Busca e filtros são aplicados no servidor. A ordenação padrão é determinística por `nome_exibido ASC` e, em empate, `id_cliente ASC`.
+
+### BR-14 — Seleção do conjunto filtrado
+
+“Selecionar tudo” significa todos os clientes do conjunto resultante da busca e dos filtros atuais, inclusive registros de páginas ainda não carregadas. A seleção persiste ao trocar de página. Alterar busca ou filtro limpa a seleção; alterar somente o page size preserva a seleção.
+
+### BR-15 — Ação em massa
+
+A única ação em massa desta CC é Excluir. A exclusão em massa exige confirmação e respeita as mesmas proteções de histórico da exclusão individual. Falhas de clientes individuais não cancelam exclusões válidas dos demais; o resultado deve distinguir excluídos, bloqueados e não encontrados.
+
+### BR-16 — Matching da busca
+
+A busca é server-side, parcial e sem limite mínimo de caracteres. Campos textuais (nome, apelido e e-mail) usam comparação parcial case-insensitive e accent-insensitive. Celular, telefone fixo, CPF, CNPJ e RG usam comparação parcial após normalização que remove máscara, pontuação e espaços. Espaços externos são ignorados.
 
 ---
 
@@ -630,11 +598,11 @@ A API deve aplicar as regras críticas de negócio independentemente das valida�
 **When** o usuário tenta salvar o cadastro  
 **Then** o sistema deve bloquear o salvamento e informar a duplicidade.
 
-### AC-06 — Observações
+### AC-06 — Observações fora do contrato
 
-**Given** que o usuário informa uma observação  
-**When** salva o cliente  
-**Then** a observação deve permanecer disponível ao reabrir o cadastro.
+**Given** que o usuário utiliza o Cadastro de Cliente  
+**When** cria, consulta ou edita um cliente  
+**Then** Observações não deve aparecer como campo nem ser recriada como parte deste contrato.
 
 ### AC-07 — Edição
 
@@ -803,9 +771,8 @@ A implementação deve revisar o estado atual do banco antes de aplicar novas al
 
 Especial atenção deve ser dada a:
 
-- coluna `observacoes`;
 - dados existentes;
-- migração `0029_clientes_drop_observacoes.sql`;
+- migração `0029_clientes_drop_observacoes.sql` (a coluna Observações não faz parte do contrato e não deve ser recriada);
 - compatibilidade com registros existentes;
 - índices de CPF;
 - índices de celular;
@@ -817,19 +784,29 @@ Nenhum dado existente deve ser descartado como efeito colateral de uma migraçã
 
 ## 22. Open Questions
 
-As seguintes decisões não fazem parte deste contrato e deverão ser definidas durante UX/Technical Design quando necessárias:
+Não há decisões de produto pendentes para a CC-09. As decisões de paginação, seleção global, ação em massa e matching da busca estão fechadas nas BR-13 a BR-16 e devem ser reproduzidas no UX Flow, Technical Design e Sprint Planning.
 
-1. Estrutura detalhada do endereço.
-2. Estrutura detalhada das redes sociais.
-3. Regras técnicas de foto.
-4. Precedência entre status manual e cálculo automático de inatividade.
-5. Comportamento exato de recálculo após uma alteração manual de status.
-6. Formato final das mensagens de validação.
-7. Campos adicionais necessários para integrações futuras.
+CC-10 (WhatsApp) e CC-11 (remoção física de `telefone`) permanecem fora desta CC.
 
-Esses pontos não devem ser inventados durante a implementação.
+## 23.1 CC-09 Acceptance Criteria
 
----
+1. A lista inicia em Todos e usa `status_operacional`.
+2. A busca cobre nome, apelido, celular, telefone fixo, e-mail, CPF, CNPJ e RG.
+3. Busca textual é parcial, case-insensitive e accent-insensitive.
+4. Busca numérica/documental é parcial e normalizada, ignorando máscara, pontuação e espaços.
+5. Debounce frontend é de 300 ms, sem mínimo de caracteres, com proteção contra resposta antiga sobrescrevendo busca mais nova.
+6. Filtros são exclusivamente Status, Com celular, Sem celular e Aniversário (intervalo de datas sobre a data de nascimento/`aniversario`; detalhe técnico no Technical Design).
+7. Paginação é server-side por offset, com 20 por padrão e opções 20/50/100, total e totalPages.
+8. A ordenação padrão é determinística por `nome_exibido ASC`, depois `id_cliente ASC`.
+9. Busca e filtros persistem entre páginas; alterar busca/filtro volta à página 1 e limpa seleção.
+10. Selecionar tudo representa o conjunto filtrado completo e a seleção persiste entre páginas.
+11. Alterar somente page size preserva seleção; Cancelar limpa.
+12. A única ação em massa é Excluir.
+13. Exclusão exige confirmação e respeita CC-05 sem apagar filhos.
+14. Falhas individuais não cancelam exclusões válidas e o resultado consolida deleted/blocked/notFound.
+15. Loading, erro + retry, empty global e empty de busca/filtro possuem os estados definidos.
+16. Novo e abertura de cliente usam exclusivamente o formulário CC-08.
+17. Nenhuma implementação de CC-10 ou CC-11 é antecipada.
 
 ## 23. Definition of Done
 
@@ -838,7 +815,7 @@ A feature poderá seguir para Validation quando:
 - [ ] Todos os campos definidos neste documento estiverem implementados.
 - [ ] Regras de obrigatoriedade estiverem implementadas.
 - [ ] CPF e celular possuírem validação de unicidade.
-- [ ] Observações forem preservadas.
+- [ ] Observações não forem recriadas no cadastro.
 - [ ] Status ativo/inativo estiver implementado.
 - [ ] Regra de 6 meses estiver implementada.
 - [ ] Exclusão protegida estiver implementada.
@@ -871,8 +848,6 @@ A validação deverá considerar este documento como fonte primária de requisit
 
 Em caso de conflito entre este documento e documentação anterior, o conflito deverá ser reportado pelo QA como Specification Gap, sem que o agente escolha silenciosamente uma das versões.
 
-A prevalência sobre a aba Clientes da planilha e sobre o lifecycle Draft de cliente não é escolha do QA. Ela está escrita na seção 25.
-
 ---
 
 ## 25. Source of Truth
@@ -889,18 +864,11 @@ Para esta feature, a ordem de referência é:
 
 Documentos antigos, planilhas ou implementações existentes não devem substituir silenciosamente as decisões deste documento.
 
-Para a feature Cadastro de Cliente, este Product Definition prevalece sobre:
-
-- a aba Clientes de `docs/01-product/overview/spreadsheet-import.md`;
-- o modelo Draft `docs/01-product/domain-models/customer-lifecycle.md`.
-
-Esses documentos continuam existindo como documentação histórica e de referência. Não são a fonte de requisitos desta feature. Onde divergirem deste Product Definition, vale este documento.
-
 ---
 
 ## Status
 
-**Product Definition — Draft para revisão**
+**Product Definition — Documentation Updated for CC-09**
 
 Próximo passo:
 

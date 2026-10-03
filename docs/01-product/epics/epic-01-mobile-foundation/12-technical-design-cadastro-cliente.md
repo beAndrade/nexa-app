@@ -1,6 +1,6 @@
 # Technical Design — Cadastro de Cliente
 
-Status: desenho técnico. Este arquivo não altera código, banco, migrations, Product Definition nem UX Flow.
+Status: desenho técnico consolidado. Este arquivo define o contrato técnico sem executar código ou migrations.
 
 Este documento é o Technical Design da feature Cadastro de Cliente. O arquivo `04-technical-design.md` deste épico descreve a fundação mobile e não é o desenho desta feature.
 
@@ -32,7 +32,7 @@ Fontes de comportamento desta feature:
 1. `docs/01-product/epics/epic-01-mobile-foundation/10-cadastro-cliente.md`
 2. `docs/01-product/epics/epic-01-mobile-foundation/11-ux-flow-cadastro-cliente.md`
 
-Esses dois arquivos não são alterados nesta tarefa.
+Esses dois arquivos são fontes de comportamento e foram consolidados com o fechamento da CC-09.
 
 Quando a implementação atual divergir do contrato aprovado, o contrato prevalece. A planilha de importação e o rascunho de ciclo de vida do cliente não são fonte desta feature; a Product Definition já registra essa precedência.
 
@@ -41,16 +41,15 @@ Decisões de produto fechadas para este desenho, e que o implementador não reab
 - atendimento concluído, para inatividade, é comanda com status `finalizado`;
 - comanda finalizada com valor pendente também conta;
 - inatividade aos 6 meses sem comanda `finalizado`;
-- uma nova comanda `finalizado` reinicia a referência de atividade e não reativa o cliente;
-- Inativo definido manualmente prevalece: o automático não reativa, e só o usuário volta o cliente para Ativo;
-- Ativo definido manualmente, e o estado normal, permanecem Ativo até a regra dos 6 meses gravar Inativo automático;
+- uma nova comanda `finalizado` reinicia a referência de atividade;
+- o cálculo automático de inatividade prevalece sobre a alteração manual e pode voltar a gravar Inativo;
 - cliente antigo pode permanecer sem celular até um salvamento futuro do cadastro;
 - `celular` e `telefone_fixo` são campos diferentes; `telefone` sai do modelo de cadastro;
 - Observações não é recuperada e não volta ao modelo.
 
 A Product Definition (BR-07, seção 6.10 e AC-06) e o UX Flow (seção 6) ainda citam Observações. A decisão fechada acima é posterior e governa este desenho: não há coluna, backfill, campo de formulário nem pendência de recuperação. Este arquivo não edita aqueles documentos para reconciliá-los.
 
-A seção 7.3 da Product Definition pede que a interação entre status manual e recálculo automático seja fechada no Technical Design. A seção 7 deste arquivo faz isso com a decisão de produto já fechada: Inativo manual não é reativado pelo automático nem por comanda nova; Ativo manual continua sujeito à inatividade automática dos 6 meses.
+A seção 7.3 da Product Definition pede que a interação entre status manual e recálculo automático seja fechada no Technical Design. A seção 7 deste arquivo faz isso, dentro do limite da decisão já fechada: o automático pode gravar Inativo de novo; não se acrescenta regra extra sobre promoção a Ativo.
 
 ---
 
@@ -169,26 +168,9 @@ A tabela continua sendo `clientes`. Colunas de outro domínio permanecem na tabe
 
 ### Status
 
-Duas colunas. `status_operacional` sozinha não distingue Inativo manual de Inativo automático, e essa distinção faz parte da regra.
+Coluna nova `status_operacional` `text NOT NULL DEFAULT 'ativo'`, com restrição `ativo` ou `inativo`.
 
-| Coluna | Valores | Papel |
-|---|---|---|
-| `status_operacional` | `ativo` ou `inativo` | valor efetivo. Lista, card, resumo e filtros leem só esta coluna. |
-| `status_modo` | `ativo`, `inativo_manual`, `inativo_automatico` | controle da regra. Não é rótulo de tela. |
-
-`status_operacional` é `text NOT NULL DEFAULT 'ativo'`. `status_modo` é `text NOT NULL DEFAULT 'ativo'`.
-
-Restrição que impede combinação inválida:
-
-```text
-(status_modo = 'ativo' AND status_operacional = 'ativo')
-OR (status_modo = 'inativo_manual' AND status_operacional = 'inativo')
-OR (status_modo = 'inativo_automatico' AND status_operacional = 'inativo')
-```
-
-Não existe `ativo_manual` separado de `ativo`. Ativo escolhido pelo usuário e estado normal seguem a mesma regra e cabem no valor `status_modo = ativo`. Separar os dois faria o Ativo manual parecer um bloqueio, e o produto permite que ele vire Inativo automático depois.
-
-Não reutiliza `notificacoes_ativo`. O comportamento de POST, PATCH, job e comanda nova está na seção 7.
+Não reutiliza `notificacoes_ativo`.
 
 ### Auditoria
 
@@ -242,30 +224,15 @@ Opcional. Quando informado, 10 dígitos (DDD + número fixo) ou 11 dígitos comp
 
 ### Unicidade e índice
 
-Regra única. A prosa desta seção já deixava valor sem 11 dígitos fora do índice, no mesmo desenho do CPF da seção 6. O SQL anterior, `UNIQUE (celular) WHERE celular IS NOT NULL`, incluía todo texto não nulo (máscara, outro tamanho e string vazia) e não era a mesma regra. O predicado abaixo é o único. Texto, SQL, relatório e portão usam este predicado. Não é regra nova de produto: a unicidade continua sendo a do celular normalizado.
-
-**Normalização.** Na gravação, e no legado cujo resultado tenha 11 dígitos, `celular` persiste só dígitos. Máscara, espaço e prefixo `+55` no tamanho esperado não são outro número.
-
-**Elegível para unicidade.** `celular` não nulo com exatamente 11 dígitos já persistidos. Null não entra. String vazia, texto ainda mascarado e qualquer outro tamanho não entram.
-
-**Predicado do índice**, criado só depois da normalização e do relatório da seção 11:
+Índice único parcial, criado só depois da normalização e do relatório de duplicatas da seção 11:
 
 ```text
-UNIQUE (celular) WHERE celular IS NOT NULL AND char_length(celular) = 11
+UNIQUE (celular) WHERE celular IS NOT NULL
 ```
 
-Vários null são permitidos no Postgres. O índice não inclui `telefone_fixo` nem `telefone`. String vazia, máscara e tamanho diferente de 11 ficam fora do índice. Dois textos iguais fora desse predicado não impedem a criação do índice e não são apagados, fundidos nem eleitos como vencedor.
+Vários null são permitidos no Postgres. O índice não inclui `telefone_fixo` nem `telefone`.
 
-**Relatório que antecede o índice.** Somente leitura, antes de qualquer índice. Lista, sem gravar:
-
-- grupos com o mesmo `celular` de exatamente 11 dígitos, no texto já persistido e na projeção da normalização desta seção (máscaras distintas que viram os mesmos 11 dígitos);
-- grupos com o mesmo CPF de exatamente 11 dígitos;
-- grupos de `celular` não nulo com o mesmo texto persistido, inclusive máscara, tamanho diferente de 11 e string vazia;
-- cada `celular` ou `cpf` que não tenha 11 dígitos.
-
-Só os dois primeiros grupos violam o predicado e bloqueiam o índice. Os outros entram no relatório para o portão ficar visível. Não autorizam limpeza, merge, exclusão nem escolha de vencedor.
-
-A checagem na aplicação continua, para devolver o outro cliente, e compara celular já normalizado para 11 dígitos. O índice é a barreira de corrida.
+A checagem na aplicação continua, para devolver o outro cliente. O índice é a barreira de corrida.
 
 ### NULL e registros antigos
 
@@ -338,9 +305,8 @@ Se outro cliente já tem aquele CPF ou celular, a API recusa e devolve o campo e
 - Inativo automático: 6 meses sem uma comanda `finalizado`;
 - comanda finalizada e paga, e comanda finalizada com valor pendente, ambas contam;
 - valor pendente não impede a comanda de estar finalizada;
-- uma nova comanda `finalizado` reinicia a referência de atividade e não reativa ninguém;
-- Inativo manual prevalece sobre o cálculo automático: o automático não reativa, e só o usuário volta o cliente para Ativo;
-- Ativo manual permanece Ativo até completar 6 meses sem comanda `finalizado`; aí o automático pode gravar Inativo, e esse Inativo não é bloqueio manual.
+- uma nova comanda `finalizado` reinicia a referência de atividade;
+- o cálculo automático prevalece sobre a alteração manual e pode gravar Inativo outra vez.
 
 ### Fonte de dados
 
@@ -369,9 +335,9 @@ A referência do cliente é o máximo dessas datas. Não se usa campo de ciclo d
 
 ### Onde o cálculo roda
 
-O valor efetivo fica em `status_operacional`. O tipo de inatividade fica em `status_modo`. A lista e os filtros leem só `status_operacional`. Não se recalcula a lista varrendo comandas a cada GET. A interface não mostra por que o cliente está Inativo.
+Coluna materializada `status_operacional`. A lista e os filtros leem essa coluna. Não se recalcula a lista varrendo comandas a cada GET.
 
-O cálculo que grava Inativo automático roda na API, porque não existe `pg_cron` no repositório:
+O cálculo que grava Inativo roda na API, porque não existe `pg_cron` no repositório:
 
 - uma vez ao subir o processo da API;
 - depois, no máximo uma vez por dia civil em `America/Sao_Paulo`.
@@ -386,86 +352,39 @@ Fuso do “hoje”: `America/Sao_Paulo`.
 referência = data da última comanda de produção finalizada
              ou, se não houver nenhuma, created_at::date nesse mesmo fuso
 
-elegível à inatividade automática quando referência + 6 meses de calendário <= hoje
+fica inativo quando referência + 6 meses de calendário <= hoje
 ```
 
-Exemplo: última comanda em 2026-04-01 torna elegível à inatividade automática a partir de 2026-10-01, com ou sem pagamento pendente. O predicado sozinho não grava status. Quem grava é o job, e só nos estados em que a regra permite.
+Exemplo: última comanda em 2026-04-01 fica inativa a partir de 2026-10-01, com ou sem pagamento pendente.
 
-### Estados persistidos
-
-| `status_modo` | `status_operacional` | Significado |
-|---|---|---|
-| `ativo` | `ativo` | Ativo manual ou estado normal. Elegível à inatividade automática. |
-| `inativo_manual` | `inativo` | Inativo por decisão do usuário. Bloqueio. |
-| `inativo_automatico` | `inativo` | Inativo pela regra dos 6 meses. Não é bloqueio manual. |
-
-### POST
-
-O body não define status. Se `status_operacional` ou `status_modo` vierem, a API ignora.
-
-O servidor grava:
-
-```text
-status_operacional = ativo
-status_modo = ativo
-```
-
-### PATCH manual
-
-O formulário de edição envia `status_operacional` (`ativo` ou `inativo`). Não envia `status_modo`. Se o body trouxer `status_modo`, a API ignora e deriva o modo do status que a pessoa escolheu.
-
-| Pessoa grava | Persistência |
-|---|---|
-| Inativo | `status_operacional = inativo`, `status_modo = inativo_manual` |
-| Ativo | `status_operacional = ativo`, `status_modo = ativo` |
-
-Gravar Ativo tira o cliente de `inativo_manual` e de `inativo_automatico`. A partir daí ele está no estado normal: permanece Ativo até o predicado dos 6 meses ser verdadeiro. A inatividade que o job gravar depois é `inativo_automatico`, não um novo bloqueio.
-
-### Job automático
+O job só executa:
 
 ```text
 UPDATE clientes
-SET status_operacional = 'inativo',
-    status_modo = 'inativo_automatico',
-    updated_at = now()
-WHERE status_modo = 'ativo'
-  AND <predicado>
+SET status_operacional = 'inativo', updated_at = now()
+WHERE <predicado>
+  AND status_operacional <> 'inativo'
 ```
 
-O `WHERE` só alcança Ativo manual e estado normal. Não alcança `inativo_manual` nem `inativo_automatico`.
+O job não grava `ativo`.
 
-O job não executa `SET` para `ativo`. Não existe outro processo que promova status. A única gravação de `status_modo = ativo` depois do POST é o PATCH em que a pessoa escolhe Ativo.
+### Interação com a alteração manual
 
-Efeito:
+Isto fecha a seção 7.3 da Product Definition, sem regra além do texto já decidido.
 
-- Ativo com predicado verdadeiro passa a Inativo automático;
-- Inativo manual não é reescrito, nem quando o predicado é verdadeiro nem quando deixa de ser;
-- Inativo automático permanece Inativo automático enquanto a pessoa não salvar Ativo.
+- POST não aceita status. O servidor grava `ativo`.
+- PATCH de edição grava `ativo` ou `inativo` quando o formulário envia o campo.
+- Se a pessoa gravar Ativo e o predicado for verdadeiro, a próxima execução do job grava Inativo de novo.
+- Uma comanda que passa a `finalizada` muda a data de referência, porque a referência é lida das comandas. Se essa data tiver menos de 6 meses, o predicado deixa de ser verdadeiro e o job para de forçar Inativo.
+- O job não promove o cliente a Ativo por causa da comanda nova. Um Inativo gravado manualmente permanece Inativo até a pessoa salvar Ativo. A comanda nova só reinicia a referência, então a regra automática não o empurra de volta a Inativo durante os 6 meses seguintes.
 
-### Comanda `finalizado` nova
-
-Marcar a cobrança como `finalizada` não dá `UPDATE` em `clientes`. A data de referência passa a ser lida dessa comanda na próxima avaliação do predicado.
-
-- Reinicia a referência.
-- Não grava `status_modo = ativo`.
-- Não reativa `inativo_manual`.
-- Não reativa `inativo_automatico`.
-- Se o cliente está `status_modo = ativo` e a referência nova tem menos de 6 meses, o predicado fica falso e o job não o torna Inativo.
-
-### Por que o automático não reativa um Inativo manual
-
-1. A finalização da comanda não escreve na linha do cliente.
-2. O job só atualiza linhas com `status_modo = ativo`.
-3. Nenhum comando automático atribui `ativo` ou `inativo_automatico` a uma linha `inativo_manual`.
-4. A restrição do banco impede `status_operacional = ativo` junto com `status_modo = inativo_manual`, então o bloqueio não convive com um rótulo Ativo.
-
-O resumo e o card mostram Ativo ou Inativo, lidos de `status_operacional`. Não há segunda frase de motivo.
+Não há coluna de “trava manual”. Não há motivo de inatividade na interface. O resumo mostra Ativo ou Inativo em texto.
 
 ### Lista e filtros
 
 O filtro inicial é Todos: nenhum predicado de status. Ativos e Inativos aparecem juntos.
 
-Filtros desta versão: Status (Todos, Ativos, Inativos), Com celular, Sem celular, Aniversário. Aniversário continua sendo o intervalo de datas que a lista já aplica sobre `aniversario`.
+Filtros desta versão: Status (Todos, Ativos, Inativos), Com celular, Sem celular, Aniversário. Aniversário continua sendo o intervalo de datas que a lista já aplica sobre `aniversario`. O contrato de fio desse intervalo (parâmetros, formato, inclusividade, ausência) está na seção 10.1 — Filtro de aniversário.
 
 Não entram filtros de dívida, avaliação, crédito, desconto nem notificação. A busca da lista cobre nome, apelido, celular, telefone fixo, e-mail, CPF, CNPJ e RG, comparando celular e documentos sem máscara. Crédito, desconto e notificação não entram na busca.
 
@@ -544,7 +463,9 @@ POST: chave ausente em opcional equivale a null.
 
 `GET /api/clientes`
 
-Resposta atual de lista, acrescida de `status_operacional`, `status_modo`, `created_at` e `updated_at`. Sem `telefone` no objeto de cadastro. A lista filtra por `status_operacional`. `status_modo` não é filtro nem rótulo. Colunas de outro domínio podem continuar no payload porque outras abas ainda as leem; o formulário de cadastro não as edita.
+**Para a lista da CC-09, o contrato detalhado da seção 10.1 é normativo e complementa esta seção.** Em particular, a seção 10.1 define a **compatibilidade dual**: GET legado (coleção completa, sem params de paginação) versus GET paginado (quando há `page` / `pageSize` / `page_size`). A CC-09 **não** substitui o GET legado por um contrato exclusivamente paginado.
+
+Resposta de item de lista, acrescida de `status_operacional`, `created_at` e `updated_at`. Sem `telefone` no objeto de cadastro. Colunas de outro domínio podem continuar no payload porque outras abas ainda as leem; o formulário de cadastro não as edita.
 
 ### GET por id
 
@@ -560,7 +481,7 @@ Obrigatórios: `nome`, `celular` válido.
 
 Opcionais: apelido, CPF, RG, CNPJ, aniversário, telefone fixo, e-mail, endereço, Instagram, Facebook, foto.
 
-Ignorados se vierem: `status_operacional`, `status_modo` (o servidor grava os dois como `ativo`), `telefone`, crédito, desconto, notificação, `id_cliente`.
+Ignorados se vierem: `status_operacional` (o servidor grava `ativo`), `telefone`, crédito, desconto, notificação, `id_cliente`.
 
 Ordem da validação: obrigatórios, formatos, CPF se preenchido, celular, duplicidade de CPF, duplicidade de celular.
 
@@ -572,7 +493,7 @@ Sucesso: `200` com o cliente criado, inclusive `id_cliente`. A interface mostra 
 
 Exige `nome` e `celular` válido, porque é o salvamento do cadastro. Exige o cliente existente.
 
-`status_operacional`, quando presente, é `ativo` ou `inativo`. Na edição o formulário sempre envia. A API deriva `status_modo` como na seção 7 (`inativo_manual` ou `ativo`) e ignora `status_modo` se o body o enviar.
+`status_operacional`, quando presente, é `ativo` ou `inativo`. Na edição o formulário sempre envia.
 
 Demais campos seguem a distinção ausente versus limpo.
 
@@ -607,7 +528,7 @@ Erro sem campo: “Não foi possível salvar. Tente de novo.” O formulário n�
 
 ### Duplicidade
 
-`409`. Não é unicidade de nome. Nome repetido é permitido. O envelope em `api/src/shared/utils/envelope.ts` hoje só carrega `code` e `message`. Este 409 estende o erro com `field` e `cliente`. O frontend precisa conservar os dois ao ler o corpo; sem `cliente.id_cliente`, “Ver cliente” não tem destino.
+`409`. Não é unicidade de nome. Nome repetido é permitido.
 
 ```json
 {
@@ -663,8 +584,6 @@ Não entram no formulário: crédito, desconto, notificação, dívida, avaliaç
 
 A mesma ordem da API: obrigatórios, formatos, CPF se preenchido, celular, duplicidade. Máscara é apresentação; colar com ou sem pontuação é válido se o valor normalizado for válido. Duplicidade compara o valor normalizado.
 
-A pré-checagem em `src/app/core/utils/clientes-unicidade.ts` segue este contrato: não exige nome único e não lê a coluna `telefone` como celular. Compara CPF e celular normalizados.
-
 Um salvamento por vez. O botão principal indica que está salvando e não aceita outro clique. Cancelar não dispara segundo salvamento. Durante o salvamento, fechar não descarta a operação no meio.
 
 Sucesso de criação atualiza a lista na hora. Se outro módulo pediu o cliente, esse módulo recebe o id criado. O desenho interno de cada módulo em volta disso não faz parte deste cadastro. Erro mantém o que foi digitado, marca o campo e devolve o foco ao primeiro inválido.
@@ -695,6 +614,146 @@ Estados: vazio global com Novo cliente; vazio de busca ou filtro com texto difer
 
 ---
 
+
+## 10.1 CC-09 — Contrato técnico da lista
+
+### GET `/api/clientes` — compatibilidade legado × paginado
+
+Existem consumidores atuais de `GET /api/clientes` **sem** parâmetros de paginação (Agenda, Comandas, Orçamentos, Financeiro e Drawer/seletores). A CC-09 **não** pode quebrar esse contrato legado nem inventar novos consumidores.
+
+**Regra de modo (fechada no Architecture Review):**
+
+| Requisição | Comportamento |
+|---|---|
+| Possui `page` **ou** `pageSize` **ou** `page_size` | Contrato **paginado** (abaixo) |
+| Não possui nenhum desses parâmetros | Comportamento **legado**: coleção completa no formato já usado (`{ items: [...] }` no envelope `ok` existente) |
+
+A superfície da lista da CC-09 **sempre** envia explicitamente os parâmetros de paginação. Não se substitui o GET legado por um contrato exclusivamente paginado.
+
+### GET paginado (lista CC-09)
+
+A listagem da CC-09 é server-side. Os nomes concretos dos parâmetros devem seguir os padrões existentes de query da API (aceitar `pageSize` e `page_size` na entrada, como em outros endpoints). Semanticamente, o contrato é:
+
+- `page` — página 1-based; default `1`;
+- `pageSize` / `page_size` — somente `20`, `50` ou `100`; default `20`;
+- `search` — texto de busca;
+- `status` — Todos/Ativos/Inativos, mapeado a `status_operacional`;
+- `hasCellphone` — sem filtro, com celular ou sem celular, considerando somente `celular`;
+- `birthdayFrom` — limite inferior do intervalo de aniversário (`YYYY-MM-DD`); ausente/`null`/inválido → sem limite inferior;
+- `birthdayTo` — limite superior do intervalo de aniversário (`YYYY-MM-DD`); ausente/`null`/inválido → sem limite superior.
+  Semântica completa do intervalo: subseção **Filtro de aniversário** abaixo (âncora da seção 7 + lista atual).
+
+Resposta semântica do modo paginado:
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "pageSize": 20,
+  "total": 0,
+  "totalPages": 0
+}
+```
+
+Os nomes finais na resposta (`pageSize`/`page_size`, `totalPages`/`total_pages`) seguem o envelope `ok`/`fail` e as convenções já usados pela API do Nexa; o frontend da lista mapeia. Não se cria um segundo envelope somente para CC-09.
+
+### Paginação e ordenação
+
+A API aplica offset calculado a partir de `page` e `pageSize`. O default é 20; somente 20, 50 e 100 são aceitos. Busca e filtros são aplicados antes da paginação. O resultado é ordenado deterministicamente por `nome_exibido ASC`, depois `id_cliente ASC`. Não há ordenação configurável nesta CC.
+
+Alterar busca ou qualquer filtro implica nova consulta na página 1. Alterar page size também volta à página 1. Trocar de página preserva busca, filtros e seleção no frontend.
+
+### Matching da busca
+
+A busca é parcial e server-side, sem mínimo de caracteres. Nome, apelido e e-mail usam comparação case-insensitive e accent-insensitive. Celular, telefone fixo, CPF, CNPJ e RG são comparados após normalização que remove pontuação, máscara e espaços, mantendo matching parcial. Espaços externos do termo são ignorados. Busca vazia não aplica predicado.
+
+O frontend usa debounce de 300 ms. Respostas fora de ordem não podem substituir o estado de uma busca mais recente. A proteção pode ser feita por cancelamento, request id, abort ou mecanismo equivalente já adotado pelo projeto.
+
+**Estado de entrega (CC-09-B, 2026-10-03):** matching, filtros (`status`, `hasCellphone`, aniversário) e composição AND com a paginação da CC-09-A estão implementados no serviço de listagem; dual-mode legado preservado. Fechamento documental: `docs/03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md`. Residuais Low F-09B-01…04 não alteram este contrato.
+
+### Filtros
+
+Os únicos filtros são `status`, `hasCellphone` e o intervalo de aniversário. Não entram filtros de dívida, avaliação, crédito, desconto ou notificação. “Com celular” e “Sem celular” consideram somente `celular`; `telefone_fixo` e `telefone` legado não satisfazem presença de celular.
+
+### Filtro de aniversário (fechamento F-B01)
+
+Contrato de fio da seção 7 (“Aniversário continua sendo o intervalo de datas que a lista já aplica sobre `aniversario`”), elevado aqui sem nova regra de produto.
+
+| Item | Contrato |
+|---|---|
+| Campo de origem | Coluna `aniversario` (texto `DD/MM/AAAA` no cadastro; a UX chama “data de nascimento”). Não há segunda coluna. |
+| Parâmetros API | `birthdayFrom` e `birthdayTo` (aliases snake_case aceitos se o padrão da API já o fizer: `birthday_from` / `birthday_to`). |
+| Formato dos parâmetros | `YYYY-MM-DD`. Valor vazio, omitido ou que não seja `YYYY-MM-DD` válido **não** ativa aquele extremo. |
+| Predicado ausente | Se **nenhum** dos extremos estiver ativo → nenhum predicado de aniversário (igual aos demais filtros omitidos). |
+| Ativação | Se `birthdayFrom` e/ou `birthdayTo` estiver(em) ativo(s) → aplica o intervalo. |
+| Comparando o cliente | Normalizar `aniversario` para `YYYY-MM-DD` comparável: (1) `DD/MM/AAAA` completo → ano real; (2) `DD/MM` sem ano → `2000-MM-DD` (comportamento da lista atual); (3) valor ausente ou não parseável → cliente **fora** do resultado quando o filtro estiver ativo. |
+| Inclusividade | Intervalo **inclusivo**: `ymd >= birthdayFrom` (se from ativo) e `ymd <= birthdayTo` (se to ativo). Extremidade única (só from ou só to) é permitida. |
+| Composição | `AND` com `search`, `status` e `hasCellphone` (mesma composição geral da lista). |
+| Paginação | Predicado aplicado **antes** de LIMIT/OFFSET, no mesmo `WHERE` do conjunto filtrado. |
+| `total` / `totalPages` | Calculados sobre o conjunto **após** todos os predicados (incluindo aniversário). |
+| Page reset (FE) | Alterar aniversário (como qualquer filtro) → nova consulta com `page = 1` e limpa seleção (contrato UX / §10.1 geral). |
+
+Não é filtro de “aniversário do mês”, “próximos N dias” nem comparação só por dia/mês ignorando o intervalo escolhido na UI. O intervalo é o que a lista já aplica.
+
+### Seleção global
+
+A seleção global é estado de interface, não exige materializar todos os registros. O modelo de estado é exatamente um destes:
+
+1. **vazia** — nenhum selecionado;
+2. **ids** — conjunto explícito de `id_cliente`;
+3. **allFiltered + snapshot** — “todos os registros que satisfazem o snapshot atual de busca/filtros” (mesmos predicados do GET paginado), **sem** carregar todos os IDs.
+
+A troca de página preserva seleção. Mudança de busca ou filtro invalida a seleção. Mudança de page size preserva a seleção. Cancelar limpa.
+
+Quando `allFiltered` estiver ativo, a exclusão em massa deve operar sobre os critérios do snapshot, e não somente sobre os IDs da página carregada.
+
+### Ações e exclusão em massa
+
+A única ação em massa da CC-09 é Excluir. A UI exige confirmação. Cada cliente deve respeitar o contrato individual de `DELETE /api/clientes/:id` da CC-05. Não se altera o DELETE individual nem se permite exclusão de filhos.
+
+**Operação dedicada (fechada no Architecture Review):**
+
+`POST /api/clientes/excluir-em-massa`
+
+(Alinha-se ao padrão existente de mutações por `POST …/excluir`, ex.: comissões; o nome literal acima é o contrato da CC-09.)
+
+Body — dois modos:
+
+```json
+{ "mode": "ids", "ids": ["…"] }
+```
+
+```json
+{
+  "mode": "allFiltered",
+  "search": null,
+  "status": null,
+  "hasCellphone": null,
+  "birthdayFrom": null,
+  "birthdayTo": null
+}
+```
+
+No modo `allFiltered`, os predicados são os **mesmos** do GET paginado da lista. Campos omitidos/`null` significam “sem esse filtro”.
+
+Para cada `id_cliente` resolvido: aplicar a **mesma** lógica de domínio de `deleteClienteById` (CC-05). Sem apagar filhos. Sem transação única que aborte o lote inteiro. Falha de um cliente (409/`HAS_RELATED`, 404 ou outro) **não** cancela exclusões válidas dos demais.
+
+Resposta semântica (envelope `ok`/`fail` existente):
+
+- `deleted` — ids excluídos com sucesso;
+- `blocked` — itens bloqueados (incluir `tipo` operacional quando a CC-05 o fornecer);
+- `notFound` — ids inexistentes.
+
+Após a operação na UI: limpar seleção; recarregar a lista preservando busca, filtros e page size; se a página atual deixar de existir, recuar para a última página válida; informar resultado parcial ao usuário.
+
+Essa rota **não** redefine o DELETE individual da CC-05.
+
+### Contrato de UI e CC-08
+
+Desktop (>=768px) usa tabela; mobile (<=767px) usa cards. A lista inicia em Todos. A seleção usa Cancelar/Selecionar tudo/Ações. Clique na linha/card abre o formulário único do CC-08. Novo cliente também usa CC-08. Loading usa skeleton; erro oferece retry; empty global e empty por busca/filtro são distintos.
+
+CC-09 não antecipa CC-10 nem CC-11.
+
 ## 11. Migração de dados existentes
 
 Estratégia apenas. Nada é executado nesta tarefa. A mudança de esquema, quando for implementada, segue migration formal em `api/drizzle/` mais `schema.ts`. Não se usa `ensureSchemaPatches` como substituto.
@@ -702,10 +761,9 @@ Estratégia apenas. Nada é executado nesta tarefa. A mudança de esquema, quand
 ### Colunas novas
 
 - `status_operacional` default `ativo`;
-- `status_modo` default `ativo`;
 - `created_at` e `updated_at`.
 
-Clientes já existentes recebem `status_operacional = ativo` e `status_modo = ativo`. Não se marca `inativo_manual`: não havia bloqueio manual antes desta feature. O primeiro job aplica a regra dos 6 meses em seguida e, quando o predicado é verdadeiro, grava `inativo_automatico`. Quem tem comanda de produção `finalizada` com data há mais de 6 meses passa a Inativo automático nessa execução. Quem tem comanda recente permanece Ativo. Quem não tem comanda finalizada permanece Ativo até completar 6 meses a partir de `created_at`.
+Clientes já existentes recebem `status_operacional = ativo` na migration. O primeiro job aplica a regra dos 6 meses em seguida. Quem tem comanda de produção `finalizada` com data há mais de 6 meses passa a Inativo nessa execução. Quem tem comanda recente permanece Ativo. Quem não tem comanda finalizada permanece Ativo até completar 6 meses a partir de `created_at`.
 
 ### Timestamps de clientes antigos
 
@@ -733,18 +791,9 @@ Não sobrescreve `celular` nem `telefone_fixo` já preenchidos. Se o destino já
 
 Cliente sem celular depois disso continua sem celular.
 
-### Outros escritores de cliente
-
-Dois caminhos gravam cliente sem passar por `POST /api/clientes`. Eles seguem esta seção e a seção 5. Não há regra nova de conflito.
-
-- `api/src/services/public-booking-domain.ts` deixa de gravar `telefone`. Persiste `celular` já normalizado. Duplicidade usa o 409 da seção 9. Não escolhe vencedor.
-- `api/src/seed/run.ts` deixa de inserir `telefone`. O telefone da planilha passa pela tabela de classificação acima. Destino já preenchido não é sobrescrito.
-
-Enquanto um desses caminhos gravar `telefone`, o portão do `DROP` não fecha.
-
 ### Duplicatas já existentes
 
-A migration que cria os índices únicos não escolhe vencedor e não apaga cliente. O predicado é o da seção 5: `char_length(celular) = 11` e `char_length(cpf) = 11`. Se existir grupo dentro desse predicado, a migration de índice falha de propósito e não é reaplicada até os dados ficarem únicos. Valor fora do predicado permanece, fora do índice. A limpeza é operacional, fora deste desenho, e não é merge automático.
+A migration que cria os índices únicos não escolhe vencedor e não apaga cliente. Antes do índice, um relatório lista grupos com o mesmo CPF de 11 dígitos ou o mesmo celular de 11 dígitos. Se existir grupo, essa migration de índice falha de propósito e não é reaplicada até os dados ficarem únicos. A limpeza é operacional, fora deste desenho, e não é merge automático.
 
 ### Relatório da migration de dados
 
@@ -755,8 +804,7 @@ A migration de cópia e normalização emite contagem, sem alterar o que não so
 - `telefone` não classificado ou em conflito com destino já preenchido;
 - `celular` que não ficou com 11 dígitos;
 - CPF que não ficou com 11 dígitos;
-- grupos duplicados de CPF e de celular com 11 dígitos (predicado do índice);
-- grupos de `celular` não nulo com o mesmo texto persistido fora desse predicado (máscara, outro tamanho, string vazia). Estes não bloqueiam o índice.
+- grupos duplicados de CPF e de celular.
 
 ### O que a migration não faz
 
@@ -771,12 +819,12 @@ A migration de cópia e normalização emite contagem, sem alterar o que não so
 
 Ordem segura. Cada passo só segue com o anterior estável.
 
-1. **Preparação.** Relatório somente leitura da seção 5: duplicatas de CPF e de celular com 11 dígitos (texto persistido e projeção da normalização), grupos de `celular` não nulo com o mesmo texto (máscara, outro tamanho, string vazia), `telefone` não classificável e `celular`/`cpf` fora de 11 dígitos. Nada é gravado. Só grupo dentro do predicado do índice bloqueia o passo do índice.
-2. **Banco.** Migration de colunas novas, backfill de status e timestamps, classificação de `telefone`, normalização de dígitos. O seed deixa de inserir `telefone` e classifica o telefone da planilha por esta seção 11. Índices únicos numa migration seguinte, somente com o predicado da seção 5 sem duplicata. Valor fora do predicado não bloqueia o índice e não é apagado. `telefone` ainda existe.
-3. **API.** POST, PATCH, GET, DELETE, unicidade, job de inatividade. O agendamento público deixa de gravar `telefone` e persiste `celular` normalizado. DELETE novo no ar antes de qualquer troca de FK. A rota `/clientes/:id/editar` hoje envia `nome` e `telefone`; ela fica incompatível com este PATCH até o formulário único do passo 5. O passo 3 não é unidade pronta para uso dessa rota.
+1. **Preparação.** Relatório somente leitura de duplicatas de CPF/celular, de `telefone` não classificável e de `celular`/`cpf` fora de 11 dígitos. Nada é gravado.
+2. **Banco.** Migration de colunas novas, backfill de status e timestamps, classificação de `telefone`, normalização de dígitos. Índices únicos numa migration seguinte, somente com o relatório de duplicatas vazio. `telefone` ainda existe, já ignorada pela aplicação que virá.
+3. **API.** POST, PATCH, GET, DELETE, unicidade, job de inatividade. DELETE novo no ar antes de qualquer troca de FK. Deploy da API que ainda não apaga filhos.
 4. **FKs.** `CASCADE` e `SET NULL` das relações da seção 8 passam a `NO ACTION`.
 5. **Frontend.** Formulário único, rotas, lista, filtros, duplicidade, confirmação de saída, exclusão. Quem envia WhatsApp a partir do cliente usa `celular`.
-6. **Remoção do legado.** API, agendamento público e seed já não leem nem gravam `telefone`. O `DROP COLUMN telefone` só roda quando não restar telefone não classificado, conflito, ou valor que a migration não tenha copiado, e quando não restar escritor da coluna. Enquanto o portão não estiver limpo, a coluna permanece, invisível para o cadastro. Não se cria regra nova para limpar o que ficou.
+6. **Remoção do legado.** API já não lê nem grava `telefone`. O `DROP COLUMN telefone` só roda quando não restar linha com `telefone` não nulo que não tenha sido copiado para o destino classificado. Enquanto houver linha no relatório de não classificados ou de conflito, a coluna permanece, invisível para o cadastro.
 7. **Validação e QA.** Cenários da seção 13, no protocolo de Validation já existente. Esta etapa de desenho não executa QA.
 
 Até o passo 5, cliente antigo sem celular continua abrindo. A partir do passo 5, salvá-lo pelo cadastro exige celular. Leitura e lista não exigem.
@@ -792,14 +840,13 @@ Não se criam testes nesta tarefa. A implementação futura cobre as camadas aba
 - normalização de celular, fixo e CPF, com e sem máscara, com `+55`;
 - dígitos verificadores de CPF e de CNPJ;
 - predicado de inatividade: comanda `finalizada` recente, comanda `finalizada` com pagamento pendente, comanda só com pagamento e cobrança aberta, orçamento, ausência de comanda, virada de 6 meses de calendário no fuso de Brasília;
-- o job só atualiza `status_modo = ativo` com predicado verdadeiro, gravando `inativo_automatico`; não grava `ativo` e não altera `inativo_manual`;
+- o job não grava `ativo`;
 - PATCH: chave ausente não anula; string vazia em opcional anula; celular vazio não anula e falha.
 
 ### Integração / API
 
 - POST sem celular → 400, nada gravado;
-- POST com celular válido → 200, `status_operacional = ativo`, `status_modo = ativo`, id devolvido;
-- PATCH com Inativo grava `inativo_manual`; PATCH seguinte com Ativo grava `status_modo = ativo` e remove o bloqueio;
+- POST com celular válido → 200, `status_operacional = ativo`, id devolvido;
 - POST e PATCH com CPF duplicado e com celular duplicado, mascarado e só dígitos → 409 com `field` e `cliente`;
 - o próprio id não é duplicata de si;
 - nome repetido é aceito;
@@ -812,9 +859,8 @@ Não se criam testes nesta tarefa. A implementação futura cobre as camadas aba
 ### Banco
 
 - vários `celular` null convivem;
-- índice único recusa o segundo celular de 11 dígitos e o segundo CPF de 11 dígitos;
-- celular sem 11 dígitos, máscara e string vazia ficam fora do índice e não bloqueiam a criação;
-- migration não cria o índice se houver grupo dentro do predicado da seção 5;
+- índice único recusa o segundo celular e o segundo CPF;
+- migration não cria o índice se o relatório de duplicatas não estiver vazio;
 - FK `NO ACTION` recusa `DELETE` direto do pai quando há filho;
 - `telefone` de 11 dígitos com nono dígito 9 não cai em `telefone_fixo` quando vira celular;
 - `telefone` de 10 dígitos não cai em `celular`;
@@ -837,7 +883,7 @@ Não se criam testes nesta tarefa. A implementação futura cobre as camadas aba
 - `telefone` celular e `telefone` fixo seguem a tabela da seção 11;
 - valor inclassificável não é copiado e impede o `DROP`;
 - timestamps antigos iguais ao instante da migration, não uma data inventada;
-- status inicial `ativo` e `status_modo = ativo`, sem `inativo_manual`; o job seguinte grava `inativo_automatico` em quem tem a última comanda finalizada há mais de 6 meses.
+- status inicial `ativo`, e o job seguinte inativa quem tem a última comanda finalizada há mais de 6 meses.
 
 ### Concorrência
 
@@ -850,11 +896,9 @@ Não se criam testes nesta tarefa. A implementação futura cobre as camadas aba
 - comanda `finalizada` com `pagamento_status` pendente ou parcial também conta;
 - cobrança ainda `aberta` não conta, mesmo com pagamento registrado;
 - orçamento não conta;
-- cliente em `status_modo = ativo` sem comanda finalizada há 6 meses desde `created_at` fica `inativo_automatico`;
-- Ativo manual (`status_modo = ativo`) com referência vencida passa a `inativo_automatico` na próxima execução; esse Inativo não é bloqueio manual;
-- Inativo manual permanece `inativo_manual` depois de uma comanda `finalizado` nova; o status efetivo não muda;
-- Inativo automático permanece `inativo_automatico` depois de uma comanda `finalizado` nova; a referência reinicia e o cliente não volta a Ativo;
-- só um PATCH com Ativo tira `inativo_manual` ou `inativo_automatico` de Inativo.
+- cliente sem comanda finalizada há 6 meses desde `created_at` fica Inativo;
+- Ativo manual com referência vencida volta a Inativo na próxima execução;
+- Inativo manual com comanda nova permanece Inativo, e não é forçado de novo enquanto a referência tiver menos de 6 meses.
 
 ---
 
@@ -867,9 +911,8 @@ Não reabrir:
 - comanda `finalizado` define atendimento concluído para inatividade;
 - valor pendente não tira a comanda de finalizada;
 - 6 meses sem essa comanda tornam o cliente Inativo;
-- comanda `finalizado` nova reinicia a referência e não reativa;
-- Inativo manual prevalece: o automático não reativa, e só o usuário volta para Ativo;
-- Ativo manual segue sujeito aos 6 meses; o Inativo resultante é automático;
+- comanda `finalizado` nova reinicia a referência;
+- o automático prevalece e pode gravar Inativo de novo depois de uma alteração manual;
 - celular obrigatório em cadastro novo e em salvamento futuro; base antiga pode seguir sem celular;
 - celular é o WhatsApp, único e normalizado;
 - telefone fixo é complementar, opcional, e não entra na unicidade;
@@ -877,9 +920,7 @@ Não reabrir:
 - Observações não volta;
 - nome não é único;
 - exclusão com qualquer registro relacionado é bloqueada, sem apagar filhos e sem órfãos;
-- filtro inicial Todos;
-- filtros desta versão: Status, Com celular, Sem celular e Aniversário;
-- dívida, avaliação, crédito, desconto e notificação ficam fora dos filtros;
+- filtro inicial Todos; filtros só de status, celular e aniversário;
 - um formulário para drawer e rotas;
 - saída com alteração não salva pede confirmação;
 - duplicidade oferece “Ver cliente” só quando a API identifica o outro, sem abrir sozinho;
@@ -893,16 +934,15 @@ Não reabrir:
 | Orçamento não entra na referência | `modo = orcamento` não é comanda. |
 | Data da referência é `atendimentos.data`, com fallback em `inicio` | São as datas já gravadas na linha da comanda. |
 | 6 meses de calendário, fuso `America/Sao_Paulo` | “6 meses” é calendário, não 180 dias. O fuso evita virar o dia em UTC. |
-| Job na API, na subida e no máximo uma vez por dia civil | Não há agendador no banco. A lista não varre comandas. |
-| `status_operacional` mais `status_modo` (`ativo`, `inativo_manual`, `inativo_automatico`) | O valor efetivo não distingue bloqueio manual de inatividade automática. Ativo manual e estado normal compartilham `status_modo = ativo`, porque os dois podem cair na regra dos 6 meses. |
-| Job só atualiza `status_modo = ativo` e grava `inativo_automatico`; não grava `ativo` | Inativo manual fica fora do `WHERE`. Comanda nova não escreve no cliente, então não promove Inativo manual nem Inativo automático. |
-| Índice de `celular`: `WHERE celular IS NOT NULL AND char_length(celular) = 11` | A prosa e o índice de CPF já deixavam fora o valor sem 11 dígitos. O SQL `WHERE celular IS NOT NULL` sozinho não era essa regra. Máscara, outro tamanho e string vazia ficam de fora e não bloqueiam o índice. |
+| `status_operacional` materializado; job na API na subida e uma vez por dia civil | Não há agendador no banco. A lista não varre comandas. |
+| O job só grava `inativo` e nunca grava `ativo` | O produto permite o automático tornar Inativo de novo e manda não inventar promoção a Ativo quando nasce uma comanda. A comanda nova só muda a referência lida no predicado. |
+| `celular` e `cpf` persistem só dígitos; índice único parcial | A comparação ignora máscara e vários null continuam válidos. |
 | Celular válido tem 11 dígitos e o terceiro é `9` | Separa celular de fixo na validação e na leitura do legado. |
 | PATCH de cadastro exige celular; GET não exige | Casa “salvamento futuro” com “sem backfill da base”. |
 | Chave ausente não anula; vazio explícito anula opcional | Corrige o PATCH atual, que zera `telefone` quando o campo não vem. |
 | Exclusão em transação com `FOR UPDATE` e depois FKs `NO ACTION` | A API deixa de apagar filhos antes de o banco passar a impedir `CASCADE` e `SET NULL`. |
 | `created_at` antigo = instante da migration | Não há data histórica. A limitação fica escrita na seção 11. |
-| `telefone` some da API, do seed e do agendamento público antes do `DROP` | O portão não fecha enquanto algum escritor gravar a coluna ou restar valor não copiado. |
+| `telefone` some da API primeiro e do banco só com o relatório limpo | Evita copiar fixo para celular e evita apagar número não classificado. |
 | Formulário único reutilizado; rotas viram hospedeiras | É o contrato de UX das duas rotas e do drawer. |
 | “Ver cliente” com dirty passa pela confirmação de saída | É navegação para fora do formulário sujo. |
 
@@ -912,8 +952,8 @@ Não há pergunta de desenho em aberto.
 
 Dois portões dependem dos dados reais e já têm estratégia. Não são regra de produto por decidir:
 
-- índice único de CPF e de celular só é criado se não houver duplicata dentro do predicado da seção 5 (`char_length` = 11) depois da normalização; valor fora do predicado não bloqueia o índice; ninguém é apagado por este desenho;
-- `DROP` de `telefone` só ocorre quando não restar valor não copiado e quando API, seed e agendamento público já não gravarem a coluna.
+- índice único de CPF e de celular só é criado se não houver duplicata depois da normalização; ninguém é apagado por este desenho;
+- `DROP` de `telefone` só ocorre quando não restar valor não copiado.
 
 Enquanto esses portões não passarem, o cadastro novo já funciona sem o índice (a API recusa duplicidade) e sem ler `telefone`.
 
@@ -923,17 +963,17 @@ Enquanto esses portões não passarem, o cadastro novo já funciona sem o índic
 
 Não implementar a partir deste arquivo até uma etapa própria de implementação.
 
-1. Relatório somente leitura da seção 12, passo 1, com o predicado da seção 5. Sem update, delete, índice, `DROP`, merge ou escolha de vencedor.
-2. Atualizar `api/src/db/schema.ts` e gerar a migration de colunas, backfill, classificação de `telefone` e normalização. O seed classifica o telefone da planilha e deixa de inserir `telefone`. Não dropar `telefone`. Não recriar `observacoes`.
-3. Migration seguinte dos índices únicos, condicionada ao predicado da seção 5 sem duplicata de 11 dígitos. Valor fora do predicado não libera limpeza nem bloqueia o índice.
-4. API: normalização, validação, unicidade com corpo `DUPLICATE` (`field` e `cliente` no envelope), POST, PATCH com ausente versus limpo, GET sem `telefone`, remoção da unicidade de nome. O agendamento público persiste `celular` normalizado e deixa de gravar `telefone`. A rota `/clientes/:id/editar` que envia `telefone` não fica pronta para uso até o formulário único.
+1. Relatório somente leitura da seção 12, passo 1.
+2. Atualizar `api/src/db/schema.ts` e gerar a migration de colunas, backfill, classificação de `telefone` e normalização. Não dropar `telefone`. Não recriar `observacoes`.
+3. Migration seguinte dos índices únicos, condicionada ao relatório de duplicatas vazio.
+4. API: normalização, validação, unicidade com corpo `DUPLICATE`, POST, PATCH com ausente versus limpo, GET sem `telefone`, remoção da unicidade de nome.
 5. Trocar `deleteClienteById` pelo DELETE da seção 8, ainda sem apagar filhos.
-6. Job de inatividade, com o predicado da seção 7: só linhas `status_modo = ativo`, gravando `inativo_automatico`, sem promover a Ativo.
+6. Job de inatividade, com o predicado da seção 7, só gravando `inativo`.
 7. Migration das FKs para `NO ACTION`.
-8. Formulário único e encaixe no drawer, em `/clientes/novo`, em `/clientes/:id/editar` e nos chamadores da agenda, comandas, financeiro e orçamentos. A pré-checagem deixa de exigir nome único e de ler `telefone` como celular.
-9. Lista: Todos, status operacional, Com celular / Sem celular só por `celular`, Aniversário, retirada dos filtros fora do contrato, confirmação de saída, “Ver cliente” com `field` e `cliente.id_cliente` conservados na leitura do erro, exclusão.
-10. WhatsApp pré-preenchido com `celular` no utilitário de telefone e nos chamadores que hoje leem `telefone`. `notificacoes_ativo` continua preferência de envio.
-11. `DROP` de `telefone` somente com o portão da seção 11 limpo: sem não classificado, sem conflito, sem valor não copiado e sem escritor da coluna.
+8. Formulário único e encaixe no drawer, em `/clientes/novo`, em `/clientes/:id/editar` e nos chamadores da agenda, comandas, financeiro e orçamentos.
+9. Lista: Todos, status operacional, Com celular / Sem celular só por `celular`, Aniversário, retirada dos filtros fora do contrato, confirmação de saída, “Ver cliente”, exclusão.
+10. WhatsApp pré-preenchido com `celular` onde o chamador usa o telefone do cliente.
+11. `DROP` de `telefone` somente com o portão da seção 11 limpo.
 12. Testes da seção 13 e Validation.
 
 ### Correspondência com o contrato
@@ -948,13 +988,13 @@ Não implementar a partir deste arquivo até uma etapa própria de implementaç�
 | Observações não voltam | seções 2 e 4 |
 | Inatividade por comanda `finalizado`, inclusive com valor pendente | seção 7 |
 | 6 meses e referência reiniciada por comanda nova | seção 7 |
-| Inativo manual não é reativado; Ativo manual pode cair em Inativo automático; comanda nova só reinicia a referência | seção 7 |
+| Manual versus automático | seção 7 |
 | Status não é notificação; novo nasce Ativo | seções 4, 7 e 10 |
 | Exclusão protegida e exclusão livre com confirmação | seções 8 e 10 |
 | API aplica a regra mesmo sem a UI | seção 9 |
 | Duplicidade identifica o outro cliente e não abre sozinha | seções 9 e 10 |
 | Um formulário no drawer e nas rotas | seção 10 |
-| Filtro inicial Todos; filtros Status, Com celular, Sem celular e Aniversário. Dívida, avaliação, crédito, desconto e notificação ficam de fora | seções 7 e 10 |
+| Filtro inicial Todos; filtros só status, celular e aniversário | seções 7 e 10 |
 | Saída com alteração não salva | seção 10 |
 | Endereço, redes, foto, apelido, RG, CNPJ, aniversário | seção 4 |
 | Crédito, desconto e notificação fora do formulário | seções 4 e 10 |

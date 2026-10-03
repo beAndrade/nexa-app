@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 fechadas documentalmente; CC-08 commit final pendente; CC-09 ainda não iniciada  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅; CC-09-B docs fechadas (commit exclusivo pendente); CC-09-C…G não iniciadas  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -13,25 +13,6 @@
 
 O [Sprint Planning do Epic](./05-sprint-planning.md) descreve a fundação mobile e não é o plano desta feature. Architecture Review é o passo seguinte do ciclo e não faz parte deste arquivo. QA roda depois da implementação, pelo agente `.cursor/agents/nexa-qa.md`.
 
-### Progresso de execução (atualizado 2026-10-02)
-
-| ID | Nome | Estado |
-|----|------|--------|
-| CC-01 | Auditoria somente leitura | ✅ Concluída |
-| CC-02 | Colunas, backfill e classificação | ✅ Concluída |
-| CC-03 | Índices únicos parciais | ✅ Concluída |
-| CC-04 | API de cadastro | ✅ Concluída |
-| CC-05 | Exclusão protegida | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-05.md) |
-| CC-06 | Job de inatividade | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-06.md) |
-| CC-07 | FKs NO ACTION | ✅ Concluída (docs) — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-07.md); **commit pendente** |
-| CC-08 | Formulário único | ✅ Docs fechadas — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-08.md); QA APPROVED; **commit final pendente** (HEAD `9176ff6` + rework WT) |
-| CC-09 | Lista, filtros e exclusão na UI | 🔒 Aguardando commit final CC-08 — **não iniciada** |
-| CC-10 | WhatsApp usa celular | 🔒 Aguardando |
-| CC-11 | Remover coluna telefone | 🔒 Aguardando |
-| CC-12 | Testes do desenho | 🔒 Aguardando |
-
-A feature Cadastro de Cliente **não** está completa. Este quadro só registra progresso por unidade; o contrato das seções abaixo permanece o plano aprovado.
-
 ---
 
 ## Purpose
@@ -42,14 +23,14 @@ Decompor o Technical Design aprovado em tarefas sequenciais e verificáveis, na 
 
 ## Sprint Strategy
 
-A sequência de seis blocos (auditoria, banco, API, formulário, lista, integração e testes) foi aberta nas doze tarefas abaixo. Fundir índice único, `DELETE` e `DROP` de `telefone` no mesmo passo quebraria a ordem da seção 12 do Technical Design.
+A sequência de blocos do cadastro é aberta nas tarefas abaixo. A CC-09 foi decomposta em sete unidades executáveis para preservar dependências entre API, busca/filtros, superfície responsiva, seleção, exclusão e estados. Fundir índice único, `DELETE` e `DROP` de `telefone` no mesmo passo quebraria a ordem da seção 12 do Technical Design.
 
 ```text
 CC-01  Relatório somente leitura
          ↓
 CC-02  Colunas, backfill, classificação de telefone, normalização
          ↓
-CC-03  Índices únicos  — só com o predicado da seção 5 sem duplicata
+CC-03  Índices únicos  — só com relatório de duplicatas vazio
          ↓
 CC-04  API de cadastro (GET, POST, PATCH, duplicidade)
          ↓
@@ -61,7 +42,7 @@ CC-07  FKs para NO ACTION
          ↓
 CC-08  Formulário único (drawer, rotas, chamadores)
          ↓
-CC-09  Lista, filtros, seleção, saída, Ver cliente, exclusão na UI
+CC-09-A → CC-09-G  Lista paginada, busca/filtros, responsividade, seleção, exclusão, estados e validação
          ↓
 CC-10  WhatsApp do cliente lê celular
          ↓
@@ -72,7 +53,7 @@ CC-12  Testes da seção 13
 QA     agente nexa-qa (fora deste plano)
 ```
 
-Não há paralelismo seguro. CC-03 permanece bloqueada enquanto o Data Audit não satisfizer o predicado da seção 5 do Technical Design (grupos de `celular` ou `cpf` com 11 dígitos). Valor fora desse predicado não libera a tarefa e não a bloqueia. CC-03 bloqueada não impede CC-04: o desenho permite o cadastro novo recusar duplicidade na aplicação antes do índice. CC-04 não é unidade pronta para uso de `/clientes/:id/editar` antes de CC-08. CC-11 pode ficar bloqueada pelo relatório de legado sem impedir CC-08 a CC-10. Nenhuma das duas inventa limpeza, apaga cliente, faz merge ou escolhe vencedor.
+Não há paralelismo seguro. CC-03 pode ficar bloqueada por dados sem impedir CC-04: o desenho permite o cadastro novo recusar duplicidade na aplicação antes do índice. CC-11 pode ficar bloqueada pelo relatório de legado sem impedir CC-08 a CC-10. Nenhuma das duas inventa limpeza.
 
 O job (CC-06) só grava `inativo_automatico` em linhas `status_modo = ativo`. Comanda nova não escreve em `clientes`. Inativo manual e Inativo automático só voltam a Ativo por PATCH em que a pessoa escolhe Ativo.
 
@@ -82,18 +63,18 @@ O job (CC-06) só grava `inativo_automatico` em linhas `status_modo = ativo`. Co
 
 ### Includes
 
-- Relatório somente leitura de CPF, celular, `telefone`, duplicatas de 11 dígitos e grupos de `celular` não nulo com o mesmo texto persistido, antes de qualquer índice único.
+- Relatório somente leitura de CPF, celular, `telefone` e duplicatas, antes de qualquer índice único.
 - Colunas `status_operacional`, `status_modo`, `created_at` e `updated_at`, com backfill da seção 11 do Technical Design.
 - Classificação de `telefone` (11 dígitos com terceiro `9` → `celular` se vazio; 10 dígitos → `telefone_fixo` se vazio; resto não copia) e normalização de dígitos já gravados em `celular` e `cpf`.
-- Índices únicos parciais de `celular` e `cpf` com o predicado `char_length` = 11, somente quando esse predicado não tiver duplicata.
+- Índices únicos parciais de `celular` e `cpf`, somente com duplicatas de 11 dígitos zeradas.
 - API de cadastro: nome e celular obrigatórios na gravação; celular único; CPF único e válido; telefone fixo opcional e fora da unicidade; nome repetido permitido; chave ausente não anula; vazio explícito anula opcional; celular vazio no PATCH de cadastro falha.
 - `status_operacional` + `status_modo`, POST sempre Ativo, PATCH deriva o modo, job diário na API.
 - DELETE em transação com `FOR UPDATE`, 409 sem apagar filhos, depois FKs `NO ACTION`.
 - Um formulário para o drawer, `/clientes/novo` e `/clientes/:id/editar`, e os chamadores já existentes (agenda, comandas, financeiro, orçamentos).
-- Lista desktop e mobile: filtro inicial Todos; Status, Com celular, Sem celular e Aniversário; busca do UX Flow; seleção mobile já existente da lista, sem regra nova de seleção.
+- CC-09: lista desktop/mobile, busca, filtros, paginação server-side, seleção global, exclusão em massa tolerante a falhas, estados e integração com CC-08, conforme as unidades CC-09-A a CC-09-G.
 - Duplicidade com “Ver cliente” só no clique, e confirmação de saída se o formulário estiver dirty.
 - Pré-preenchimento de WhatsApp a partir de `celular`, sem redesenhar o módulo de WhatsApp.
-- `DROP COLUMN telefone` apenas com o portão da seção 11 limpo e sem escritor da coluna.
+- `DROP COLUMN telefone` apenas com o portão limpo.
 - Testes da seção 13 do Technical Design.
 
 ### Does Not Include
@@ -122,7 +103,13 @@ O job (CC-06) só grava `inativo_automatico` em linhas `status_modo = ativo`. Co
 | CC-06 | Job de inatividade | `feat(clientes): inatividade automática por comanda finalizada` |
 | CC-07 | FKs NO ACTION | `feat(clientes): FKs impedem apagar cliente com filhos` |
 | CC-08 | Formulário único | `feat(clientes): formulário único no drawer e nas rotas` |
-| CC-09 | Lista, filtros e exclusão na UI | `feat(clientes): lista e filtros do cadastro` |
+| CC-09-A | API de listagem paginada | `feat(clientes): lista paginada de clientes` |
+| CC-09-B | Busca e filtros server-side | `feat(clientes): busca e filtros de clientes` |
+| CC-09-C | Tabela e cards responsivos | `feat(clientes): lista responsiva de clientes` |
+| CC-09-D | Seleção e seleção global | `feat(clientes): seleção global de clientes` |
+| CC-09-E | Ações e exclusão protegida | `feat(clientes): exclusão em massa de clientes` |
+| CC-09-F | Estados, paginação e integração CC-08 | `feat(clientes): estados e integração da lista` |
+| CC-09-G | Validação e documentação | `test(clientes): valida contrato da lista` |
 | CC-10 | WhatsApp usa celular | `fix(clientes): WhatsApp do cliente lê celular` |
 | CC-11 | Remover coluna telefone | `chore(clientes): remove coluna telefone após o portão` |
 | CC-12 | Testes do desenho | `test(clientes): cobre o contrato de cadastro` |
@@ -135,27 +122,23 @@ O job (CC-06) só grava `inativo_automatico` em linhas `status_modo = ativo`. Co
 
 ### Objective
 
-Produzir o relatório da seção 12, passo 1, sem gravar. O relatório precisa bastar para o Project Orchestrator saber se o predicado do índice de CC-03 está limpo.
+Produzir o relatório da seção 12, passo 1, sem gravar.
 
 ### Scope
 
-Contagens e grupos, só leitura. O predicado que libera CC-03 é o da seção 5 do Technical Design: `celular` e `cpf` com exatamente 11 dígitos.
+Contagens e grupos, só leitura:
 
 - `telefone` que a seção 11 copiaria para `celular` (11 dígitos, terceiro `9`);
 - `telefone` que copiaria para `telefone_fixo` (10 dígitos);
 - `telefone` não classificado, ou em conflito porque o destino já tem outro número;
-- `celular` que não tem 11 dígitos, inclusive valor mascarado, outro tamanho e string vazia;
+- `celular` que não tem 11 dígitos;
 - `cpf` que não tem 11 dígitos;
 - grupos com o mesmo CPF de 11 dígitos;
-- grupos com o mesmo celular de 11 dígitos, no texto já persistido;
-- projeção somente leitura dos grupos de 11 dígitos que a normalização da seção 11 produziria, sem gravar essa projeção;
-- grupos de `celular` não nulo com o mesmo texto persistido, inclusive máscara, tamanho diferente de 11 e string vazia.
-
-Os grupos de 11 dígitos violam o predicado e mantêm CC-03 bloqueada. Os grupos fora do predicado entram no relatório e não bloqueiam o índice. Nenhum grupo autoriza limpeza.
+- grupos com o mesmo celular de 11 dígitos.
 
 ### Out of Scope
 
-Update, delete, índice, `DROP`, escolha de vencedor, merge, limpeza automática.
+Update, delete, índice, `DROP`, escolha de vencedor, merge.
 
 ### Likely Files
 
@@ -167,10 +150,9 @@ Nenhuma. É a primeira tarefa.
 
 ### Acceptance Criteria
 
-- [ ] Nenhuma linha de `clientes` é alterada. Não há `UPDATE`, `DELETE`, `DROP` nem criação de índice.
-- [ ] O relatório separa os grupos do escopo, inclusive texto persistido igual fora de 11 dígitos e a projeção de 11 dígitos.
-- [ ] Duplicata é listada como grupo, sem eleger um cliente e sem merge.
-- [ ] Fica explícito se os grupos de 11 dígitos estão vazios. Só esse vazio permite analisar a liberação de CC-03. Grupos fora do predicado não liberam limpeza.
+- [ ] Nenhuma linha de `clientes` é alterada.
+- [ ] O relatório separa os sete grupos acima.
+- [ ] Duplicata é listada como grupo, sem eleger um cliente.
 
 ### Manual Validation
 
@@ -182,7 +164,7 @@ O script roda até o fim. Não exige `ng build`.
 
 ### Risk
 
-**Baixo** para dados, porque a tarefa só lê. **Alto** como portão: grupo de CPF ou celular com 11 dígitos mantém CC-03 bloqueada. Grupo fora do predicado não autoriza apagar dado.
+**Baixo** para dados. **Alto** como portão: se houver grupo duplicado, CC-03 não cria índice.
 
 ### Definition of Done
 
@@ -210,9 +192,8 @@ Em `api/src/db/schema.ts` e em migration formal em `api/drizzle/`:
 - classificar `telefone` só quando o destino está vazio;
 - normalizar `celular` e `cpf` já gravados quando o resultado tem 11 dígitos;
 - não apagar celular ou CPF que não tenha 11 dígitos;
-- emitir as contagens do relatório da migration (copiados, não classificados, conflito, fora de 11 dígitos, grupos duplicados de 11 dígitos e grupos de `celular` não nulo com o mesmo texto fora do predicado);
-- `telefone` permanece na tabela;
-- `api/src/seed/run.ts` deixa de inserir `telefone`. O telefone da planilha segue a tabela da seção 11: 11 dígitos com terceiro `9` vão para `celular` se estiver vazio; 10 dígitos vão para `telefone_fixo` se estiver vazio; outro tamanho não copia; destino já preenchido não é sobrescrito.
+- emitir as contagens do relatório da migration (copiados, não classificados, conflito, fora de 11 dígitos, grupos duplicados);
+- `telefone` permanece na tabela.
 
 ### Out of Scope
 
@@ -222,7 +203,7 @@ Em `api/src/db/schema.ts` e em migration formal em `api/drizzle/`:
 
 - `api/src/db/schema.ts`
 - `api/drizzle/*.sql` e `api/drizzle/meta/_journal.json`
-- `api/src/seed/run.ts`
+- `api/src/seed/run.ts`, só se o insert de cliente quebrar por coluna nova NOT NULL sem default já coberto
 
 ### Dependencies
 
@@ -238,7 +219,6 @@ CC-01. A migration de dados pode rodar com duplicatas presentes; ela não as res
 - [ ] Outro tamanho, ou destino já preenchido com outro número, não é copiado e entra na contagem.
 - [ ] Valor já em `celular` ou `telefone_fixo` não é sobrescrito.
 - [ ] `observacoes` não é criada.
-- [ ] O seed não grava `telefone` e classifica o telefone da planilha pela seção 11.
 
 ### Manual Validation
 
@@ -266,18 +246,18 @@ Migration aplicada, `telefone` ainda existe, relatório de contagem emitido, nen
 
 ### Objective
 
-Criar os índices da seção 5 e da seção 6 somente quando o predicado desses índices não tiver grupo duplicado.
+Criar os índices da seção 5 e da seção 6 somente quando não houver grupo duplicado de 11 dígitos.
 
 ### Scope
 
-Migration seguinte, separada de CC-02. O SQL é o do Technical Design, seção 5 e seção 6:
+Migration seguinte, separada de CC-02:
 
 ```text
-UNIQUE (celular) WHERE celular IS NOT NULL AND char_length(celular) = 11
+UNIQUE (celular) WHERE celular IS NOT NULL
 UNIQUE (cpf) WHERE cpf IS NOT NULL AND char_length(cpf) = 11
 ```
 
-Vários null continuam válidos. `telefone_fixo`, `telefone`, string vazia, máscara e tamanho diferente de 11 ficam fora do índice de celular. Se o relatório de CC-02 ainda tiver grupo de CPF ou celular com 11 dígitos, esta migration falha de propósito e não é reaplicada até esses grupos ficarem vazios. Grupo fora do predicado não bloqueia o índice e não autoriza apagar cliente. A limpeza é operacional e está fora deste desenho.
+Vários null continuam válidos. `telefone_fixo` e `telefone` ficam de fora. Se o relatório de duplicatas de CC-02 não estiver vazio, esta migration falha de propósito e não é reaplicada até os dados ficarem únicos. A limpeza é operacional e está fora deste desenho.
 
 ### Out of Scope
 
@@ -290,15 +270,14 @@ Apagar cliente, eleger vencedor, merge, índice de nome, de RG ou de CNPJ.
 
 ### Dependencies
 
-CC-02. Permanece bloqueada enquanto o Data Audit não satisfizer o predicado real do índice. Não depende de decisão de produto nova.
+CC-02. Depende do portão de duplicatas, não de uma decisão de produto nova.
 
 ### Acceptance Criteria
 
 - [ ] Com duplicata de CPF ou celular de 11 dígitos, a migration não cria o índice.
-- [ ] Sem esses grupos, os dois índices parciais existem, com `char_length` = 11 nos dois.
+- [ ] Sem esses grupos, os dois índices parciais existem.
 - [ ] Dois `celular` null convivem.
-- [ ] CPF ou celular que não tem 11 dígitos fica fora do índice.
-- [ ] String vazia, máscara e texto repetido fora de 11 dígitos não bloqueiam a criação e não são apagados.
+- [ ] CPF que não tem 11 dígitos fica fora do índice.
 
 ### Manual Validation
 
@@ -335,8 +314,7 @@ Fazer POST, PATCH e GET cumprirem a seção 9, com a aplicação recusando dupli
 - POST exige nome e celular válido (11 dígitos, terceiro `9`). Status do body é ignorado; o servidor grava `ativo` / `ativo`.
 - PATCH de cadastro exige nome e celular válido. Chave ausente não altera a coluna. Vazio explícito em opcional grava null. Celular vazio não grava null: 400.
 - `status_operacional` no PATCH é `ativo` ou `inativo`. `status_modo` do body é ignorado e derivado (`inativo_manual` ou `ativo`).
-- Duplicidade de CPF ou celular de outro cliente: HTTP 409 `DUPLICATE`. O envelope em `api/src/shared/utils/envelope.ts` passa a transportar `field` e `cliente`, além de `code` e `message`. O próprio id não é duplicata. Nome repetido é aceito.
-- `api/src/services/public-booking-domain.ts` deixa de gravar `telefone`, persiste `celular` normalizado e trata duplicidade pelo mesmo 409. Não inventa resolução de conflito.
+- Duplicidade de CPF ou celular de outro cliente: 409 `DUPLICATE` com `field` e `cliente` quando a linha for encontrada. O próprio id não é duplicata. Nome repetido é aceito.
 - GET lista e GET por id incluem status e auditoria e não incluem `telefone` nem observações. Colunas de crédito, desconto e notificação podem continuar no payload para outras abas; o contrato de cadastro não as edita.
 - Unicidade de nome, se existir hoje, sai.
 - Nome alterado continua disparando `sincronizarNomeClienteEmAtendimentos`.
@@ -346,8 +324,6 @@ Fazer POST, PATCH e GET cumprirem a seção 9, com a aplicação recusando dupli
 
 DELETE (CC-05), job (CC-06), FKs (CC-07), formulário (CC-08), filtros da lista na UI (CC-09). Rotas `/credito-movimentos` não passam a exigir celular.
 
-`src/app/features/clientes/pages/editar/clientes-editar.component.ts` hoje envia `nome` e `telefone`. Quando o PATCH exigir `celular` e ignorar `telefone`, essa rota deixa de salvar. CC-04 não é unidade independente pronta para uso dessa rota. O formulário único que a corrige é CC-08. Esta tarefa não altera esse componente.
-
 ### Likely Files
 
 - `api/src/index.ts` (rotas `/api/clientes`)
@@ -355,8 +331,6 @@ DELETE (CC-05), job (CC-06), FKs (CC-07), formulário (CC-08), filtros da lista 
 - `api/src/services/clientes-unicidade.ts`
 - `api/src/services/queries.ts` (`sincronizarNomeClienteEmAtendimentos`)
 - `api/src/db/schema.ts` (leitura das colunas novas)
-- `api/src/shared/utils/envelope.ts`
-- `api/src/services/public-booking-domain.ts`
 
 ### Dependencies
 
@@ -371,10 +345,7 @@ CC-02. CC-03 é desejável, não bloqueante: sem índice, a checagem na aplicaç
 - [ ] Duplicidade mascarada ou só dígitos responde 409 com `field` `cpf` ou `celular`.
 - [ ] GET de cliente antigo sem celular responde 200 com celular null.
 - [ ] A API não lê nem grava `telefone` no cadastro.
-- [ ] O 409 traz `field` e `cliente` no envelope.
-- [ ] O agendamento público grava `celular` normalizado e não grava `telefone`.
 - [ ] Observações não entram no contrato.
-- [ ] `/clientes/:id/editar` não é tratada como pronta para uso até CC-08.
 
 ### Manual Validation
 
@@ -386,7 +357,7 @@ Subir a API e exercitar as rotas. A suíte da seção 13 fica em CC-12; esta tar
 
 ### Risk
 
-**Alto.** O PATCH atual zera campo omitido. A distinção ausente versus limpo é o contrato; não se mantém o comportamento velho. Publicar CC-04 sem CC-08 tira do ar o salvamento de `/clientes/:id/editar`, que ainda manda `telefone`.
+**Alto.** O PATCH atual zera campo omitido. A distinção ausente versus limpo é o contrato; não se mantém o comportamento velho.
 
 ### Definition of Done
 
@@ -399,10 +370,6 @@ POST, PATCH e GET seguem a seção 9 na base já migrada por CC-02. Duplicidade 
 ---
 
 ## CC-05 — Exclusão protegida
-
-**Estado (2026-10-02):** ✅ Concluída — Implementation · AR (ciclo) · QA APPROVED · Documentation Updated.  
-**Fechamento:** [2026-10-02-cadastro-cliente-cc-05.md](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-05.md).  
-**Próxima:** CC-06 liberada, não iniciada. CC-07–CC-12 aguardam.
 
 ### Objective
 
@@ -429,16 +396,14 @@ CC-04, para o deploy da API nova acontecer antes de CC-07. A API antiga apaga fi
 
 ### Acceptance Criteria
 
-- [x] Cliente sem as cinco relações é excluído e a resposta é 200.
-- [x] Cada uma das cinco relações, sozinha, responde 409 e deixa o filho intacto, inclusive com pagamento pendente.
-- [x] Não existe `DELETE` de atendimento, comanda, crédito, avaliação ou WhatsApp neste fluxo.
-- [x] Id inexistente responde 404.
+- [ ] Cliente sem as cinco relações é excluído e a resposta é 200.
+- [ ] Cada uma das cinco relações, sozinha, responde 409 e deixa o filho intacto, inclusive com pagamento pendente.
+- [ ] Não existe `DELETE` de atendimento, comanda, crédito, avaliação ou WhatsApp neste fluxo.
+- [ ] Id inexistente responde 404.
 
 ### Manual Validation
 
 Cinco clientes de ensaio, um por relação, mais um sem relação. Conferir que as linhas filhas continuam depois do 409.
-
-Validação funcional/API desta unidade: **11/11 PASS** (ver fechamento). Concorrência DELETE × INSERT do TD não exercitada — limitação não bloqueante.
 
 ### Build / Test
 
@@ -452,8 +417,6 @@ API no ar. Testes automatizados em CC-12.
 
 `deleteClienteById` não apaga filhos e o 409 está no ar, com as FKs ainda como estão hoje.
 
-**DoD CC-05 (2026-10-02):** atendido. Documentação de fechamento registrada; FKs `NO ACTION` seguem em CC-07.
-
 ### Suggested Commit
 
 `fix(clientes): exclusão bloqueada sem apagar filhos`
@@ -461,9 +424,6 @@ API no ar. Testes automatizados em CC-12.
 ---
 
 ## CC-06 — Job de inatividade
-
-**Estado (2026-10-02):** ✅ Concluída — Implementation · AR APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED · [Documentation](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-06.md).  
-**Próxima:** CC-07 liberada, não iniciada. CC-08–CC-12 aguardam.
 
 ### Objective
 
@@ -497,19 +457,17 @@ CC-02 (colunas de status e `created_at`). CC-04, para o PATCH manual continuar s
 
 ### Acceptance Criteria
 
-- [x] Ativo com última comanda finalizada há mais de 6 meses, paga ou pendente, vira `inativo_automatico`.
-- [x] Cobrança ainda aberta não conta, mesmo com pagamento.
-- [x] Orçamento não conta.
-- [x] Sem comanda, o relógio começa em `created_at`.
-- [x] `inativo_manual` permanece depois de comanda nova.
-- [x] `inativo_automatico` permanece depois de comanda nova; a referência reinicia e o cliente não volta a Ativo.
-- [x] O job não executa `SET` para `ativo`.
+- [ ] Ativo com última comanda finalizada há mais de 6 meses, paga ou pendente, vira `inativo_automatico`.
+- [ ] Cobrança ainda aberta não conta, mesmo com pagamento.
+- [ ] Orçamento não conta.
+- [ ] Sem comanda, o relógio começa em `created_at`.
+- [ ] `inativo_manual` permanece depois de comanda nova.
+- [ ] `inativo_automatico` permanece depois de comanda nova; a referência reinicia e o cliente não volta a Ativo.
+- [ ] O job não executa `SET` para `ativo`.
 
 ### Manual Validation
 
 Cinco fichas de ensaio cobrindo os casos acima, mais uma execução repetida no mesmo dia civil que não reprocessa.
-
-Validação controlada (2026-10-02): `npx tsx scripts/validate-cc06-inatividade.ts` — PASS (predicado + smoke SQL com ROLLBACK). Startup/restart ao vivo da API não observado nesta rodada — limitação não bloqueante.
 
 ### Build / Test
 
@@ -523,8 +481,6 @@ API sobe e o job roda uma vez. Suíte em CC-12.
 
 Uma execução do job na base de desenvolvimento produz só `inativo_automatico` a partir de `status_modo = ativo`, e uma segunda execução no mesmo dia não repete o write.
 
-**DoD CC-06 (2026-10-02):** atendido. Documentação de fechamento registrada; FKs `NO ACTION` seguem em CC-07.
-
 ### Suggested Commit
 
 `feat(clientes): inatividade automática por comanda finalizada`
@@ -532,9 +488,6 @@ Uma execução do job na base de desenvolvimento produz só `inativo_automatico`
 ---
 
 ## CC-07 — FKs NO ACTION
-
-**Estado (2026-10-02):** ✅ Documentation UPDATED — Implementation · AR APPROVED · QA APPROVED · [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-07.md).  
-**Commit:** pendente. **Seguinte:** CC-08 já executada (docs fechadas; commit final da CC-08 pendente). CC-09–CC-12 aguardam.
 
 ### Objective
 
@@ -567,15 +520,13 @@ CC-05 estável em produção ou na base alvo. Não inverter a ordem.
 
 ### Acceptance Criteria
 
-- [x] `DELETE` direto do cliente com filho nessas três tabelas é recusado pelo banco.
-- [x] A API de CC-05 continua respondendo 409 antes disso, com os filhos intactos.
-- [x] Cliente sem relação ainda pode ser excluído pela API.
+- [ ] `DELETE` direto do cliente com filho nessas três tabelas é recusado pelo banco.
+- [ ] A API de CC-05 continua respondendo 409 antes disso, com os filhos intactos.
+- [ ] Cliente sem relação ainda pode ser excluído pela API.
 
 ### Manual Validation
 
 Tentar `DELETE` SQL do pai com um movimento de crédito, uma solicitação de avaliação e um log de WhatsApp. Os três falham. A API no cliente sem relação ainda exclui.
-
-Validação QA (2026-10-02): `information_schema` 5/5 NO ACTION; DELETE SQL controlado (crédito, avaliação, WhatsApp, atendimentos, comandas) → `23503` com filhos intactos; cliente livre deletável; ROLLBACK limpo. Residual MINOR Low em `ensureSchemaPatches` — não bloqueia.
 
 ### Build / Test
 
@@ -589,8 +540,6 @@ Validação QA (2026-10-02): `information_schema` 5/5 NO ACTION; DELETE SQL cont
 
 As três FKs estão `NO ACTION` e a API nova já não apaga filhos.
 
-**DoD CC-07 (2026-10-02):** atendido no código/BD/docs. Commit da unidade ainda pendente.
-
 ### Suggested Commit
 
 `feat(clientes): FKs impedem apagar cliente com filhos`
@@ -598,9 +547,6 @@ As três FKs estão `NO ACTION` e a API nova já não apaga filhos.
 ---
 
 ## CC-08 — Formulário único
-
-**Estado (2026-10-02):** ✅ Documentation UPDATED — Implementation (`9176ff6`) · AR inicial APPROVED WITH MINOR ADJUSTMENTS · QA inicial REQUIRES REWORK (F1/F2) · Rework F1/F2 na working tree · AR Recheck APPROVED · QA Re-Validation APPROVED · [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-08.md).  
-**Commit final:** pendente (rework ainda na working tree; sem push). **Próxima:** CC-09 após o commit final; ainda **não iniciada**. CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -615,8 +561,6 @@ Blocos: identificação (foto, nome, apelido, CPF, RG, CNPJ, data de nascimento 
 Não entram: crédito, desconto, notificação, dívida, avaliação, coluna `telefone`, observações.
 
 Validação na mesma ordem da API. Máscara é apresentação. Um salvamento por vez. Sucesso de criação: “Cliente salvo.” Sucesso de edição: “Alterações salvas.” Erro mantém o digitado, marca o campo e foca o primeiro inválido.
-
-`src/app/core/utils/clientes-unicidade.ts` deixa de tratar nome como único e deixa de usar a coluna `telefone` como celular. A pré-checagem segue o contrato de CPF e celular da seção 9.
 
 Rotas `/clientes/novo` e `/clientes/:id/editar` deixam de ter formulário próprio. Agenda, hub, comandas, financeiro e orçamentos abrem esse componente. Fora do modal, quem hoje navega para `/clientes/novo` chega ao formulário completo. Abas dos outros módulos permanecem; pela lista, a pessoa cai em Cadastro.
 
@@ -635,7 +579,6 @@ Filtros e cards da lista (CC-09). Redesenho das abas de outros módulos. Regra n
 - `src/app/shared/cliente-cadastro-drawer/cliente-cadastro-drawer.service.ts`
 - `src/app/features/clientes/pages/novo/clientes-novo.component.ts`
 - `src/app/features/clientes/pages/editar/clientes-editar.component.ts`
-- `src/app/core/utils/clientes-unicidade.ts`
 - Chamadores que abrem cliente na agenda, comandas, financeiro e orçamentos
 - `src/app/core/services/sheets-api.service.ts` (payload de create/update)
 
@@ -645,33 +588,22 @@ CC-04. Sem a API nova, o formulário não tem contrato para gravar.
 
 ### Acceptance Criteria
 
-- [x] Drawer, `/clientes/novo` e `/clientes/:id/editar` usam o mesmo formulário e as mesmas validações.
-- [x] Criação não oferece escolha de status e grava Ativo.
-- [x] Edição grava Ativo ou Inativo junto com o cadastro.
-- [x] Celular é obrigatório no salvamento; telefone fixo não é.
-- [x] Nome vazio, celular vazio ou inválido, fixo inválido, e-mail inválido, CPF inválido e data inválida usam as mensagens da seção 9.
-- [x] Nome repetido passa na pré-checagem. Celular e CPF não são lidos de `telefone`.
-- [x] Crédito, desconto, notificação, `telefone` e observações não aparecem.
-- [x] Cliente antigo sem celular abre. Salvar sem celular falha e não grava null.
-- [x] Desktop e mobile usam o mesmo formulário. Área de toque mínima 44×44 nos controles do formulário e do rodapé no mobile.
+- [ ] Drawer, `/clientes/novo` e `/clientes/:id/editar` usam o mesmo formulário e as mesmas validações.
+- [ ] Criação não oferece escolha de status e grava Ativo.
+- [ ] Edição grava Ativo ou Inativo junto com o cadastro.
+- [ ] Celular é obrigatório no salvamento; telefone fixo não é.
+- [ ] Nome vazio, celular vazio ou inválido, fixo inválido, e-mail inválido, CPF inválido e data inválida usam as mensagens da seção 9.
+- [ ] Crédito, desconto, notificação, `telefone` e observações não aparecem.
+- [ ] Cliente antigo sem celular abre. Salvar sem celular falha e não grava null.
+- [ ] Desktop e mobile usam o mesmo formulário. Área de toque mínima 44×44 nos controles do formulário e do rodapé no mobile.
 
 ### Manual Validation
 
 Criar pelo drawer, por `/clientes/novo` e a partir da agenda. Editar pelo drawer e por `/clientes/:id/editar`. Tentar salvar cliente legado sem celular.
 
-Validação QA Re-Validation (2026-10-02): F1 (GET OK / GET FAIL / sem PATCH / recuperação / create sem falso bloqueio) PASS; F2 (linha e editar → aba Cadastro) PASS; regressão essencial do formulário PASS no recorte exercitado; `ng build --configuration=development` exit 0. Entry points Agenda/Hub/Comandas/Financeiro/Orçamentos: wiring estático (não smoke runtime completo nesta rodada).
-
-### Rework (pós-QA inicial)
-
-| Finding | Severidade | Correção | Estado |
-|---------|------------|----------|--------|
-| F1 — GET fail liberava form vazio com Salvar ativo | HIGH | `cadastroHidratado` / `cadastroCargaErro` / `bloqueioSalvarAteHidratacao`; `salvar()` não faz PATCH sem hidratação | Encerrado (Re-QA PASS) |
-| F2 — clique na linha abria Painel | MEDIUM | `abrirPerfilCliente` / `onEditarCliente` com `abaInicial: 'Cadastro'` | Encerrado (Re-QA PASS) |
-| F3 — sem botão explícito “Tentar de novo” | LOW | Não implementado; reabrir edição dispara novo GET | Residual Low — não bloqueia |
-
 ### Build / Test
 
-`npx ng build` / `ng build --configuration=development` do app. Fluxos acima na base já com CC-04.
+`npx ng build` do app. Fluxos acima na base já com CC-04.
 
 ### Risk
 
@@ -681,88 +613,469 @@ Validação QA Re-Validation (2026-10-02): F1 (GET OK / GET FAIL / sem PATCH / r
 
 Não há formulário de cadastro paralelo. Os três entry points gravam pelo contrato de CC-04.
 
-**DoD CC-08 (2026-10-02):** atendido em código + QA Re-Validation APPROVED + documentação de fechamento. Commit final do rework ainda pendente. Unidade **não** está “fully closed” antes do commit.
-
 ### Suggested Commit
 
-`feat(clientes): formulário único no drawer e nas rotas`  
-(Rework F1/F2: commit adicional após auditoria Git — não amend de `9176ff6`.)
+`feat(clientes): formulário único no drawer e nas rotas`
 
 ---
 
-## CC-09 — Lista, filtros e exclusão na UI
+## CC-09-A — API de listagem paginada
+
+**Estado (2026-10-02):** ✅ Documentation UPDATED — Implementation · AR APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED WITH MINOR ISSUES · [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-09a.md).  
+**Commit exclusivo:** pendente. **Próxima:** CC-09-B após o commit exclusivo; ainda **não iniciada**. CC-09-C…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
-A lista e a exclusão na interface seguem as seções 7, 8 e 10, no desktop e no mobile.
+Implementar a listagem server-side com paginação, total e ordenação determinística conforme o contrato CC-09, **sem quebrar** o `GET /api/clientes` legado usado por pickers.
 
 ### Scope
 
-Filtro inicial Todos. Status lê só `status_operacional`, com texto Ativo ou Inativo no card e na tabela. Filtros: Status (Todos, Ativos, Inativos), Com celular (`celular` com 11 dígitos), Sem celular (`celular` null ou ainda sem 11 dígitos), Aniversário no intervalo que a lista já aplica sobre `aniversario`. `telefone_fixo` e `telefone` não contam como celular.
+`page`, `pageSize`/`page_size`, offset, default 20, opções 20/50/100, `total`, `totalPages` e ordenação `nome_exibido ASC, id_cliente ASC`. Busca e filtros devem ser aceitos no mesmo contrato de listagem, sem paginação client-side.
 
-Fora dos filtros e da busca: dívida, avaliação, crédito, desconto, notificação. A busca cobre nome, apelido, celular, telefone fixo, e-mail, CPF, CNPJ e RG, sem máscara em celular e documentos.
+**Compatibilidade (Architecture Review — GAP-01):**
 
-Desktop, 768px ou mais: tabela, busca no header, filtros no painel lateral, Novo na toolbar, clique na linha abre o cadastro. Sem bottom navigation.
+- Com `page` **ou** `pageSize` **ou** `page_size` → contrato paginado (defaults `page=1`, `pageSize=20`).
+- Sem esses parâmetros → comportamento legado: coleção completa `{ items: [...] }` no envelope existente.
+- A lista da CC-09 **sempre** envia paginação explicitamente.
+- Não substituir o GET legado por um contrato exclusivamente paginado.
 
-Mobile, 767px ou menos: cards (nome, celular, status em texto). Barra Menu, Filtro, Selecionar, Novo. Busca no header. Filtro em aviso quando sai do padrão. Sheet em tela cheia, da direita para a esquerda. Seleção troca a barra para Cancelar, Selecionar tudo e Ações. Selecionar tudo vale para o conjunto filtrado. Excluir pede confirmação com o nome. Filtros abertos fecham ao entrar em seleção. Reutilizar `mobile-filtros-sheet` e `mobile-list-actions-menu`. Não criar seleção nova além desse contrato.
+**Entregue nesta unidade (2026-10-02):**
 
-Duplicidade: mensagem no campo. “Ver cliente” só se a API mandou `cliente.id_cliente`, e só no clique. `src/app/core/services/sheets-api.service.ts` (`unwrap`) e `src/app/core/utils/api-error-message.ts` conservam `field` e `cliente`. O tipo em `src/app/core/models/api.models.ts` acompanha o envelope. Sem `cliente.id_cliente`, a ação não tem destino. Se o formulário estiver dirty, a saída passa pela confirmação.
-
-Saída com dirty (drawer, ESC, overlay, rotas): “Continuar editando” ou “Descartar e sair”. Sem dirty, sai direto. Rota usa guarda. Drawer intercepta o fechar.
-
-Exclusão bloqueada usa a frase da UX Flow seção 9 e não apaga. Exclusão livre, após confirmar, mostra “Cliente excluído.” e tira o cliente da lista.
-
-Estados: vazio global com Novo cliente; vazio de busca ou filtro com outro texto; carregando com skeleton; erro com tentar de novo.
+- Modo dual legado × paginado em `GET /api/clientes`.
+- Paginação SQL `LIMIT`/`OFFSET`; ordenação `nome_exibido ASC, id_cliente ASC`.
+- Infra `status` → `status_operacional`; `hasCellphone` → só `celular`.
+- `search` / aniversário aceitos sem predicado (CC-09-B).
+- Script `api/scripts/validate-cc09a-listagem.ts`.
 
 ### Out of Scope
 
-Mudar a regra de inatividade. Implementar bulk delete. Colocar os quatro catálogos de outra feature neste filtro. Architecture Review.
+UI responsiva, seleção global, bulk delete, CC-10 e CC-11. Não alterar consumidores Agenda/Comandas/Orçamentos/Financeiro/Drawer além de preservar o GET sem params. Busca/matching completo e aniversário = CC-09-B.
 
 ### Likely Files
 
-- `src/app/features/clientes/pages/lista/clientes.component.ts`
-- `src/app/features/clientes/pages/lista/clientes.component.html`
-- `src/app/features/clientes/pages/lista/clientes.component.scss`
-- Guarda das rotas de novo e editar
-- `src/app/core/services/sheets-api.service.ts` (lista, delete e `unwrap` do 409)
-- `src/app/core/utils/api-error-message.ts`
-- `src/app/core/models/api.models.ts`
+- `api/src/index.ts` — rota `GET /api/clientes`
+- `api/src/services/clientes-listagem.ts`
+- `api/src/services/queries.ts`
+- `api/scripts/validate-cc09a-listagem.ts`
+- `src/app/core/services/sheets-api.service.ts` — método da lista (quando a UI passar a enviar `page`/`pageSize`; **não** alterado nesta unidade)
 
 ### Dependencies
 
-CC-04, CC-05 e CC-08. O filtro de status depende de `status_operacional` já gravado. A exclusão na UI depende do 409 de CC-05.
+CC-04 e o contrato consolidado de CC-09 (TD §10.1).
 
 ### Acceptance Criteria
 
-- [ ] A lista abre em Todos, com Ativos e Inativos juntos.
-- [ ] Só existem os quatro filtros do contrato.
-- [ ] Com celular / Sem celular ignoram `telefone_fixo` e `telefone`.
-- [ ] Card e tabela dizem Ativo ou Inativo, não usam `notificacoes_ativo` como status.
-- [ ] Desktop permanece tabela com filtro lateral. Mobile permanece cards e bottom nav já contratada.
-- [ ] Duplicidade não abre o outro cliente sozinha.
-- [ ] “Ver cliente” recebe `field` e `cliente.id_cliente` sem o `unwrap` descartar o corpo do erro.
-- [ ] Dirty pede confirmação. Limpo sai direto.
-- [ ] Exclusão com relação não remove o cliente. Exclusão sem relação remove, depois da confirmação com o nome.
+- [x] Sem params de paginação → resposta legado completa (pickers intactos).
+- [x] Com `page` / `pageSize` / `page_size` → contrato paginado.
+- [x] Default page size é 20.
+- [x] Somente 20, 50 e 100 são aceitos (inválido → coerção para 20; F-02 Low).
+- [x] Resposta paginada contém items, page, pageSize (ou `page_size`), total e totalPages (ou `total_pages`) sem criar envelope paralelo ao padrão da API.
+- [x] Paginação usa offset no servidor.
+- [x] Ordenação é determinística por nome e id.
 
 ### Manual Validation
 
-390×844 e 1280×800: filtro inicial, cada filtro, busca, duplicidade com e sem dirty, exclusão bloqueada e exclusão livre de ensaio. Não usar dado real do salão na exclusão livre se houver relação.
+Testar GET sem params (coleção completa). Testar páginas 1/2, troca de page size, total e último page com conjunto pequeno e com conjunto maior que 20. Confirmar que Agenda/Comandas ainda listam clientes via GET sem paginação.
+
+Validação QA (2026-10-02): legado/paginado/LIMIT-OFFSET/ordenação/status/hasCellphone PASS; `validate-cc09a-listagem.ts` PASS (smoke DB); `tsc` com erros pré-existentes fora do escopo (`finance-domain.ts:598`, `public-booking-domain.ts:109`, `public-booking-domain.ts:294`).
+
+### Findings residuais (não bloqueantes)
+
+| ID | Sev | Origem | Nota |
+|----|-----|--------|------|
+| F-01 | Low | AR | Legado filtra nome/id vazios pós-map; `total` paginado pode divergir. |
+| F-02 | Low | AR | `pageSize` inválido → 20 sem 400. |
+| F-03 | Low | AR | Asserção fraca de total no script (smoke real OK). |
+| F-04 | Low | AR→QA | Smoke/`tsc` confirmados no QA. |
+| F-05 | Low | QA | `page > totalPages` não clamado na API (`items: []`). Diferença vs regra de “última página válida” (TD: UI pós-exclusão) permanece visível para decisão posterior — **não** corrigir neste fechamento; **não** é CC-09-B. |
 
 ### Build / Test
 
-`npx ng build`. Cenários acima contra a API de CC-04 e CC-05.
+Suíte da API e build existente da API. Script `npx tsx scripts/validate-cc09a-listagem.ts` na pasta `api`.
 
 ### Risk
 
-**Médio.** Tratar notificação como status, ou deixar filtro de dívida, volta o comportamento que o contrato tirou.
+**Alto.** Paginar o GET sem modo legado quebra todos os `listClientes()` dos pickers. Paginação client-side ou ordenação não determinística quebra seleção global e estabilidade entre páginas.
 
 ### Definition of Done
 
-Lista desktop e mobile, duplicidade e exclusão na UI batem com as seções 7, 8 e 10, sem filtro fora do contrato.
+Contrato de listagem paginada disponível para o frontend; GET legado preservado; DELETE CC-05 inalterado.
+
+**DoD CC-09-A (2026-10-02):** atendido em código + AR + QA + docs. Commit exclusivo ainda pendente. Unidade **não** “fully closed” antes do commit. CC-09-B…F **não** implementadas.
 
 ### Suggested Commit
 
-`feat(clientes): lista e filtros do cadastro`
+`feat(clientes): lista paginada de clientes`
+
+---
+
+## CC-09-B — Busca e filtros server-side
+
+**Estado (2026-10-03):** ✅ Documentation UPDATED — Implementation · AR pré-impl APPROVED WITH MINOR ADJUSTMENTS · F-B01 CLOSED · AR Recheck APPROVED · AR pós-impl APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED WITH MINOR ISSUES · [fechamento](../../../03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md).  
+**Commit exclusivo:** pendente. **Próxima:** CC-09-C após o commit exclusivo; ainda **não iniciada**. CC-09-D…G e CC-10–CC-12 aguardam.
+
+### Objective
+
+Implementar matching e filtros exclusivamente server-side.
+
+### Scope
+
+Busca nos oito campos: nome, apelido, celular, telefone fixo, e-mail, CPF, CNPJ e RG. Texto parcial case-insensitive e accent-insensitive; números/documentos parciais normalizados. Filtros: status, hasCellphone e aniversário (`birthdayFrom`/`birthdayTo` conforme TD §10.1).
+
+**Aniversário (F-B01 CLOSED):** intervalo inclusivo `YYYY-MM-DD` sobre coluna `aniversario`; extremos omitidos/inválidos não ativam predicado; com filtro ativo, sem data parseável → fora; composição `AND` com search/status/hasCellphone; predicado antes de LIMIT/OFFSET; altera `total`/`totalPages`; FE ao mudar filtro → `page = 1` e limpa seleção.
+
+**Entregue nesta unidade (2026-10-03):**
+
+- Predicados em `clientes-listagem.ts` (search + status + hasCellphone + birthday); accent via NFD + `translate` (sem migration).
+- FE: `listClientesPaginado`, debounce 300 ms, stale (`listaLoadSeq`), page reset.
+- Scripts `validate-cc09b-listagem.ts` e atualização de `validate-cc09a-listagem.ts` (sem enfraquecer A).
+- Dual-mode e ordenação da CC-09-A preservados.
+
+### Out of Scope
+
+Filtros de dívida, avaliação, crédito, desconto e notificação. Ordenação configurável. UI completa (CC-09-C), seleção (CC-09-D), bulk (CC-09-E).
+
+### Likely Files
+
+- `api/src/services/clientes-listagem.ts` (`buildClientesListConditions`)
+- `api/scripts/validate-cc09b-listagem.ts`
+- `src/app/core/services/sheets-api.service.ts` / `api.models.ts`
+- `src/app/features/clientes/pages/lista/clientes.component.ts`
+
+### Dependencies
+
+CC-09-A, CC-03 e CC-04.
+
+### Acceptance Criteria
+
+- [x] Busca é parcial e sem mínimo de caracteres.
+- [x] Texto ignora caixa e acentos.
+- [x] Números/documentos ignoram máscara, pontuação e espaços.
+- [x] Busca vazia não aplica predicado.
+- [x] Filtros usam somente os campos do contrato.
+- [x] `hasCellphone` considera somente `celular`.
+- [x] `birthdayFrom`/`birthdayTo` seguem o contrato TD §10.1 (formato, inclusividade, ausência, exclusão sem data).
+- [x] Search + status + hasCellphone + aniversário são `AND` e afetam `total`/`totalPages` antes da paginação.
+- [x] Alterar search/filtro (incl. aniversário) usa `page = 1` (e limpa seleção conforme contrato; UI de seleção = CC-09-D).
+
+### Manual Validation
+
+Testar termos mascarados e sem máscara, acentos, substring e cada filtro combinado com busca e paginação. Aniversário: só from, só to, from+to, ausente, cliente sem `aniversario`, data `DD/MM/AAAA` e `DD/MM`.
+
+Validação QA (2026-10-03): `npx tsx scripts/validate-cc09b-listagem.ts` EXIT 0; `validate-cc09a-listagem.ts` EXIT 0; smoke DB OK. UI browser (debounce visual) não exercitada. `tsc` com erros pré-existentes fora do B (`finance-domain.ts:598`, `public-booking-domain.ts:109`, `public-booking-domain.ts:294`).
+
+### Findings residuais (não bloqueantes — não corrigidos)
+
+| ID | Sev | Nota |
+|----|-----|------|
+| F-09B-01 | Low | Assert de accent no script B tautológico |
+| F-09B-02 | Low | Lista inicia em Ativos; UX define Todos |
+| F-09B-03 | Low | Dívida/avaliação ainda client-side na UI |
+| F-09B-04 | Low | Edge `DD/MM` sem validação completa do calendário |
+
+### Build / Test
+
+`npx tsx scripts/validate-cc09b-listagem.ts` e `validate-cc09a-listagem.ts` na pasta `api`.
+
+### Risk
+
+**Alto.** Filtro baseado em `notificacoes_ativo` ou `telefone` legado reintroduz contratos removidos. Inventar semântica de aniversário diferente da lista atual (TD §7) reabre F-B01.
+
+### Definition of Done
+
+Busca e filtros server-side reproduzem o contrato Product/UX/Technical, inclusive o filtro de aniversário fechado no TD §10.1.
+
+**DoD CC-09-B (2026-10-03):** atendido em código + AR + QA + docs. Commit exclusivo ainda pendente. Unidade **não** “fully closed” antes do commit. CC-09-C…F **não** implementadas.
+
+### Suggested Commit
+
+`feat(clientes): busca e filtros de clientes`
+
+---
+
+## CC-09-C — Tabela e cards responsivos
+
+### Objective
+
+Adaptar a superfície da lista ao contrato desktop/mobile sem criar novo formulário.
+
+### Scope
+
+Desktop >=768px: tabela, busca no header, filtros laterais, Novo na toolbar. Mobile <=767px: cards, busca no header e barra Menu/Filtro/Selecionar/Novo. Clique abre CC-08.
+
+### Out of Scope
+
+Seleção global, bulk delete, CC-10, CC-11 e redesign de outros módulos.
+
+### Likely Files
+
+- Arquivos reais da feature `clientes` identificados no repositório para lista/template/styles.
+- Componentes existentes `mobile-filtros-sheet` e `mobile-list-actions-menu`, se forem os pontos de integração atuais.
+
+### Dependencies
+
+CC-08, CC-09-A e CC-09-B.
+
+### Acceptance Criteria
+
+- [ ] Desktop usa tabela e não bottom navigation.
+- [ ] Mobile usa cards e barra contratada.
+- [ ] Lista inicia em Todos.
+- [ ] Card mostra nome, celular ou “Sem celular”, e status.
+- [ ] Novo e clique de cliente usam CC-08.
+
+### Manual Validation
+
+390×844 e 1280×800, verificando tabela/card, barra, busca, filtros e abertura do cadastro.
+
+### Build / Test
+
+`npx ng build`.
+
+### Risk
+
+**Médio.** Uma tabela comprimida no mobile ou formulário paralelo quebra CC-08 e o padrão mobile.
+
+### Definition of Done
+
+Lista responsiva integrada ao formulário único.
+
+### Suggested Commit
+
+`feat(clientes): lista responsiva de clientes`
+
+---
+
+## CC-09-D — Seleção e seleção global
+
+### Objective
+
+Implementar seleção individual, persistência entre páginas e seleção global do conjunto filtrado.
+
+### Scope
+
+Modelo de estado (Architecture Review — GAP-03):
+
+1. `vazia` — nenhum selecionado;
+2. `ids` — conjunto explícito de `id_cliente`;
+3. `allFiltered` + snapshot de busca/filtros — todos os registros do conjunto atual, **sem** carregar todos os IDs.
+
+Troca de página preserva seleção; busca/filtro limpa; page size preserva; Cancelar limpa. “Selecionar tudo” ativa `allFiltered` com o snapshot atual. Helpers atuais de `Set` de IDs podem permanecer para seleção parcial; o estado `allFiltered` é específico da feature.
+
+### Out of Scope
+
+Ações de ativar/inativar, exportar, WhatsApp ou editar em massa.
+
+### Likely Files
+
+- Estado e template da lista de clientes (`clientes.component.ts` / html).
+- Componentes de seleção mobile já existentes (`mobile-list-selection` e afins) — reuso para IDs; não exigir que o helper genérico implemente `allFiltered`.
+
+### Dependencies
+
+CC-09-A, CC-09-B e CC-09-C.
+
+### Acceptance Criteria
+
+- [ ] Seleção individual funciona (`ids`).
+- [ ] Selecionar tudo representa o conjunto filtrado completo (`allFiltered` + snapshot).
+- [ ] Seleção persiste ao trocar de página.
+- [ ] Busca/filtro limpa seleção.
+- [ ] Page size preserva seleção.
+- [ ] Não é necessário carregar todos os registros.
+
+### Manual Validation
+
+Selecionar em página 1, mudar para 2, aplicar busca/filtro, mudar page size e cancelar. Confirmar que “Selecionar tudo” não dispara fetch de todos os itens.
+
+### Build / Test
+
+`npx ng build` e testes existentes da lista, quando houver.
+
+### Risk
+
+**Alto.** Confundir “selecionar tudo” com página carregada produz exclusões incompletas.
+
+### Definition of Done
+
+Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | ids | allFiltered+snapshot`).
+
+### Suggested Commit
+
+`feat(clientes): seleção global de clientes`
+
+---
+
+## CC-09-E — Ações e exclusão protegida
+
+### Objective
+
+Implementar a única ação em massa, Excluir, respeitando CC-05, inclusive com seleção `allFiltered`.
+
+### Scope
+
+Ações desabilitada com zero; Excluir com um ou mais. Confirmação obrigatória. Processamento tolerante a falhas individuais, sem apagar filhos. Resultado consolidado `deleted`, `blocked`, `notFound`.
+
+**Operação dedicada (Architecture Review — GAP-02):**
+
+- Rota: `POST /api/clientes/excluir-em-massa` (padrão `POST …/excluir` do projeto).
+- Body `mode: 'ids'` + `ids[]` **ou** `mode: 'allFiltered'` + predicados iguais ao GET paginado (`search`, `status`, `hasCellphone`, `birthdayFrom`, `birthdayTo`).
+- Para cada id: mesma lógica de `deleteClienteById` (CC-05). Sem transação única que aborte o lote.
+- Resposta: `deleted`, `blocked` (com `tipo` quando houver), `notFound`.
+- Após: limpar seleção; preservar busca/filtros/page size; recalcular página; informar parcial.
+
+### Out of Scope
+
+Alteração do DELETE individual de CC-05, FKs de CC-07, CC-10 e CC-11. Ativar/inativar/exportar/WhatsApp/editar em massa.
+
+### Likely Files
+
+- `api/src/index.ts` — nova rota POST.
+- Domínio/query de exclusão existente (`deleteClienteById` / equivalente).
+- `src/app/core/services/sheets-api.service.ts`.
+- Estado/menus de ações da lista.
+
+### Dependencies
+
+CC-05, CC-07, CC-09-D (e predicados de CC-09-A/B para `allFiltered`).
+
+### Acceptance Criteria
+
+- [ ] Confirmação existe para exclusão.
+- [ ] Modo `ids` e modo `allFiltered` estão implementados.
+- [ ] Cada cliente respeita 404/409/200 do DELETE CC-05.
+- [ ] Falha individual não cancela exclusões válidas.
+- [ ] Resultado informa excluídos, bloqueados e não encontrados.
+- [ ] Nenhum filho é apagado.
+- [ ] Seleção é limpa após a operação.
+- [ ] Busca, filtros e page size são preservados; página recalculada se necessário.
+
+### Manual Validation
+
+Misturar clientes sem relação e com cada tipo de relação protegida; validar resultado parcial. Testar Excluir com seleção da página e com “Selecionar tudo” (`allFiltered`) sem carregar todos os IDs no cliente.
+
+### Build / Test
+
+Testes da API/UI e `npx ng build`.
+
+### Risk
+
+**Alto.** Bulk delete pode contornar a proteção de CC-05 se criar uma lógica paralela de exclusão. Loop só com IDs da página deixa `allFiltered` incompleto.
+
+### Definition of Done
+
+Exclusão em massa usa a mesma proteção de domínio do DELETE individual, cobre `ids` e `allFiltered`, e reporta resultado parcial.
+
+### Suggested Commit
+
+`feat(clientes): exclusão em massa de clientes`
+
+---
+
+## CC-09-F — Estados, paginação e integração CC-08
+
+### Objective
+
+Fechar a experiência da lista, seus estados e a integração com o formulário único.
+
+### Scope
+
+Loading skeleton, erro com retry, empty global com Novo, empty por busca/filtro distinto, persistência de busca/filtros/page size na atualização após exclusão e recuo para a última página válida. Integração de Novo e abertura do cliente com CC-08.
+
+### Out of Scope
+
+Novos campos do cadastro, WhatsApp, DROP de `telefone` e mudanças no contrato CC-08.
+
+### Likely Files
+
+- Página/componente de lista de clientes.
+- Serviço HTTP de clientes.
+- Integração com rotas/drawer já existente.
+
+### Dependencies
+
+CC-08 e CC-09-A até CC-09-E.
+
+### Acceptance Criteria
+
+- [ ] Loading apresenta skeleton.
+- [ ] Erro oferece retry.
+- [ ] Empty global e empty filtrado são distintos.
+- [ ] Atualização pós-exclusão preserva busca, filtros e page size.
+- [ ] Página é recalculada quando necessário.
+- [ ] Novo e abertura usam exclusivamente CC-08.
+
+### Manual Validation
+
+Validar todos os estados em 390×844 e 1280×800 e testar retorno da lista após criar, editar e excluir.
+
+### Build / Test
+
+`npx ng build`.
+
+### Risk
+
+**Médio.** Estados inconsistentes podem apagar contexto de busca/filtro ou reabrir formulário paralelo.
+
+### Definition of Done
+
+Lista mantém contexto e estados previstos e integra somente o formulário CC-08.
+
+### Suggested Commit
+
+`feat(clientes): estados e integração da lista`
+
+---
+
+## CC-09-G — Validação e documentação
+
+### Objective
+
+Após a implementação das unidades CC-09-A…F, validar o contrato executável da CC-09 e deixar evidências/artefatos prontos para os gates **pós-código** de QA e Documentation. Architecture Review pré-implementação já ocorreu; esta unidade **não** o substitui nem o antecipa.
+
+### Scope
+
+Cobrir paginação (legado × paginado), matching, filtros, seleção (`vazia | ids | allFiltered`), bulk delete (`ids` + `allFiltered`), estados, integração CC-08 e ausência de antecipação de CC-10/CC-11. Registra evidências de validação; não declara aprovação de QA ou Documentation.
+
+### Out of Scope
+
+Declarar aprovação de Architecture Review ou QA dentro desta tarefa. Reabrir Product/UX.
+
+### Likely Files
+
+- Specs/roteiros de validação existentes da feature `clientes`.
+- Os quatro documentos oficiais desta feature (já consolidados + ajustes do AR).
+
+### Dependencies
+
+CC-09-A até CC-09-F.
+
+### Acceptance Criteria
+
+- [ ] Os quatro GAPs têm cobertura de validação: paginação (incl. GET legado), seleção global, bulk delete e matching.
+- [ ] Critérios finais de aceite da CC-09 são exercitados.
+- [ ] Nenhuma validação exige Observações, crédito, desconto ou notificação.
+- [ ] Nenhum caso antecipa CC-10 ou CC-11.
+
+### Manual Validation
+
+390×844 e 1280×800, incluindo estados vazios, retry, paginação, seleção entre páginas e exclusão parcial (`ids` e `allFiltered`).
+
+### Build / Test
+
+Suíte da API, `npx ng build` e specs de frontend existentes/novas para a lista.
+
+### Risk
+
+**Médio.** Sem cobertura específica dos quatro GAPs, a implementação pode parecer correta em uma única página e falhar no conjunto completo.
+
+### Definition of Done
+
+A evidência de validação da CC-09 está registrada. QA e Documentation continuam gates separados e não são considerados concluídos por esta tarefa.
+
+### Suggested Commit
+
+`test(clientes): valida contrato da lista`
 
 ---
 
@@ -774,24 +1087,16 @@ Quem pré-preenche WhatsApp a partir do cliente passa a usar `celular`.
 
 ### Scope
 
-A escolha do número hoje está em `src/app/core/utils/telefone-br.ts` e nos chamadores abaixo: o utilitário usa celular e, se não achar número, cai em `telefone` ou `telefoneFixo`. O modal só mostra o número que já recebeu. A fonte principal passa a ser `celular` normalizado. `telefone` e `telefone_fixo` não preenchem o envio do cliente. Mensagem quando não houver celular válido para envio. `notificacoes_ativo` continua preferência daquele módulo, não status do cadastro. O módulo de WhatsApp não é redesenhado.
+Trocar a leitura do número do cliente nesses chamadores. Mensagem quando não houver celular válido para envio. `notificacoes_ativo` continua preferência daquele módulo, não status do cadastro. O módulo de WhatsApp não é redesenhado.
 
 ### Out of Scope
 
-Templates, logs, provider, novos filtros de notificação, tornar celular obrigatório na leitura, alterar `notificacoes_ativo` como preferência de envio.
+Templates, logs, provider, novos filtros de notificação, tornar celular obrigatório na leitura.
 
 ### Likely Files
 
-- `src/app/core/utils/telefone-br.ts`
-- `src/app/features/agenda/pages/novo/agenda-novo-client-sidebar.component.ts`
-- `src/app/features/agenda/pages/novo/agenda-novo.component.ts`
-- `src/app/features/agenda/pages/hub/nova-comanda-drawer.component.ts`
-- `src/app/features/agenda/pages/hub/agenda-hub.component.ts`
-- `src/app/shared/cliente-cadastro-drawer/cliente-debitos-tab.component.ts`
-- `src/app/shared/cliente-cadastro-drawer/cliente-orcamentos-tab.component.ts`
-- `src/app/features/orcamentos/pages/main/orcamentos.component.ts`
-- `src/app/shared/agenda-novo-global/agenda-novo-global-host.component.ts`
-- `src/app/shared/whatsapp/whatsapp-enviar-modal.component.ts` (consome o número já escolhido)
+- `src/app/shared/whatsapp/whatsapp-enviar-modal.component.ts`
+- Chamadores que passam o telefone do cliente para esse modal ou para `whatsapp-deep-link`
 
 ### Dependencies
 
@@ -834,16 +1139,9 @@ Nenhum pré-preenchimento de WhatsApp do cliente lê `telefone`.
 
 ### Scope
 
-O `DROP` só ocorre quando o portão da seção 11 estiver satisfeito, ao mesmo tempo:
+A coluna só sai quando não restar linha com `telefone` não nulo que não tenha sido copiada para o destino classificado. Enquanto houver linha no relatório de não classificados ou de conflito, a coluna permanece, invisível para o cadastro. A API de CC-04 já não a lê nem a grava; esta tarefa não volta a expô-la.
 
-- não houver `telefone` não classificado;
-- não houver conflito com destino já preenchido;
-- não houver valor que a migration não tenha conseguido copiar;
-- não houver escritor novo da coluna.
-
-`api/src/seed/run.ts` e `api/src/services/public-booking-domain.ts` já não inserem `telefone` (CC-02 e CC-04). Se algum dos dois ainda gravar a coluna, o `DROP` não roda. A API de CC-04 já não a lê nem a grava; esta tarefa não volta a expô-la.
-
-Se o portão não estiver limpo, a tarefa termina bloqueada. Não se apaga o valor, não se reclassifica com regra nova e não se escolhe vencedor para liberar o `DROP`.
+Se o portão não estiver limpo, a tarefa termina bloqueada. Não se apaga o valor para liberar o `DROP`.
 
 ### Out of Scope
 
@@ -853,18 +1151,15 @@ Reclassificar com regra nova. Copiar o que CC-02 deixou de fora. Dropar outras c
 
 - `api/src/db/schema.ts`
 - `api/drizzle/*.sql` e `api/drizzle/meta/_journal.json`
-- `api/src/seed/run.ts` (confirmação de que o insert não usa `telefone`)
-- `api/src/services/public-booking-domain.ts` (confirmação de que o insert não usa `telefone`)
 
 ### Dependencies
 
-CC-02 (classificação, relatório e seed) e CC-04 (API e agendamento público já ignoram a coluna). Não depende de CC-08 para o `DROP`, mas o cadastro não pode voltar a ler a coluna antes dele.
+CC-02 (classificação e relatório) e CC-04 (API já ignora a coluna). Não depende de CC-08 para o `DROP`, mas o cadastro não pode voltar a ler a coluna antes dele.
 
 ### Acceptance Criteria
 
-- [ ] Com telefone não classificado, conflito ou valor não copiado, não há `DROP`.
-- [ ] Com escritor ainda gravando `telefone`, não há `DROP`.
-- [ ] Com o portão limpo, a coluna deixa o schema e a migration.
+- [ ] Com linha não classificada ou em conflito, não há `DROP`.
+- [ ] Com o relatório limpo, a coluna deixa o schema e a migration.
 - [ ] Nenhum valor não copiado é apagado para passar o portão.
 
 ### Manual Validation
@@ -956,8 +1251,8 @@ A seção 13 está coberta e a suíte passa. O documento de QA ainda não foi pr
 A feature pode seguir para QA quando:
 
 - [ ] CC-01 a CC-10 e CC-12 estão concluídas na ordem deste plano.
-- [ ] CC-03 ou está com os índices do predicado da seção 5 criados, ou está bloqueada com grupo de 11 dígitos e sem cliente apagado.
-- [ ] CC-11 ou removeu `telefone` com o portão limpo e sem escritor da coluna, ou deixou a coluna no banco com o relatório de não classificados, conflito ou valor não copiado.
+- [ ] CC-03 ou está com os índices criados, ou está bloqueada com o relatório de duplicatas e sem cliente apagado.
+- [ ] CC-11 ou removeu `telefone` com o portão limpo, ou deixou a coluna no banco com o relatório de não classificados ou de conflito.
 - [ ] Observações não voltaram. Crédito, desconto e notificação não entraram no formulário, nos filtros nem na busca.
 - [ ] Status efetivo é `status_operacional`. Modo é `status_modo`. Inativo manual não é reativado por job nem por comanda.
 - [ ] DELETE não apaga filhos. FKs citadas estão `NO ACTION` só depois desse DELETE.
@@ -971,9 +1266,17 @@ A feature pode seguir para QA quando:
 
 Não há decisão de produto ou de desenho em aberto nas fontes. As pendências abaixo são portões de dados, já com estratégia. Não autorizam regra nova:
 
-- Índice único de CPF e de celular só nasce se, depois de CC-02, não houver grupo duplicado dentro do predicado da seção 5 (`char_length` = 11). Valor fora do predicado não bloqueia o índice. A limpeza é operacional e não é merge.
-- `DROP` de `telefone` só nasce se não restar não classificado, conflito, valor não copiado, nem escritor da coluna. Enquanto isso, a coluna fica no banco e fora do cadastro.
+- Índice único de CPF e de celular só nasce se, depois de CC-02, não houver grupo duplicado de 11 dígitos. A limpeza é operacional e não é merge.
+- `DROP` de `telefone` só nasce se não restar valor não copiado. Enquanto isso, a coluna fica no banco e fora do cadastro.
 
 As perguntas da seção 22 do Product Definition foram fechadas pelo UX Flow e pelo Technical Design (endereço, redes, foto, precedência de status, mensagens, recálculo). Este plano não as reabre.
 
 Não há pergunta que tenha impedido o detalhamento de uma tarefa.
+
+---
+
+## CC-09 Documentation Gate
+
+**Status: READY FOR ARCHITECTURE REVIEW**
+
+Os quatro GAPs estão consolidados nos quatro artefatos oficiais. Architecture Review, Implementation, QA e Documentation continuam gates distintos; nenhuma implementação é autorizada por este Sprint Planning.
