@@ -26,7 +26,10 @@ export {
 } from '../modules/beauty/application';
 
 export async function listClientesNormalized(db: Db) {
-  const rows = await db.select().from(clientes).orderBy(asc(clientes.nomeExibido));
+  const rows = await db
+    .select()
+    .from(clientes)
+    .orderBy(asc(clientes.nomeExibido), asc(clientes.idCliente));
   return rows
     .map((r) => mapClienteRowToApi(r))
     .filter((x) => x.nome.trim() && x.id.trim());

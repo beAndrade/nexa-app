@@ -92,6 +92,12 @@ import {
   listServicosForApi,
   sincronizarNomeClienteEmAtendimentos,
 } from './services/queries';
+import {
+  CLIENTES_PAGE_SIZE_DEFAULT,
+  isClientesListagemPaginada,
+  listClientesPaginado,
+  parseClientesListFiltrosFromQuery,
+} from './services/clientes-listagem';
 import { parseClienteCadastroBody } from './services/clientes-cadastro-normalize';
 import type { ClienteCadastroBody } from './services/clientes-cadastro-normalize';
 import {
@@ -1142,7 +1148,22 @@ const app = new Elysia({ adapter: node() })
     },
     { body: t.Object({ movimentacao_id: t.Number() }) },
   )
-  .get('/api/clientes', async () => ok({ items: await listClientesNormalized(db) }))
+  .get('/api/clientes', async ({ query }) => {
+    const q = query as Record<string, string | undefined>;
+    if (!isClientesListagemPaginada(q)) {
+      return ok({ items: await listClientesNormalized(db) });
+    }
+    const pageSizeRaw = q.pageSize ?? q.page_size;
+    const data = await listClientesPaginado(db, {
+      page: q.page,
+      pageSize:
+        pageSizeRaw !== undefined && pageSizeRaw !== ''
+          ? pageSizeRaw
+          : CLIENTES_PAGE_SIZE_DEFAULT,
+      ...parseClientesListFiltrosFromQuery(q),
+    });
+    return ok(data);
+  })
   .get(
     '/api/clientes/:id',
     async ({ params, set }) => {
