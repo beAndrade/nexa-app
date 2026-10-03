@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-07 fechadas documentalmente; CC-08 aguarda Commit da CC-07 e ainda não iniciada  
+**Status:** Em execução — CC-01 a CC-08 fechadas documentalmente; CC-08 commit final pendente; CC-09 ainda não iniciada  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -24,8 +24,8 @@ O [Sprint Planning do Epic](./05-sprint-planning.md) descreve a fundação mobil
 | CC-05 | Exclusão protegida | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-05.md) |
 | CC-06 | Job de inatividade | ✅ Concluída — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-06.md) |
 | CC-07 | FKs NO ACTION | ✅ Concluída (docs) — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-07.md); **commit pendente** |
-| CC-08 | Formulário único | ⏳ Próxima unidade — **não iniciada** (aguardar Commit CC-07) |
-| CC-09 | Lista, filtros e exclusão na UI | 🔒 Aguardando |
+| CC-08 | Formulário único | ✅ Docs fechadas — [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-08.md); QA APPROVED; **commit final pendente** (HEAD `9176ff6` + rework WT) |
+| CC-09 | Lista, filtros e exclusão na UI | 🔒 Aguardando commit final CC-08 — **não iniciada** |
 | CC-10 | WhatsApp usa celular | 🔒 Aguardando |
 | CC-11 | Remover coluna telefone | 🔒 Aguardando |
 | CC-12 | Testes do desenho | 🔒 Aguardando |
@@ -534,7 +534,7 @@ Uma execução do job na base de desenvolvimento produz só `inativo_automatico`
 ## CC-07 — FKs NO ACTION
 
 **Estado (2026-10-02):** ✅ Documentation UPDATED — Implementation · AR APPROVED · QA APPROVED · [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-07.md).  
-**Commit:** pendente. **Próxima:** CC-08 após o Commit; ainda não iniciada. CC-09–CC-12 aguardam.
+**Commit:** pendente. **Seguinte:** CC-08 já executada (docs fechadas; commit final da CC-08 pendente). CC-09–CC-12 aguardam.
 
 ### Objective
 
@@ -599,6 +599,9 @@ As três FKs estão `NO ACTION` e a API nova já não apaga filhos.
 
 ## CC-08 — Formulário único
 
+**Estado (2026-10-02):** ✅ Documentation UPDATED — Implementation (`9176ff6`) · AR inicial APPROVED WITH MINOR ADJUSTMENTS · QA inicial REQUIRES REWORK (F1/F2) · Rework F1/F2 na working tree · AR Recheck APPROVED · QA Re-Validation APPROVED · [fechamento](../../../03-development/audits/2026-10-02-cadastro-cliente-cc-08.md).  
+**Commit final:** pendente (rework ainda na working tree; sem push). **Próxima:** CC-09 após o commit final; ainda **não iniciada**. CC-10–CC-12 aguardam.
+
 ### Objective
 
 Um componente de cadastro para o drawer, as duas rotas e os chamadores, com as regras de campo da seção 10.
@@ -642,23 +645,33 @@ CC-04. Sem a API nova, o formulário não tem contrato para gravar.
 
 ### Acceptance Criteria
 
-- [ ] Drawer, `/clientes/novo` e `/clientes/:id/editar` usam o mesmo formulário e as mesmas validações.
-- [ ] Criação não oferece escolha de status e grava Ativo.
-- [ ] Edição grava Ativo ou Inativo junto com o cadastro.
-- [ ] Celular é obrigatório no salvamento; telefone fixo não é.
-- [ ] Nome vazio, celular vazio ou inválido, fixo inválido, e-mail inválido, CPF inválido e data inválida usam as mensagens da seção 9.
-- [ ] Nome repetido passa na pré-checagem. Celular e CPF não são lidos de `telefone`.
-- [ ] Crédito, desconto, notificação, `telefone` e observações não aparecem.
-- [ ] Cliente antigo sem celular abre. Salvar sem celular falha e não grava null.
-- [ ] Desktop e mobile usam o mesmo formulário. Área de toque mínima 44×44 nos controles do formulário e do rodapé no mobile.
+- [x] Drawer, `/clientes/novo` e `/clientes/:id/editar` usam o mesmo formulário e as mesmas validações.
+- [x] Criação não oferece escolha de status e grava Ativo.
+- [x] Edição grava Ativo ou Inativo junto com o cadastro.
+- [x] Celular é obrigatório no salvamento; telefone fixo não é.
+- [x] Nome vazio, celular vazio ou inválido, fixo inválido, e-mail inválido, CPF inválido e data inválida usam as mensagens da seção 9.
+- [x] Nome repetido passa na pré-checagem. Celular e CPF não são lidos de `telefone`.
+- [x] Crédito, desconto, notificação, `telefone` e observações não aparecem.
+- [x] Cliente antigo sem celular abre. Salvar sem celular falha e não grava null.
+- [x] Desktop e mobile usam o mesmo formulário. Área de toque mínima 44×44 nos controles do formulário e do rodapé no mobile.
 
 ### Manual Validation
 
 Criar pelo drawer, por `/clientes/novo` e a partir da agenda. Editar pelo drawer e por `/clientes/:id/editar`. Tentar salvar cliente legado sem celular.
 
+Validação QA Re-Validation (2026-10-02): F1 (GET OK / GET FAIL / sem PATCH / recuperação / create sem falso bloqueio) PASS; F2 (linha e editar → aba Cadastro) PASS; regressão essencial do formulário PASS no recorte exercitado; `ng build --configuration=development` exit 0. Entry points Agenda/Hub/Comandas/Financeiro/Orçamentos: wiring estático (não smoke runtime completo nesta rodada).
+
+### Rework (pós-QA inicial)
+
+| Finding | Severidade | Correção | Estado |
+|---------|------------|----------|--------|
+| F1 — GET fail liberava form vazio com Salvar ativo | HIGH | `cadastroHidratado` / `cadastroCargaErro` / `bloqueioSalvarAteHidratacao`; `salvar()` não faz PATCH sem hidratação | Encerrado (Re-QA PASS) |
+| F2 — clique na linha abria Painel | MEDIUM | `abrirPerfilCliente` / `onEditarCliente` com `abaInicial: 'Cadastro'` | Encerrado (Re-QA PASS) |
+| F3 — sem botão explícito “Tentar de novo” | LOW | Não implementado; reabrir edição dispara novo GET | Residual Low — não bloqueia |
+
 ### Build / Test
 
-`npx ng build` do app. Fluxos acima na base já com CC-04.
+`npx ng build` / `ng build --configuration=development` do app. Fluxos acima na base já com CC-04.
 
 ### Risk
 
@@ -668,9 +681,12 @@ Criar pelo drawer, por `/clientes/novo` e a partir da agenda. Editar pelo drawer
 
 Não há formulário de cadastro paralelo. Os três entry points gravam pelo contrato de CC-04.
 
+**DoD CC-08 (2026-10-02):** atendido em código + QA Re-Validation APPROVED + documentação de fechamento. Commit final do rework ainda pendente. Unidade **não** está “fully closed” antes do commit.
+
 ### Suggested Commit
 
-`feat(clientes): formulário único no drawer e nas rotas`
+`feat(clientes): formulário único no drawer e nas rotas`  
+(Rework F1/F2: commit adicional após auditoria Git — não amend de `9176ff6`.)
 
 ---
 

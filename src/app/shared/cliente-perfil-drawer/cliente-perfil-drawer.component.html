@@ -186,7 +186,7 @@
     @if (abaAtiva === 'Cadastro') {
       <footer class="cliente-drawer-footer cliente-drawer-footer--embutido">
         <button type="button" class="cliente-footer-btn cliente-footer-btn--ghost" [disabled]="cadastro.salvando" (click)="onVoltarDoCadastro()">Voltar</button>
-        <button type="button" class="cliente-footer-btn cliente-footer-btn--primary" [disabled]="cadastro.salvando || cadastro.carregandoFormulario" (click)="cadastro.salvar()">{{ cadastro.salvando ? 'Salvando…' : 'Salvar' }}</button>
+        <button type="button" class="cliente-footer-btn cliente-footer-btn--primary" [disabled]="cadastro.bloqueioSalvarAteHidratacao" (click)="cadastro.salvar()">{{ cadastro.salvando ? 'Salvando…' : 'Salvar' }}</button>
       </footer>
     }
   </div>

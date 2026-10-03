@@ -599,13 +599,14 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 | CC-05 DELETE protegido | ✅ |
 | CC-06 Job de inatividade | ✅ |
 | CC-07 FKs NO ACTION | ✅ — DOCUMENTATION UPDATED (commit pendente) |
-| CC-08 Formulário único | ⏳ próxima unidade — **não iniciada** |
-| CC-09–CC-12 | 🔒 aguardando |
+| CC-08 Formulário único | ✅ — DOCUMENTATION UPDATED · QA APPROVED · **commit final pendente** |
+| CC-09–CC-12 | 🔒 aguardando (CC-09 bloqueada até commit final CC-08) |
 
 **Fechamento CC-05:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-05.md`  
 **Fechamento CC-06:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-06.md`  
 **Fechamento CC-07:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-07.md`  
-**Gates CC-07:** Implementation concluída · Architecture Review APPROVED · QA APPROVED · Documentation atualizada · Commit pendente · sem achados / rework / bloqueio · residual MINOR Low em `ensureSchemaPatches` (não bloqueia).
+**Fechamento CC-08:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-08.md`  
+**Gates CC-08:** Implementation (`9176ff6`) · AR APPROVED WITH MINOR ADJUSTMENTS · QA inicial REQUIRES REWORK · Rework F1/F2 (WT) · AR Recheck APPROVED · QA Re-Validation APPROVED · Documentation atualizada · Commit final pendente · sem push · F1/F2 encerrados · residual F3 Low (sem “Tentar de novo”; não bloqueia).
 
 Contrato canônico (inalterado neste passo): Product Definition, UX Flow, Technical Design e Sprint Planning em `docs/01-product/epics/epic-01-mobile-foundation/10–13-*-cadastro-cliente.md`.
 

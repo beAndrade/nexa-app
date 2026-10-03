@@ -285,6 +285,14 @@ export class ClienteCadastroDrawerService {
   exibicao: ClienteCadastroExibicao = 'drawer';
   embutidoAtivo = false;
   carregandoFormulario = false;
+  /**
+   * Edição: true só após GET bem-sucedido (hidratação + snapshot).
+   * Criação: true assim que o formulário vazio é aberto.
+   * Sem isto, falha no GET não pode liberar formulário vazio nem Salvar/PATCH.
+   */
+  cadastroHidratado = false;
+  /** GET de edição falhou — mantém edição bloqueada e UI de erro coerente. */
+  cadastroCargaErro = false;
   saveErro = '';
   salvando = false;
   notificacoesToggleLiqArmed = false;
@@ -332,6 +340,16 @@ export class ClienteCadastroDrawerService {
     return this.aberto;
   }
 
+  /** Salvar/PATCH bloqueados até hidratação OK (edição) ou formulário de criação pronto. */
+  get bloqueioSalvarAteHidratacao(): boolean {
+    return (
+      this.salvando ||
+      this.carregandoFormulario ||
+      !this.cadastroHidratado ||
+      this.cadastroCargaErro
+    );
+  }
+
   abrirNovo(
     nomeInicial = '',
     callbacks?: ClienteCadastroDrawerCallbacks,
@@ -346,6 +364,8 @@ export class ClienteCadastroDrawerService {
     this.clienteId = null;
     this.drawerNome = 'Novo cliente';
     this.carregandoFormulario = false;
+    this.cadastroCargaErro = false;
+    this.cadastroHidratado = true;
     this.preencherFormularioVazio(nomeInicial);
     this.capturarSnapshot();
     this.abaAtiva = 'Cadastro';
@@ -369,6 +389,8 @@ export class ClienteCadastroDrawerService {
     this.modo = 'perfil';
     this.clienteId = cid;
     this.carregandoFormulario = true;
+    this.cadastroHidratado = false;
+    this.cadastroCargaErro = false;
     this.preencherFormularioVazio(options?.nomeLista ?? '');
     this.abaAtiva = this.resolverAbaInicial(options?.abaInicial);
     this.abrirPainel();
@@ -392,6 +414,8 @@ export class ClienteCadastroDrawerService {
     this.clienteId = null;
     this.drawerNome = 'Novo cliente';
     this.carregandoFormulario = false;
+    this.cadastroCargaErro = false;
+    this.cadastroHidratado = true;
     this.aberto = false;
     this.panelOpen = false;
     this.preencherFormularioVazio('');
@@ -420,6 +444,8 @@ export class ClienteCadastroDrawerService {
     this.modo = 'perfil';
     this.clienteId = cid;
     this.carregandoFormulario = true;
+    this.cadastroHidratado = false;
+    this.cadastroCargaErro = false;
     this.aberto = false;
     this.panelOpen = false;
     this.preencherFormularioVazio('');
@@ -445,6 +471,8 @@ export class ClienteCadastroDrawerService {
     this.saveErro = '';
     this.salvando = false;
     this.carregandoFormulario = false;
+    this.cadastroHidratado = false;
+    this.cadastroCargaErro = false;
     this.duplicadoCampo = null;
     this.duplicadoClienteId = null;
     this.duplicadoClienteNome = '';
@@ -611,6 +639,8 @@ export class ClienteCadastroDrawerService {
     this.modo = 'perfil';
     this.clienteId = cid;
     this.carregandoFormulario = true;
+    this.cadastroHidratado = false;
+    this.cadastroCargaErro = false;
     this.preencherFormularioVazio(options?.nomeLista ?? '');
     const fotoSeed = (options?.fotoUrlInicial ?? '').trim();
     if (fotoSeed) {
@@ -628,6 +658,8 @@ export class ClienteCadastroDrawerService {
     this.embutidoAtivo = false;
     this.exibicao = 'drawer';
     this.carregandoFormulario = false;
+    this.cadastroHidratado = false;
+    this.cadastroCargaErro = false;
     this.descontoDropdownAberto = false;
     this.clienteId = null;
     this.saveErro = '';
@@ -749,6 +781,9 @@ export class ClienteCadastroDrawerService {
       this.orcamentosFiltroFim = ymdFimFiltroOrcamentosPadrao();
       this.saveErro = '';
       this.salvando = false;
+      this.carregandoFormulario = false;
+      this.cadastroHidratado = false;
+      this.cadastroCargaErro = false;
       this.notificacoesToggleLiqArmed = false;
       this.clientesIndiceUnicidade = null;
       this.duplicadoCampo = null;
@@ -1369,7 +1404,9 @@ export class ClienteCadastroDrawerService {
   }
 
   salvar(): void {
-    if (this.salvando || this.carregandoFormulario) return;
+    if (this.bloqueioSalvarAteHidratacao) return;
+    // Edição sem GET OK: nunca montar PATCH a partir de formulário vazio/parcial.
+    if (this.clienteId && !this.cadastroHidratado) return;
 
     this.saveErro = '';
     this.duplicadoCampo = null;
@@ -1606,6 +1643,8 @@ export class ClienteCadastroDrawerService {
 
   private carregarCliente(cid: string): void {
     this.carregandoFormulario = true;
+    this.cadastroHidratado = false;
+    this.cadastroCargaErro = false;
     this.api.getCliente(cid).subscribe({
       next: (c) => {
         if (this.clienteId !== cid) return;
@@ -1616,7 +1655,10 @@ export class ClienteCadastroDrawerService {
           this.cadastroFotoRemovida = true;
         }
         this.capturarSnapshot();
+        this.cadastroHidratado = true;
+        this.cadastroCargaErro = false;
         this.carregandoFormulario = false;
+        this.saveErro = '';
         if (this.abaAtiva === 'Painel') {
           this.carregarPainel(cid);
         }
@@ -1648,7 +1690,12 @@ export class ClienteCadastroDrawerService {
       },
       error: () => {
         if (this.clienteId === cid) {
+          // Mantém contexto da tentativa (clienteId, aba, nome da lista) e
+          // NÃO libera formulário vazio como edição válida.
           this.carregandoFormulario = false;
+          this.cadastroHidratado = false;
+          this.cadastroCargaErro = true;
+          this.formSnapshot = null;
           this.saveErro = 'Não foi possível carregar os dados do cliente.';
           this.appRef.tick();
         }

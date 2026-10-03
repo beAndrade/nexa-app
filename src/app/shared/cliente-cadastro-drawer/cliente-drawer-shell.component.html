@@ -93,7 +93,7 @@
       <button
         type="button"
         class="cliente-footer-btn cliente-footer-btn--primary"
-        [disabled]="d.salvando || d.carregandoFormulario"
+        [disabled]="d.bloqueioSalvarAteHidratacao"
         (click)="d.salvar()"
       >
         {{ d.salvando ? 'Salvando…' : 'Salvar' }}

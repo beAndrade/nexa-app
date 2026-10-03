@@ -863,7 +863,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
     this.cadastroDrawer.abrirEdicao(id, {
       nomeLista: cliente.nome?.trim() ?? '',
       fotoUrlInicial: cliente.fotoUrl,
-      abaInicial: 'Painel',
+      abaInicial: 'Cadastro',
       callbacks: {
         onSalvo: (c) => this.atualizarClienteNaLista(c),
         onClienteCarregado: (c) => this.atualizarClienteNaLista(c),
