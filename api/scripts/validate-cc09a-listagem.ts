@@ -77,15 +77,25 @@ assert(
   'hasCellphone com → só celular',
 );
 assert(
-  buildClientesListConditions({ search: 'maria' }).length === 0,
-  'search reservado CC-09-B',
+  buildClientesListConditions({ search: 'maria' }).length === 1,
+  'search não vazio → predicado',
+);
+assert(
+  buildClientesListConditions({ search: '   ' }).length === 0,
+  'search só espaços → sem predicado',
 );
 assert(
   buildClientesListConditions({
     birthdayFrom: '2000-01-01',
     birthdayTo: '2000-12-31',
+  }).length === 1,
+  'birthday válido → predicado',
+);
+assert(
+  buildClientesListConditions({
+    birthdayFrom: '01/01/2000',
   }).length === 0,
-  'birthday reservado CC-09-B',
+  'birthday formato inválido → sem predicado',
 );
 
 async function smokeDb(): Promise<void> {

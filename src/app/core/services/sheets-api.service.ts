@@ -22,6 +22,7 @@ import {
   Cliente,
   ClienteCadastroPayload,
   ClienteCreditoMovimento,
+  ClientesListaPaginada,
   CriarClienteCreditoMovimentoPayload,
   CriarClienteCreditoMovimentoResponse,
   CreateAtendimentoPayload,
@@ -32,6 +33,7 @@ import {
   FinFormaPagamentoCadastroItem,
   FinFormaPagamentoOpcaoItem,
   FinTransacaoItem,
+  ListClientesPaginadoParams,
   MarcaCatalogoItem,
   FornecedorItem,
   FornecedorWritePayload,
@@ -73,6 +75,47 @@ export class SheetsApiService {
         map((r) => this.unwrap(r)),
         map((d) => d.items),
       );
+  }
+
+  /**
+   * GET `/api/clientes` modo paginado (CC-09-A/B).
+   * Envia sempre `page`/`pageSize` para não cair no contrato legado.
+   */
+  listClientesPaginado(
+    params: ListClientesPaginadoParams,
+  ): Observable<ClientesListaPaginada> {
+    let httpParams = new HttpParams()
+      .set('page', String(params.page ?? 1))
+      .set(
+        'pageSize',
+        String(params.pageSize ?? params.page_size ?? 20),
+      );
+    const search = String(params.search ?? '').trim();
+    if (search) httpParams = httpParams.set('search', search);
+    const status = String(params.status ?? '').trim();
+    if (status) httpParams = httpParams.set('status', status);
+    if (params.hasCellphone === true || params.hasCellphone === 'true') {
+      httpParams = httpParams.set('hasCellphone', 'true');
+    } else if (
+      params.hasCellphone === false ||
+      params.hasCellphone === 'false'
+    ) {
+      httpParams = httpParams.set('hasCellphone', 'false');
+    }
+    const bFrom = String(params.birthdayFrom ?? params.birthday_from ?? '')
+      .trim()
+      .slice(0, 10);
+    if (bFrom) httpParams = httpParams.set('birthdayFrom', bFrom);
+    const bTo = String(params.birthdayTo ?? params.birthday_to ?? '')
+      .trim()
+      .slice(0, 10);
+    if (bTo) httpParams = httpParams.set('birthdayTo', bTo);
+
+    return this.http
+      .get<ApiResponse<ClientesListaPaginada>>(this.url('/api/clientes'), {
+        params: httpParams,
+      })
+      .pipe(map((r) => this.unwrap(r)));
   }
 
   getCliente(clienteId: string): Observable<Cliente> {

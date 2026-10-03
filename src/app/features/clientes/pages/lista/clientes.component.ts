@@ -8,9 +8,10 @@ import {
   OnDestroy,
   OnInit,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
 import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
 import { Cliente } from '../../../../core/models/api.models';
@@ -18,7 +19,6 @@ import { ClienteCadastroDrawerService } from '../../../../shared/cliente-cadastr
 import { ClienteAvatarComponent } from '../../../../shared/cliente-avatar/cliente-avatar.component';
 import { AppToastService } from '../../../../shared/app-toast/app-toast.service';
 import { formatarCpfBr } from '../../../../core/utils/br-document-masks';
-import { parseFiltroDataDdMm } from '../../../../core/utils/atendimento-display';
 import {
   totaisDebitosPorClienteId,
   type TotaisDebitosCliente,
@@ -46,6 +46,8 @@ import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-pan
 import { mediaQueryMin } from '../../../../styles/breakpoints';
 
 const CLIENTES_BOTTOM_NAV_OWNER = 'clientes';
+const CLIENTES_SEARCH_DEBOUNCE_MS = 300;
+const CLIENTES_PAGE_SIZES = [20, 50, 100] as const;
 type OrdenacaoNome = 'asc' | 'desc';
 
 export type ClienteColunaId =
@@ -146,6 +148,15 @@ export class ClientesComponent implements OnInit, OnDestroy {
   private totaisDebitosPorCliente = new Map<string, TotaisDebitosCliente>();
 
   busca = '';
+  /** Termo efetivamente enviado à API (após debounce). */
+  private buscaAplicada = '';
+  private readonly searchInput$ = new Subject<string>();
+  /**
+   * Sequência + sub ativa do GET paginado: ignora respostas stale
+   * (padrão Angular do projeto — ex.: nova-comanda-drawer).
+   */
+  private listaLoadSeq = 0;
+  private listaLoadSub: { unsubscribe(): void } | null = null;
   buscaAberta = false;
   filtrosAbertos = false;
   /** Mobile: exibe checkboxes na lista e permite seleção em lote. */
@@ -179,8 +190,11 @@ export class ClientesComponent implements OnInit, OnDestroy {
   };
 
   pagina = 1;
-  itensPorPagina = 20;
-  readonly opcoesItensPorPagina = [10, 20, 40, 50, 100];
+  itensPorPagina: (typeof CLIENTES_PAGE_SIZES)[number] = 20;
+  readonly opcoesItensPorPagina = [...CLIENTES_PAGE_SIZES];
+  /** Totais do conjunto filtrado no servidor (CC-09-A/B). */
+  totalServidor = 0;
+  totalPaginasServidor = 0;
   perPageMenuAberto = false;
 
   ordenacaoNome: OrdenacaoNome = 'asc';
@@ -227,15 +241,46 @@ export class ClientesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.carregarColunasSalvas();
+    this.setupSearchDebounce();
     this.carregar();
     this.setupShellBottomNav();
     this.setupBalaoAvaliacaoCliqueFora();
   }
 
   ngOnDestroy(): void {
+    this.listaLoadSub?.unsubscribe();
+    this.listaLoadSub = null;
     this.shellUi.clearMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER);
     this.clearNomeSortTipShowTimer();
     this.clearColunasMenuAnimTimer();
+  }
+
+  private setupSearchDebounce(): void {
+    this.searchInput$
+      .pipe(
+        debounceTime(CLIENTES_SEARCH_DEBOUNCE_MS),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((q) => {
+        this.buscaAplicada = String(q ?? '').trim();
+        this.resetPageAndSelection();
+        this.carregarLista();
+      });
+  }
+
+  /** Page reset + limpa seleção ao mudar search/filtros (seleção UI = CC-09-D). */
+  private resetPageAndSelection(): void {
+    this.pagina = 1;
+    this.selecionados.clear();
+  }
+
+  private normalizePageSize(raw: number): (typeof CLIENTES_PAGE_SIZES)[number] {
+    const n = Math.trunc(Number(raw));
+    if ((CLIENTES_PAGE_SIZES as readonly number[]).includes(n)) {
+      return n as (typeof CLIENTES_PAGE_SIZES)[number];
+    }
+    return 20;
   }
 
   private setupShellBottomNav(): void {
@@ -396,7 +441,9 @@ export class ClientesComponent implements OnInit, OnDestroy {
         break;
     }
     this.pagina = 1;
+    this.selecionados.clear();
     this.syncShellBottomNavActions();
+    this.carregarLista();
   }
 
   entrarModoSelecao(): void {
@@ -513,26 +560,106 @@ export class ClientesComponent implements OnInit, OnDestroy {
   carregar(): void {
     this.carregando = true;
     this.erro = '';
-    forkJoin({
-      clientes: this.api.listClientes(),
-      atendimentos: this.api.listAgendamentos(),
-    }).subscribe({
-      next: ({ clientes, atendimentos }) => {
-        this.itens = clientes ?? [];
+    this.api.listAgendamentos().subscribe({
+      next: (atendimentos) => {
         this.totaisDebitosPorCliente = totaisDebitosPorClienteId(
           atendimentos ?? [],
         );
-        this.carregando = false;
-        this.pagina = 1;
-        this.selecionados.clear();
       },
-      error: (e: Error) => {
-        this.erro =
-          e.message ||
-          'Não foi possível carregar clientes. Tente novamente.';
-        this.carregando = false;
+      error: () => {
+        /* débitos são auxiliares; lista segue mesmo se falhar */
       },
     });
+    this.carregarLista();
+  }
+
+  /** Recarrega a página atual da lista paginada (CC-09-A/B). */
+  private carregarLista(): void {
+    if (!this.filtroStatusAtivos && !this.filtroStatusInativos) {
+      this.listaLoadSeq += 1;
+      this.listaLoadSub?.unsubscribe();
+      this.listaLoadSub = null;
+      this.itens = [];
+      this.totalServidor = 0;
+      this.totalPaginasServidor = 0;
+      this.carregando = false;
+      return;
+    }
+
+    const seq = ++this.listaLoadSeq;
+    this.listaLoadSub?.unsubscribe();
+    this.carregando = true;
+    this.erro = '';
+
+    this.listaLoadSub = this.api
+      .listClientesPaginado(this.montarParamsListagem())
+      .subscribe({
+        next: (data) => {
+          if (seq !== this.listaLoadSeq) return;
+          this.itens = data.items ?? [];
+          this.totalServidor = Number(data.total ?? 0);
+          this.totalPaginasServidor = Number(data.totalPages ?? 0);
+          this.pagina = Number(data.page ?? this.pagina) || 1;
+          this.itensPorPagina = this.normalizePageSize(
+            Number(data.pageSize ?? this.itensPorPagina),
+          );
+          this.carregando = false;
+        },
+        error: (e: Error) => {
+          if (seq !== this.listaLoadSeq) return;
+          this.erro =
+            e.message ||
+            'Não foi possível carregar clientes. Tente novamente.';
+          this.carregando = false;
+        },
+      });
+  }
+
+  private montarParamsListagem(): {
+    page: number;
+    pageSize: number;
+    search?: string;
+    status?: string;
+    hasCellphone?: boolean;
+    birthdayFrom?: string;
+    birthdayTo?: string;
+  } {
+    const pageSize = this.normalizePageSize(this.itensPorPagina);
+    this.itensPorPagina = pageSize;
+    const params: {
+      page: number;
+      pageSize: number;
+      search?: string;
+      status?: string;
+      hasCellphone?: boolean;
+      birthdayFrom?: string;
+      birthdayTo?: string;
+    } = {
+      page: this.pagina,
+      pageSize,
+    };
+
+    const q = this.buscaAplicada.trim();
+    if (q) params.search = q;
+
+    if (this.filtroStatusAtivos && !this.filtroStatusInativos) {
+      params.status = 'ativos';
+    } else if (!this.filtroStatusAtivos && this.filtroStatusInativos) {
+      params.status = 'inativos';
+    }
+
+    if (this.filtroComCelular && !this.filtroSemCelular) {
+      params.hasCellphone = true;
+    } else if (!this.filtroComCelular && this.filtroSemCelular) {
+      params.hasCellphone = false;
+    }
+
+    const ini = this.filtroAniversarioInicioYmd.trim().slice(0, 10);
+    const fim = this.filtroAniversarioFimYmd.trim().slice(0, 10);
+    if (ymdValido(ini)) params.birthdayFrom = ini;
+    if (ymdValido(fim)) params.birthdayTo = fim;
+
+    return params;
   }
 
   get buscaPlaceholder(): string {
@@ -576,7 +703,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onBuscaInput(): void {
-    this.pagina = 1;
+    this.searchInput$.next(this.busca);
   }
 
   onBuscaEnter(ev: Event): void {
@@ -585,7 +712,9 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onBuscar(): void {
-    this.pagina = 1;
+    this.buscaAplicada = this.busca.trim();
+    this.resetPageAndSelection();
+    this.carregarLista();
   }
 
   toggleFiltros(ev?: Event): void {
@@ -622,16 +751,18 @@ export class ClientesComponent implements OnInit, OnDestroy {
     const checked = (ev.target as HTMLInputElement).checked;
     if (which === 'ativos') this.filtroStatusAtivos = checked;
     else this.filtroStatusInativos = checked;
-    this.pagina = 1;
+    this.resetPageAndSelection();
     this.syncShellBottomNavActions();
+    this.carregarLista();
   }
 
   toggleFiltroCelular(which: 'com' | 'sem', ev: Event): void {
     const checked = (ev.target as HTMLInputElement).checked;
     if (which === 'com') this.filtroComCelular = checked;
     else this.filtroSemCelular = checked;
-    this.pagina = 1;
+    this.resetPageAndSelection();
     this.syncShellBottomNavActions();
+    this.carregarLista();
   }
 
   toggleFiltroDebito(which: 'com' | 'sem', ev: Event): void {
@@ -643,8 +774,9 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onAniversarioPeriodoAlterado(): void {
-    this.pagina = 1;
+    this.resetPageAndSelection();
     this.syncShellBottomNavActions();
+    this.carregarLista();
   }
 
   definirFiltroAvaliacao(n: number, ev?: Event, mostrarBalao = false): void {
@@ -928,75 +1060,21 @@ export class ClientesComponent implements OnInit, OnDestroy {
 
   filtrados(): Cliente[] {
     let list = this.comDadosValidos();
-    const q = this.busca.trim();
-    if (q) {
-      list = list.filter((c) => this.clienteMatchesBusca(c, q));
-    }
-    list = list.filter((c) => this.clienteMatchesFiltrosPainel(c));
-    const dir = this.ordenacaoNome === 'asc' ? 1 : -1;
-    return list.slice().sort((a, b) => {
-      const cmp = (a.nome ?? '').localeCompare(b.nome ?? '', 'pt-BR', {
-        sensitivity: 'base',
-      });
-      return cmp * dir;
-    });
+    // Search / status / hasCellphone / aniversário: server-side (CC-09-B).
+    // Débito / avaliação: ainda client-side na página carregada (fora do contrato B).
+    list = list.filter((c) => this.clienteMatchesFiltrosPainelLegado(c));
+    // Ordenação fixa na API (nome_exibido ASC, id ASC). UI de sort configurável ≠ CC-09-B.
+    return list;
   }
 
-  private clienteMatchesBusca(c: Cliente, qRaw: string): boolean {
-    const q = this.normalizarTextoBusca(qRaw);
-    if (!q) return true;
-
-    const qDig = this.apenasDigitos(qRaw);
-    const textos = [
-      c.nome,
-      c.apelido,
-      c.email,
-      c.cpf,
-      c.cnpj,
-      c.rg,
-    ].map((x) => this.normalizarTextoBusca(String(x ?? '')));
-
-    if (textos.some((t) => t.includes(q))) return true;
-
-    if (qDig.length > 0) {
-      const docs = [c.cpf, c.cnpj, c.rg].map((x) =>
-        this.apenasDigitos(String(x ?? '')),
-      );
-      if (docs.some((d) => d.includes(qDig))) return true;
-
-      const fones = [c.celular, c.telefone, c.telefoneFixo].map((x) =>
-        this.apenasDigitos(String(x ?? '')),
-      );
-      if (fones.some((f) => f.length > 0 && f.includes(qDig))) return true;
-    }
-
-    return false;
-  }
-
-  private clienteMatchesFiltrosPainel(c: Cliente): boolean {
-    if (!this.filtroStatusAtivos && !this.filtroStatusInativos) return false;
-    if (this.filtroStatusInativos && !this.filtroStatusAtivos) {
-      if (c.notificacoesAtivo !== false) return false;
-    }
-
-    const temCelular = this.clienteTemCelular(c);
-    if (this.filtroComCelular && !temCelular) return false;
-    if (this.filtroSemCelular && temCelular) return false;
-
+  /**
+   * Filtros de painel que ainda não têm predicado server-side nesta CC.
+   * Status / celular / aniversário NÃO passam por aqui (evita notificacoesAtivo / telefone legado).
+   */
+  private clienteMatchesFiltrosPainelLegado(c: Cliente): boolean {
     const temDebito = this.debitosTotalCliente(c) > 0.005;
     if (this.filtroComDebito && !temDebito) return false;
     if (this.filtroSemDebito && temDebito) return false;
-
-    const ymd = this.aniversarioParaYmd(c.aniversario);
-    const ini = this.filtroAniversarioInicioYmd.trim().slice(0, 10);
-    const fim = this.filtroAniversarioFimYmd.trim().slice(0, 10);
-    const temIni = ymdValido(ini);
-    const temFim = ymdValido(fim);
-    if (temIni || temFim) {
-      if (!ymd) return false;
-      if (temIni && ymd < ini) return false;
-      if (temFim && ymd > fim) return false;
-    }
 
     if (this.filtroAvaliacaoMin > 0) {
       return false;
@@ -1005,57 +1083,31 @@ export class ClientesComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  private clienteTemCelular(c: Cliente): boolean {
-    return [c.celular, c.telefone, c.telefoneFixo].some(
-      (x) => this.apenasDigitos(String(x ?? '')).length >= 8,
-    );
-  }
-
-  private aniversarioParaYmd(raw: string | null | undefined): string | null {
-    const s = String(raw ?? '').trim();
-    if (!s) return null;
-    const ymd = parseFiltroDataDdMm(s);
-    if (ymd) return ymd;
-    const m = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/.exec(s);
-    if (!m) return null;
-    const dd = m[1].padStart(2, '0');
-    const mm = m[2].padStart(2, '0');
-    return `2000-${mm}-${dd}`;
-  }
-
-  private normalizarTextoBusca(s: string): string {
-    return s
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{M}/gu, '');
-  }
-
-  private apenasDigitos(s: string): string {
-    return String(s ?? '').replace(/\D/g, '');
-  }
-
   totalFiltrado(): number {
-    return this.filtrados().length;
+    return this.totalServidor;
   }
 
   itensPagina(): Cliente[] {
-    const all = this.filtrados();
-    const start = (this.pagina - 1) * this.itensPorPagina;
-    return all.slice(start, start + this.itensPorPagina);
+    // Página já veio da API; não re-slice client-side.
+    return this.filtrados();
   }
 
   totalPaginas(): number {
-    const n = this.totalFiltrado();
-    return Math.max(1, Math.ceil(n / this.itensPorPagina));
+    return Math.max(1, this.totalPaginasServidor || 1);
   }
 
   paginaAnterior(): void {
-    if (this.pagina > 1) this.pagina--;
+    if (this.pagina > 1) {
+      this.pagina--;
+      this.carregarLista();
+    }
   }
 
   paginaSeguinte(): void {
-    if (this.pagina < this.totalPaginas()) this.pagina++;
+    if (this.pagina < this.totalPaginas()) {
+      this.pagina++;
+      this.carregarLista();
+    }
   }
 
   togglePerPageMenu(ev: Event): void {
@@ -1066,9 +1118,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
 
   selecionarItensPorPagina(n: number, ev: Event): void {
     ev.stopPropagation();
-    this.itensPorPagina = n;
+    this.itensPorPagina = this.normalizePageSize(n);
     this.perPageMenuAberto = false;
     this.pagina = 1;
+    this.carregarLista();
   }
 
   estaSelecionado(id: string): boolean {

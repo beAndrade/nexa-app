@@ -59,6 +59,29 @@ export interface Cliente {
   updatedAt?: string | null;
 }
 
+/** Params do GET `/api/clientes` paginado (CC-09-A/B). */
+export type ListClientesPaginadoParams = {
+  page?: number;
+  pageSize?: number;
+  page_size?: number;
+  search?: string | null;
+  status?: string | null;
+  hasCellphone?: boolean | string | null;
+  birthdayFrom?: string | null;
+  birthday_from?: string | null;
+  birthdayTo?: string | null;
+  birthday_to?: string | null;
+};
+
+/** Resposta do GET `/api/clientes` modo paginado. */
+export type ClientesListaPaginada = {
+  items: Cliente[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
 /** Linha do extrato de crédito (`GET /api/clientes/:id/credito-movimentos`). */
 export interface ClienteCreditoMovimento {
   id: string;
