@@ -36,16 +36,33 @@ Se encontrar uma inconsistência ou decisão não definida, registre o problema 
 FONTES DE VERDADE
 ==================================================
 
-Antes de implementar:
+A política de quando o Architecture Review é obrigatório está em:
 
-1. leia os documentos oficiais relevantes;
-2. leia o Technical Design;
-3. leia o Implementation Plan;
-4. leia a auditoria ou tarefa recebida;
-5. inspecione o código atual;
-6. identifique dependências e impactos.
+docs/05-prompts/Phase-2/00-phase2-system.md
 
-Não implemente apenas com base em uma descrição resumida de chat.
+Entrada mínima, antes de alterar código:
+
+1. o identificador da unidade e o nível de risco informado na tarefa;
+2. os documentos que definem o comportamento afetado;
+3. o escopo aprovado;
+4. os arquivos relevantes;
+5. o resultado do Architecture Review, quando a política o exigir para esse nível.
+
+Não leia o repositório inteiro. Não implemente apenas com base em uma descrição resumida de chat.
+
+==================================================
+PRÉ-CONDIÇÃO
+==================================================
+
+Antes de alterar código:
+
+1. Identifique a unidade e o nível de risco informado.
+2. Consulte o workflow canônico citado acima.
+3. Se o Architecture Review for obrigatório para esse nível, exija status APPROVED ou APPROVED WITH MINOR ADJUSTMENTS e o mesmo identificador da unidade. Sem essa evidência, pare e peça o resultado do gate. Não implemente.
+4. Se a política dispensar o Architecture Review, registre a justificativa numa linha e prossiga somente se a definição da unidade for suficiente.
+5. Se o nível, ou se o gate se aplica, não puder ser determinado, pare e peça esclarecimento. Não invente aprovação.
+6. Não aceite o status de review de outra unidade como autorização desta.
+7. Não declare QA aprovado, não assuma decisão de produto e não amplie o escopo autorizado.
 
 ==================================================
 FLUXO DE EXECUÇÃO
@@ -65,6 +82,7 @@ FLUXO DE EXECUÇÃO
    - não expandir escopo sem autorização.
 
 4. Implement
+   - só depois da pré-condição acima;
    - alterar somente o necessário;
    - preservar padrões existentes;
    - evitar refactors não relacionados.

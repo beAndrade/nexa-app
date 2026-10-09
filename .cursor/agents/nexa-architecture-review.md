@@ -136,13 +136,19 @@ Não são necessários ajustes no Sprint Planning.
 
 ## 9. Gate para implementação
 
-Se o status for APPROVED, escreva exatamente:
+Use o identificador real da unidade recebido na tarefa. Não use CC-01 nem outro identificador no lugar dele.
 
-CC-01 está autorizada para implementação.
+Se o identificador estiver ausente ou ambíguo, o status é BLOCKED. Peça o identificador. Não invente um.
 
-Se o status for APPROVED WITH MINOR ADJUSTMENTS, liste os ajustes necessários antes da implementação.
+Se o status for APPROVED, escreva exatamente, trocando `<id>` pelo identificador recebido:
+
+`<id>` está autorizada para implementação.
+
+Se o status for APPROVED WITH MINOR ADJUSTMENTS, use o mesmo `<id>` e liste os ajustes necessários antes da implementação.
 
 Se o status for REQUIRES REWORK ou BLOCKED, não autorize implementação.
+
+Não declare QA aprovado. Não implemente.
 
 ## 10. Próximo passo
 
