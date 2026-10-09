@@ -173,8 +173,9 @@ Não antecipar implementação.
 - QA: `docs/05-prompts/Phase-2/08-validation.md`
 - Architecture Review: `.cursor/agents/nexa-architecture-review.md`. O arquivo `06-architecture-review.md` está vazio e não é o protocolo.
 - Implementation: `.cursor/agents/nexa-implementation.md`. O arquivo `07-implementation.md` desta pasta está vazio e não é o protocolo.
-
-Design & UX Review, Global Consistency Check e Git Audit são gates desta política. O procedimento reutilizável de cada um ainda não está neste repositório. Este arquivo não aponta um caminho inexistente e não inventa esse passo a passo.
+- Design & UX Review: `docs/05-prompts/Phase-2/10-design-ux-review.md`, quando houver impacto de UI/UX. Sem esse impacto, registra-se uma linha de dispensa.
+- Global Consistency Check: `docs/05-prompts/Phase-2/11-global-consistency-check.md`, quando a mudança tocar ou dever seguir padrão ou componente compartilhado. O recorte são esses padrões e as áreas relacionadas, não o produto inteiro.
+- Git Audit: `docs/05-prompts/Phase-2/12-git-audit.md`, antes do commit. Não há agente dedicado. Staging e commit continuam manuais.
 
 `01-vision.md` e `02-business-rules.md`, nesta pasta, são conteúdo do EPIC-01 (Product EPIC 01 — Mobile Foundation). Não são templates reutilizáveis. `03-ux-flows.md`, `04-technical-design.md`, `05-sprint-planning.md` e `09-documentation.md` estão vazios e também não são modelos.
 

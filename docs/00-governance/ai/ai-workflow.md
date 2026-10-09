@@ -1,49 +1,5 @@
 # AI Workflow
 
-Every task follows this order.
+A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`.
 
-Business Request
-
-↓
-
-Architecture Analysis
-
-↓
-
-Documentation Review
-
-↓
-
-Proposal
-
-↓
-
-Discussion
-
-↓
-
-Implementation
-
-↓
-
-Code Review
-
-↓
-
-Testing
-
-↓
-
-Documentation Update
-
-↓
-
-Project State Update
-
-↓
-
-Commit
-
-↓
-
-Release
+Este arquivo não define outra sequência. O fluxo Business Request → Release que existia aqui foi retirado para não concorrer com a fonte oficial.
