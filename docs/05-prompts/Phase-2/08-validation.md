@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the canonical protocol for step 8 of the Phase 2 workflow.
+This document is the canonical protocol for Validation, gate 6 of the canonical sequence.
 
 It defines how to validate a feature.
 
