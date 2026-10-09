@@ -1,6 +1,4 @@
-Follow the workflow defined in:
-
-docs/00-governance/START-HERE.md
+Siga `docs/05-prompts/Phase-2/00-phase2-system.md`. Nível típico: L2, com a menor mudança que corrige o problema.
 
 This task is a Hotfix.
 
@@ -12,7 +10,7 @@ BEFORE CODING
 
 Read only the documentation that is directly related to the affected feature.
 
-Do NOT perform a full architecture review.
+Não use este atalho para pular Architecture Review se o nível for L3 ou L4. Se o conserto exigir schema, contrato de API ou arquitetura, pare e reclassifique.
 
 Analyze the problem first.
 
@@ -98,6 +96,8 @@ IMPORTANT
 Do not automatically update documentation.
 
 Only suggest documentation updates when necessary.
+
+Se o canônico exigir documentação porque o estado ou o contrato mudou, vale o canônico.
 
 If the issue reveals an architectural problem, recommend creating a future refactoring task instead of solving it during the Hotfix.
 

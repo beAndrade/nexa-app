@@ -83,20 +83,11 @@ Code should be easy to understand before being clever.
 
 # Development Workflow
 
-Every feature should follow the official Product EPIC lifecycle under `docs/01-product/epics/` (when a lifecycle exists for that EPIC):
+A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`.
 
-1. Product Decision (PDR)
-2. Vision
-3. Business Rules
-4. UX Flows
-5. Technical Design
-6. Sprint Planning
-7. Architecture Review
-8. Implementation
-9. Validation
-10. Documentation
+Este README não numera outro fluxo. O ciclo de vida do EPIC, quando existe, fica em `docs/01-product/epics/`.
 
-Development should never begin before product documentation is approved.
+A implementação não começa antes da definição exigida pelo nível de risco dessa fonte.
 
 ---
 
@@ -125,6 +116,8 @@ Software releases should include:
 - Architecture Review (when necessary)
 
 Every release should be reproducible and fully documented.
+
+Checklist de release, não a sequência de produto.
 
 ---
 

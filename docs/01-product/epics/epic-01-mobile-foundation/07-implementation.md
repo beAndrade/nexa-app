@@ -38,7 +38,9 @@ If implementation reveals missing requirements, development should pause until d
 
 # Development Workflow
 
-Every implementation task should follow this sequence:
+A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`. Este arquivo não define outra política geral.
+
+Os passos abaixo são a checagem local de implementação do EPIC-01, depois que o fluxo canônico exigir implementação:
 
 1. Read all related documentation.
 2. Understand the business objective.

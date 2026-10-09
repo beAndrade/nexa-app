@@ -1,4 +1,4 @@
-Follow the workflow defined in docs/00-governance/START-HERE.md.
+Siga `docs/05-prompts/Phase-2/00-phase2-system.md`. Nível típico: L3. Se o contrato da unidade já existir e a mudança for localizada, trate como L2 e não repita os gates aqui.
 
 This task introduces a new feature.
 

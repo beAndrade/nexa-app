@@ -21,45 +21,19 @@ These prompts standardize the interaction between developers and AI assistants.
 - Documentation Review
 - Weekly Health Check
 
-### Phase 2 prompts
+### Phase 2
 
-EPIC / Phase-2 structured prompts live under:
+A fonte oficial do workflow de produto é [Phase-2/00-phase2-system.md](./Phase-2/00-phase2-system.md).
 
-[Phase-2/](./Phase-2/)
+O protocolo de QA é [Phase-2/08-validation.md](./Phase-2/08-validation.md).
 
-The official protocol for step 8, Validation, is [Phase-2/08-validation.md](./Phase-2/08-validation.md).
-
-Do not treat this README as the future prompt methodology (that work is intentionally postponed).
+Este README não define outra sequência.
 
 ---
 
 ## Workflow
 
-Business Request
-
-↓
-
-Choose Prompt
-
-↓
-
-AI Analysis
-
-↓
-
-Implementation
-
-↓
-
-Review
-
-↓
-
-Documentation
-
-↓
-
-Commit
+Não há sequência própria neste arquivo. Use a fonte oficial acima. Staging e commit continuam manuais.
 
 ---
 

@@ -119,31 +119,64 @@ Propose a better alternative.
 
 ---
 
-# Mandatory Workflow
+# Fonte oficial
 
-Every Product EPIC MUST follow this sequence.
+Este arquivo é a fonte oficial do workflow de desenvolvimento de produto.
 
-1. Vision
+Agentes, atalhos e READMEs não definem outra sequência. O procedimento de cada gate fica no documento próprio. Aqui só se diz quando o gate entra.
 
-2. Business Rules
+Staging e commit são manuais e só acontecem quando o usuário pede.
 
-3. UX Flows
+---
 
-4. Technical Design
+# Classificação de risco
 
-5. Sprint Planning
+O nível não reduz a leitura do QA. O QA lê sempre os documentos que definem o comportamento afetado.
 
-6. Architecture Review
+Na dúvida, sobe um nível. Se o escopo passar a incluir schema, contrato de API, fluxo novo ou padrão compartilhado, o trabalho para e o nível é reclassificado antes de continuar.
 
-7. Implementation
+Impacto de UI/UX significa layout, texto visível, interação, estado vazio, erro, foco ou breakpoint.
 
-8. Validation
+Impeccable não é gate padrão. Entra somente quando a unidade pede acabamento visual. O julgamento funcional permanece no QA.
 
-9. Documentation
+| Nível | Quando | Architecture Review | Design & UX | Consistência global | QA | Documentação | Git |
+|---|---|---|---|---|---|---|---|
+| L1 | Ajuste local sem comportamento novo e sem UI visível | Não; registrar o motivo | Não | Não, se não houver padrão compartilhado | Lê o contrato do comportamento tocado | Só se um marcador mudar | Auditoria antes do commit; staging e commit manuais |
+| L2 | Comportamento já contratado, num módulo | Sim se houver API, schema, serviço compartilhado ou mais de um módulo; senão, justificativa | Sim se houver impacto de UI/UX | Sim se usar ou dever seguir padrão ou componente compartilhado | Lê o contrato do comportamento afetado e a regressão nomeada nesse contrato | Estado da unidade, se mudar | Igual ao L1; commit exclusivo da unidade, manual |
+| L3 | Contrato novo ou alterado, tela nova ou payload | Sim | Sim se houver impacto de UI/UX | Sim, só nos padrões e consumidores citados no documento do padrão | Protocolo de validação sobre os documentos da unidade | Fechamento da unidade | Auditoria; commit manual depois da documentação |
+| L4 | Padrão compartilhado, autenticação, migration destrutiva ou arquitetura | Sim | Sim se o padrão tiver UI | Consumidores listados no documento do padrão, não o produto inteiro | Protocolo de validação mais essa lista de consumidores | Padrão e, se a arquitetura mudar, ADR | Auditoria; commit manual |
 
-Never skip steps.
+Nenhum nível dispensa implementação fora do que foi autorizado, QA quando o comportamento muda, documentação quando o estado ou o contrato muda, nem Git Audit antes de um commit.
 
-Never anticipate implementation.
+---
+
+# Sequência canônica
+
+1. Definição da unidade, no recorte do nível.
+2. Architecture Review, quando a tabela exigir.
+3. Implementation.
+4. Design & UX Review, quando houver impacto de UI/UX. Sem esse impacto, registra-se uma linha de dispensa.
+5. Global Consistency Check, quando a mudança tocar ou dever seguir padrão ou componente compartilhado. O recorte são esses padrões, componentes e áreas, não o produto inteiro.
+6. Validation. Gate funcional, independente dos reviews visuais.
+7. Documentação, quando o estado ou o contrato mudar.
+8. Git Audit, antes do commit.
+9. Staging e commit manuais, sob controle do usuário.
+
+PDR não é um passo numerado. Quando existe, é entrada da definição, não uma segunda sequência.
+
+Não antecipar implementação.
+
+---
+
+# Onde está o procedimento
+
+- QA: `docs/05-prompts/Phase-2/08-validation.md`
+- Architecture Review: `.cursor/agents/nexa-architecture-review.md`. O arquivo `06-architecture-review.md` está vazio e não é o protocolo.
+- Implementation: `.cursor/agents/nexa-implementation.md`. O arquivo `07-implementation.md` desta pasta está vazio e não é o protocolo.
+
+Design & UX Review, Global Consistency Check e Git Audit são gates desta política. O procedimento reutilizável de cada um ainda não está neste repositório. Este arquivo não aponta um caminho inexistente e não inventa esse passo a passo.
+
+`01-vision.md` e `02-business-rules.md`, nesta pasta, são conteúdo do EPIC-01 (Product EPIC 01 — Mobile Foundation). Não são templates reutilizáveis. `03-ux-flows.md`, `04-technical-design.md`, `05-sprint-planning.md` e `09-documentation.md` estão vazios e também não são modelos.
 
 ---
 

@@ -1,4 +1,4 @@
-Follow the workflow defined in docs/00-governance/START-HERE.md.
+Siga `docs/05-prompts/Phase-2/00-phase2-system.md`. Nível típico: L1. Suba o nível se houver UI visível, schema, API ou padrão compartilhado.
 
 This is a small implementation.
 

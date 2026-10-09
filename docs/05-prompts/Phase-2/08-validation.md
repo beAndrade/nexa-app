@@ -18,29 +18,17 @@ The outcome vocabulary is the one already used by Product EPIC validation, plus 
 
 # Where this step sits
 
-Phase 2 sequence, from `docs/05-prompts/Phase-2/00-phase2-system.md`:
+A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`.
 
-1. Vision
-2. Business Rules
-3. UX Flows
-4. Technical Design
-5. Sprint Planning
-6. Architecture Review
-7. Implementation
-8. Validation
-9. Documentation
+Validation é o gate funcional dessa sequência. Gates condicionais de Design & UX e de consistência global não fazem parte deste protocolo.
+
+O README de development não mantém mais uma numeração própria.
 
 Never skip Validation.
 
 Never treat a successful build as acceptance.
 
-`docs/03-development/README.md` inserts Product Decision (PDR) before Vision, so the same Validation activity appears there as item 9.
-
-That numbering difference is a documentation inconsistency.
-
-Do not treat it as a specification gap for the feature under test.
-
-Do not edit either document to “fix” it during Validation.
+Do not edit the workflow documents to “fix” them during Validation.
 
 ---
 
