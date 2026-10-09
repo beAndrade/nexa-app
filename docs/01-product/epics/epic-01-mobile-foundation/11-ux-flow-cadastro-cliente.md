@@ -30,6 +30,16 @@ As rotas `/clientes/novo` e `/clientes/:id/editar` continuam como entradas, mas 
 
 A lista usa tabela no shell existente, busca no header, filtros no painel lateral e ação Novo na toolbar. Clicar na linha abre o cadastro CC-08. Não existe bottom navigation nessa largura.
 
+A tabela tem exatamente estas colunas, nesta ordem (L-C01):
+
+1. **Nome** — `nome_exibido`. Apelido, se houver, aparece como informação secundária na mesma célula. Não há coluna de Apelido.
+2. **Celular** — somente `celular`. Sem `telefone` e sem `telefone_fixo` como fallback. Ausência: `Sem celular`.
+3. **E-mail** — e-mail cadastrado. Ausência: `—`.
+4. **Aniversário** — `aniversario`, exibido `DD/MM/AAAA`. Ausência: `—`. A semântica de filtro continua a do CC-09-B.
+5. **Status** — `status_operacional`, texto `Ativo` ou `Inativo`. Não depende só de cor.
+
+Não há coluna de ações. Não há ordenação configurável por coluna. A ordem da lista continua `nome_exibido ASC`, com `id_cliente ASC` no empate. Fora da tabela: CPF, CNPJ, RG, endereço, Instagram, Facebook, crédito, desconto, dívida, avaliação, notificações, cashback, telefone legado e indicadores financeiros.
+
 ### Mobile — até 767px
 
 A lista usa card-stack, não tabela comprimida. A busca fica no header. A barra normal é:
@@ -147,7 +157,7 @@ Na exclusão em massa, cada cliente é processado segundo a mesma proteção. O 
 
 ## 10. Responsive
 
-Desktop: tabela, busca no header, filtros laterais, Novo na toolbar, sem bottom navigation.
+Desktop: tabela com as colunas Nome, Celular, E-mail, Aniversário e Status (seção 2), busca no header, filtros laterais, Novo na toolbar, sem bottom navigation.
 
 Mobile: cards, busca no header e barra Menu/Filtro/Selecionar/Novo. Filtros abrem em painel fullscreen. Seleção usa Cancelar/Selecionar tudo/Ações. Alvos de toque seguem o padrão mínimo de 44×44 já adotado.
 

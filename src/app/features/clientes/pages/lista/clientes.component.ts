@@ -4,12 +4,10 @@ import {
   ElementRef,
   HostListener,
   inject,
-  LOCALE_ID,
   OnDestroy,
   OnInit,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
@@ -18,13 +16,6 @@ import { Cliente } from '../../../../core/models/api.models';
 import { ClienteCadastroDrawerService } from '../../../../shared/cliente-cadastro-drawer/cliente-cadastro-drawer.service';
 import { ClienteAvatarComponent } from '../../../../shared/cliente-avatar/cliente-avatar.component';
 import { AppToastService } from '../../../../shared/app-toast/app-toast.service';
-import { formatarCpfBr } from '../../../../core/utils/br-document-masks';
-import {
-  totaisDebitosPorClienteId,
-  type TotaisDebitosCliente,
-} from '../../../../core/utils/comanda-status.util';
-import { UI_TIP_SHOW_DELAY_MS } from '../../../../shared/ui-tip-trigger/ui-tip-delay';
-import { UiTipTriggerComponent } from '../../../../shared/ui-tip-trigger/ui-tip-trigger.component';
 import { ClienteDrawerPeriodoFiltroComponent } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-drawer-periodo-filtro.component';
 import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
 import {
@@ -36,8 +27,6 @@ import {
   buildSelectionBottomNavActions,
   selectAllIds,
   selectionCount,
-  setId,
-  setIds,
   toggleId,
 } from '../../../../shared/mobile-list-selection/mobile-list-selection';
 import { ymdValido } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-periodo-filtro.util';
@@ -48,65 +37,8 @@ import { mediaQueryMin } from '../../../../styles/breakpoints';
 const CLIENTES_BOTTOM_NAV_OWNER = 'clientes';
 const CLIENTES_SEARCH_DEBOUNCE_MS = 300;
 const CLIENTES_PAGE_SIZES = [20, 50, 100] as const;
-type OrdenacaoNome = 'asc' | 'desc';
-
-export type ClienteColunaId =
-  | 'email'
-  | 'celular'
-  | 'nascimento'
-  | 'creditos'
-  | 'cashback'
-  | 'cpf'
-  | 'rg'
-  | 'hashtags'
-  | 'cidade'
-  | 'debitos'
-  | 'pacotes_em_aberto'
-  | 'ultima_avaliacao'
-  | 'observacoes';
-
-type ClienteColunaOpcao = { id: ClienteColunaId; label: string };
-
-const CLIENTES_COLUNAS_STORAGE_KEY = 'espacolounge.clientes.colunas-visiveis';
-
-/** Colunas já renderizadas na tabela (as demais só aparecem no menu por enquanto). */
-const CLIENTES_COLUNAS_IMPLEMENTADAS = new Set<ClienteColunaId>([
-  'email',
-  'celular',
-  'nascimento',
-  'creditos',
-  'cashback',
-  'cpf',
-  'rg',
-  'cidade',
-  'debitos',
-]);
-
-/** Pesos relativos das colunas flexíveis (check/ações ficam em px/rem fixos). */
-const CLIENTES_COLUNAS_PESOS: Record<'nome' | ClienteColunaId, number> = {
-  nome: 25,
-  email: 15,
-  celular: 14,
-  nascimento: 11,
-  creditos: 11,
-  cashback: 11,
-  cpf: 13,
-  rg: 11,
-  hashtags: 12,
-  cidade: 11,
-  debitos: 11,
-  pacotes_em_aberto: 14,
-  ultima_avaliacao: 13,
-  observacoes: 16,
-};
-
-const CLIENTES_COLUNAS_PADRAO: ClienteColunaId[] = [
-  'email',
-  'celular',
-  'nascimento',
-  'creditos',
-  'observacoes',
-];
+/** Ausência de e-mail ou aniversário na lista (L-C01). */
+const CLIENTES_AUSENCIA = '\u2014';
 
 @Component({
   selector: 'app-clientes',
@@ -115,16 +47,13 @@ const CLIENTES_COLUNAS_PADRAO: ClienteColunaId[] = [
     FlipDropdownPanelDirective,
     TableEmptyComponent,
     FormsModule,
-    CurrencyPipe,
     ClienteAvatarComponent,
-    UiTipTriggerComponent,
     ClienteDrawerPeriodoFiltroComponent,
     MobileFiltrosSheetComponent,
     MobileListActionsMenuComponent,
   ],
   templateUrl: './clientes.component.html',
   styleUrl: './clientes.component.scss',
-  providers: [{ provide: LOCALE_ID, useValue: 'pt-BR' }],
 })
 export class ClientesComponent implements OnInit, OnDestroy {
   private readonly api = inject(SheetsApiService);
@@ -144,8 +73,6 @@ export class ClientesComponent implements OnInit, OnDestroy {
   carregando = false;
   erro = '';
   itens: Cliente[] = [];
-  /** Totais de débitos / comandas em aberto por id do cliente. */
-  private totaisDebitosPorCliente = new Map<string, TotaisDebitosCliente>();
 
   busca = '';
   /** Termo efetivamente enviado à API (após debounce). */
@@ -168,26 +95,13 @@ export class ClientesComponent implements OnInit, OnDestroy {
   private tPulsoFiltro = 0;
   private tPulsoBusca = 0;
 
-  filtroStatusAtivos = true;
+  /** Todos: nenhum extremo de status marcado (omite `status` na API). */
+  filtroStatusAtivos = false;
   filtroStatusInativos = false;
   filtroComCelular = false;
   filtroSemCelular = false;
-  filtroComDebito = false;
-  filtroSemDebito = false;
   filtroAniversarioInicioYmd = '';
   filtroAniversarioFimYmd = '';
-  filtroAvaliacaoMin = 0;
-  avaliacaoBalaoAberto = false;
-  avaliacaoBalaoLeft = 0;
-  avaliacaoBalaoAnimar = false;
-  readonly estrelasAvaliacao = [1, 2, 3, 4, 5] as const;
-  readonly avaliacaoRotulos: Record<number, string> = {
-    1: 'Péssimo',
-    2: 'Ruim',
-    3: 'Neutro',
-    4: 'Bom',
-    5: 'Ótimo',
-  };
 
   pagina = 1;
   itensPorPagina: (typeof CLIENTES_PAGE_SIZES)[number] = 20;
@@ -197,11 +111,6 @@ export class ClientesComponent implements OnInit, OnDestroy {
   totalPaginasServidor = 0;
   perPageMenuAberto = false;
 
-  ordenacaoNome: OrdenacaoNome = 'asc';
-  /** Tooltip do cabeçalho Nome (só hover; suprimida após clique até sair da célula). */
-  nomeSortTipVisivel = false;
-  private nomeSortTipSuprimida = false;
-  private nomeSortTipShowTimer: ReturnType<typeof setTimeout> | null = null;
   selecionados = new Set<string>();
   excluindoId: string | null = null;
   excluirModalAberto = false;
@@ -217,42 +126,16 @@ export class ClientesComponent implements OnInit, OnDestroy {
   private excluirModalTimer: ReturnType<typeof setTimeout> | null = null;
   private excluirModalRaf = 0;
 
-  colunasMenuAberto = false;
-  /** Mantém o menu no DOM durante a animação de fechamento. */
-  colunasMenuMontado = false;
-  private colunasMenuAnimTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly colunasMenuAnimMs = 200;
-  readonly colunasOpcoes: ClienteColunaOpcao[] = [
-    { id: 'email', label: 'E-mail' },
-    { id: 'celular', label: 'Celular' },
-    { id: 'nascimento', label: 'Nascimento' },
-    { id: 'creditos', label: 'Créditos' },
-    { id: 'cashback', label: 'Cashback' },
-    { id: 'cpf', label: 'CPF' },
-    { id: 'rg', label: 'RG' },
-    { id: 'hashtags', label: 'Hashtags' },
-    { id: 'cidade', label: 'Cidade' },
-    { id: 'debitos', label: 'Débitos' },
-    { id: 'pacotes_em_aberto', label: 'Pacotes em aberto' },
-    { id: 'ultima_avaliacao', label: 'Última avaliação' },
-    { id: 'observacoes', label: 'Observações' },
-  ];
-  colunasVisiveis = new Set<ClienteColunaId>(CLIENTES_COLUNAS_PADRAO);
-
   ngOnInit(): void {
-    this.carregarColunasSalvas();
     this.setupSearchDebounce();
     this.carregar();
     this.setupShellBottomNav();
-    this.setupBalaoAvaliacaoCliqueFora();
   }
 
   ngOnDestroy(): void {
     this.listaLoadSub?.unsubscribe();
     this.listaLoadSub = null;
     this.shellUi.clearMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER);
-    this.clearNomeSortTipShowTimer();
-    this.clearColunasMenuAnimTimer();
   }
 
   private setupSearchDebounce(): void {
@@ -365,23 +248,19 @@ export class ClientesComponent implements OnInit, OnDestroy {
     ]);
   }
 
-  /** Filtros além do padrão (só Ativos). */
+  /** Filtros além do padrão (Todos, sem os outros critérios). */
   temFiltroAtivo(): boolean {
     return this.filtrosAtivosBadges().length > 0;
   }
 
   filtrosAtivosBadges(): { id: string; label: string }[] {
     const badges: { id: string; label: string }[] = [];
-    const soAtivos =
-      this.filtroStatusAtivos && !this.filtroStatusInativos;
-    if (!soAtivos) {
-      if (this.filtroStatusAtivos && this.filtroStatusInativos) {
-        badges.push({ id: 'status-ambos', label: 'Ativos e Inativos' });
-      } else if (this.filtroStatusInativos) {
-        badges.push({ id: 'status-inativos', label: 'Inativos' });
-      } else if (!this.filtroStatusAtivos && !this.filtroStatusInativos) {
-        badges.push({ id: 'status-nenhum', label: 'Sem status' });
-      }
+    if (this.filtroStatusAtivos && this.filtroStatusInativos) {
+      badges.push({ id: 'status-ambos', label: 'Ativos e Inativos' });
+    } else if (this.filtroStatusAtivos) {
+      badges.push({ id: 'status-ativos', label: 'Ativos' });
+    } else if (this.filtroStatusInativos) {
+      badges.push({ id: 'status-inativos', label: 'Inativos' });
     }
     if (this.filtroComCelular) {
       badges.push({ id: 'cel-com', label: 'Com celular' });
@@ -389,22 +268,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
     if (this.filtroSemCelular) {
       badges.push({ id: 'cel-sem', label: 'Sem celular' });
     }
-    if (this.filtroComDebito) {
-      badges.push({ id: 'deb-com', label: 'Com débito' });
-    }
-    if (this.filtroSemDebito) {
-      badges.push({ id: 'deb-sem', label: 'Sem débito' });
-    }
     const ini = this.filtroAniversarioInicioYmd.trim();
     const fim = this.filtroAniversarioFimYmd.trim();
     if (ini || fim) {
       badges.push({ id: 'aniversario', label: 'Aniversário' });
-    }
-    if (this.filtroAvaliacaoMin > 0) {
-      badges.push({
-        id: 'avaliacao',
-        label: `${this.filtroAvaliacaoMin}+ estrelas`,
-      });
     }
     return badges;
   }
@@ -413,9 +280,9 @@ export class ClientesComponent implements OnInit, OnDestroy {
     ev?.stopPropagation();
     switch (id) {
       case 'status-ambos':
+      case 'status-ativos':
       case 'status-inativos':
-      case 'status-nenhum':
-        this.filtroStatusAtivos = true;
+        this.filtroStatusAtivos = false;
         this.filtroStatusInativos = false;
         break;
       case 'cel-com':
@@ -424,18 +291,9 @@ export class ClientesComponent implements OnInit, OnDestroy {
       case 'cel-sem':
         this.filtroSemCelular = false;
         break;
-      case 'deb-com':
-        this.filtroComDebito = false;
-        break;
-      case 'deb-sem':
-        this.filtroSemDebito = false;
-        break;
       case 'aniversario':
         this.filtroAniversarioInicioYmd = '';
         this.filtroAniversarioFimYmd = '';
-        break;
-      case 'avaliacao':
-        this.filtroAvaliacaoMin = 0;
         break;
       default:
         break;
@@ -558,34 +416,11 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   carregar(): void {
-    this.carregando = true;
-    this.erro = '';
-    this.api.listAgendamentos().subscribe({
-      next: (atendimentos) => {
-        this.totaisDebitosPorCliente = totaisDebitosPorClienteId(
-          atendimentos ?? [],
-        );
-      },
-      error: () => {
-        /* débitos são auxiliares; lista segue mesmo se falhar */
-      },
-    });
     this.carregarLista();
   }
 
   /** Recarrega a página atual da lista paginada (CC-09-A/B). */
   private carregarLista(): void {
-    if (!this.filtroStatusAtivos && !this.filtroStatusInativos) {
-      this.listaLoadSeq += 1;
-      this.listaLoadSub?.unsubscribe();
-      this.listaLoadSub = null;
-      this.itens = [];
-      this.totalServidor = 0;
-      this.totalPaginasServidor = 0;
-      this.carregando = false;
-      return;
-    }
-
     const seq = ++this.listaLoadSeq;
     this.listaLoadSub?.unsubscribe();
     this.carregando = true;
@@ -727,7 +562,6 @@ export class ClientesComponent implements OnInit, OnDestroy {
 
   fecharFiltros(): void {
     if (!this.filtrosAbertos) return;
-    this.avaliacaoBalaoAberto = false;
     this.filtrosAbertos = false;
     this.syncShellBottomNavActions();
   }
@@ -765,102 +599,15 @@ export class ClientesComponent implements OnInit, OnDestroy {
     this.carregarLista();
   }
 
-  toggleFiltroDebito(which: 'com' | 'sem', ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked;
-    if (which === 'com') this.filtroComDebito = checked;
-    else this.filtroSemDebito = checked;
-    this.pagina = 1;
-    this.syncShellBottomNavActions();
-  }
-
   onAniversarioPeriodoAlterado(): void {
     this.resetPageAndSelection();
     this.syncShellBottomNavActions();
     this.carregarLista();
   }
 
-  definirFiltroAvaliacao(n: number, ev?: Event, mostrarBalao = false): void {
-    ev?.stopPropagation();
-    if (this.filtroAvaliacaoMin === n) {
-      this.filtroAvaliacaoMin = 0;
-      this.avaliacaoBalaoAberto = false;
-      this.avaliacaoBalaoAnimar = false;
-      this.pagina = 1;
-      this.syncShellBottomNavActions();
-      return;
-    }
-    const balaoJaAberto = this.avaliacaoBalaoAberto && mostrarBalao;
-    this.filtroAvaliacaoMin = n;
-    this.avaliacaoBalaoAnimar = balaoJaAberto;
-    if (mostrarBalao) {
-      this.atualizarPosicaoBalaoAvaliacao();
-      this.avaliacaoBalaoAberto = true;
-      if (!balaoJaAberto) {
-        requestAnimationFrame(() => {
-          this.avaliacaoBalaoAnimar = true;
-        });
-      }
-    } else {
-      this.avaliacaoBalaoAberto = false;
-    }
-    this.pagina = 1;
-    this.syncShellBottomNavActions();
-  }
-
-  rotuloFiltroAvaliacao(n: number): string {
-    return this.avaliacaoRotulos[n] ?? '';
-  }
-
-  private atualizarPosicaoBalaoAvaliacao(): void {
-    const wrap = this.hostEl.nativeElement.querySelector(
-      '.clientes-filtros-stars--sheet',
-    ) as HTMLElement | null;
-    const btn = wrap?.querySelector(
-      `[data-estrela="${this.filtroAvaliacaoMin}"]`,
-    ) as HTMLElement | null;
-    if (!wrap || !btn) return;
-    const wr = wrap.getBoundingClientRect();
-    const br = btn.getBoundingClientRect();
-    this.avaliacaoBalaoLeft = br.left - wr.left + br.width / 2;
-  }
-
-  private setupBalaoAvaliacaoCliqueFora(): void {
-    if (typeof document === 'undefined') return;
-    const fecharSeFora = (ev: Event): void => {
-      if (!this.avaliacaoBalaoAberto) return;
-      const alvo = ev.target;
-      if (
-        alvo instanceof Element &&
-        alvo.closest('.clientes-filtros-stars--sheet')
-      ) {
-        return;
-      }
-      this.avaliacaoBalaoAberto = false;
-      this.avaliacaoBalaoAnimar = false;
-    };
-    document.addEventListener('pointerdown', fecharSeFora, true);
-    this.destroyRef.onDestroy(() => {
-      document.removeEventListener('pointerdown', fecharSeFora, true);
-    });
-  }
-
   onNovoCliente(): void {
     this.cadastroDrawer.abrirNovo('', {
       onSalvo: () => this.carregar(),
-    });
-  }
-
-  onEditarCliente(c: Cliente): void {
-    const id = c.id?.trim();
-    if (!id) return;
-    this.cadastroDrawer.abrirEdicao(id, {
-      nomeLista: c.nome?.trim() ?? '',
-      fotoUrlInicial: c.fotoUrl,
-      abaInicial: 'Cadastro',
-      callbacks: {
-        onSalvo: (salvo) => this.atualizarClienteNaLista(salvo),
-        onClienteCarregado: (salvo) => this.atualizarClienteNaLista(salvo),
-      },
     });
   }
 
@@ -1014,73 +761,14 @@ export class ClientesComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSortNomeMouseEnter(): void {
-    if (this.nomeSortTipSuprimida) return;
-    this.clearNomeSortTipShowTimer();
-    this.nomeSortTipShowTimer = setTimeout(() => {
-      this.nomeSortTipShowTimer = null;
-      if (!this.nomeSortTipSuprimida) {
-        this.nomeSortTipVisivel = true;
-      }
-    }, UI_TIP_SHOW_DELAY_MS);
-  }
-
-  onSortNomeMouseLeave(): void {
-    this.clearNomeSortTipShowTimer();
-    this.nomeSortTipVisivel = false;
-    this.nomeSortTipSuprimida = false;
-  }
-
-  private clearNomeSortTipShowTimer(): void {
-    if (this.nomeSortTipShowTimer != null) {
-      clearTimeout(this.nomeSortTipShowTimer);
-      this.nomeSortTipShowTimer = null;
-    }
-  }
-
-  onOrdenarNomeClick(event: MouseEvent): void {
-    this.clearNomeSortTipShowTimer();
-    this.ordenacaoNome = this.ordenacaoNome === 'asc' ? 'desc' : 'asc';
-    this.pagina = 1;
-    this.nomeSortTipVisivel = false;
-    this.nomeSortTipSuprimida = true;
-    (event.currentTarget as HTMLButtonElement | null)?.blur();
-  }
-
-  /** Tooltip do cabeçalho Nome (próximo clique alterna a direção). */
-  tooltipOrdenacaoNome(): string {
-    return this.ordenacaoNome === 'asc'
-      ? 'Clique organiza por descendente'
-      : 'Clique organiza por ascendente';
-  }
-
   comDadosValidos(): Cliente[] {
     return this.itens.filter((c) => Boolean(c.id?.trim() && c.nome?.trim()));
   }
 
   filtrados(): Cliente[] {
-    let list = this.comDadosValidos();
     // Search / status / hasCellphone / aniversário: server-side (CC-09-B).
-    // Débito / avaliação: ainda client-side na página carregada (fora do contrato B).
-    list = list.filter((c) => this.clienteMatchesFiltrosPainelLegado(c));
-    // Ordenação fixa na API (nome_exibido ASC, id ASC). UI de sort configurável ≠ CC-09-B.
-    return list;
-  }
-
-  /**
-   * Filtros de painel que ainda não têm predicado server-side nesta CC.
-   * Status / celular / aniversário NÃO passam por aqui (evita notificacoesAtivo / telefone legado).
-   */
-  private clienteMatchesFiltrosPainelLegado(c: Cliente): boolean {
-    const temDebito = this.debitosTotalCliente(c) > 0.005;
-    if (this.filtroComDebito && !temDebito) return false;
-    if (this.filtroSemDebito && temDebito) return false;
-
-    if (this.filtroAvaliacaoMin > 0) {
-      return false;
-    }
-
-    return true;
+    // Ordenação fixa na API (nome_exibido ASC, id_cliente ASC).
+    return this.comDadosValidos();
   }
 
   totalFiltrado(): number {
@@ -1128,188 +816,33 @@ export class ClientesComponent implements OnInit, OnDestroy {
     return this.selecionados.has(id);
   }
 
-  toggleSelecionado(c: Cliente, ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked;
-    this.selecionados = setId(this.selecionados, c.id, checked);
-  }
-
-  todosDaPaginaSelecionados(): boolean {
-    return areAllSelected(
-      this.itensPagina().map((c) => c.id),
-      this.selecionados,
-    );
-  }
-
-  toggleSelecionarTodos(ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked;
-    this.selecionados = setIds(
-      this.selecionados,
-      this.itensPagina().map((c) => c.id),
-      checked,
-    );
-  }
-
-  exibirCelular(c: Cliente): string {
+  /** Celular da lista: só `celular`. Sem telefone fixo nem telefone legado. */
+  textoCelularLista(c: Cliente): string {
     const cel = String(c.celular ?? '').trim();
-    const tel = String(c.telefoneFixo ?? c.telefone ?? '').trim();
-    return cel || tel || '';
+    return cel || 'Sem celular';
   }
 
-  exibirNascimento(c: Cliente): string {
-    const a = String(c.aniversario ?? '').trim();
-    return a || '';
+  textoEmailLista(c: Cliente): string {
+    const email = String(c.email ?? '').trim();
+    return email || CLIENTES_AUSENCIA;
   }
 
-  exibirCpf(c: Cliente): string {
-    const raw = String(c.cpf ?? '').trim();
-    if (!raw) return '';
-    const fmt = formatarCpfBr(raw);
-    return fmt || raw;
+  /** `aniversario` já chega em DD/MM/AAAA. Não reformatar. */
+  textoAniversarioLista(c: Cliente): string {
+    const data = String(c.aniversario ?? '').trim();
+    return data || CLIENTES_AUSENCIA;
   }
 
-  creditoPositivo(c: Cliente): boolean {
-    return (c.creditoSaldo ?? 0) > 0;
+  /** Só `statusOperacional`. Texto, não só cor. */
+  textoStatusLista(c: Cliente): string {
+    const status = String(c.statusOperacional ?? '').trim().toLowerCase();
+    if (status === 'ativo') return 'Ativo';
+    if (status === 'inativo') return 'Inativo';
+    return '';
   }
 
-  creditoNegativo(c: Cliente): boolean {
-    return (c.creditoSaldo ?? 0) < 0;
-  }
-
-  debitosTotalCliente(c: Cliente): number {
-    return this.totaisDebitosPorCliente.get(c.id)?.debitosTotal ?? 0;
-  }
-
-  debitoComValor(c: Cliente): boolean {
-    return this.debitosTotalCliente(c) > 0.005;
-  }
-
-  exibirDebitos(c: Cliente): string {
-    const n = this.debitosTotalCliente(c);
-    if (n <= 0.005) return '';
-    return n.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-  }
-
-  colunaVisivel(id: ClienteColunaId): boolean {
-    return this.colunasVisiveis.has(id);
-  }
-
-  /**
-   * Largura % da coluna flexível, redistribuída pelos pesos das colunas
-   * atualmente visíveis (mantém proporção relativa ao esconder/mostrar).
-   */
-  larguraColunaFlex(id: 'nome' | ClienteColunaId): string {
-    let total = CLIENTES_COLUNAS_PESOS.nome;
-    for (const colId of CLIENTES_COLUNAS_IMPLEMENTADAS) {
-      if (this.colunasVisiveis.has(colId)) {
-        total += CLIENTES_COLUNAS_PESOS[colId];
-      }
-    }
-    if (total <= 0) return '0%';
-    const pct = (CLIENTES_COLUNAS_PESOS[id] / total) * 100;
-    return `${pct.toFixed(4)}%`;
-  }
-
-  totalColunasTabela(): number {
-    let visiveisImplementadas = 0;
-    for (const id of this.colunasVisiveis) {
-      if (CLIENTES_COLUNAS_IMPLEMENTADAS.has(id)) visiveisImplementadas += 1;
-    }
-    return 2 + visiveisImplementadas + 1;
-  }
-
-  toggleColunasMenu(ev: Event): void {
-    ev.stopPropagation();
-    if (this.colunasMenuAberto) this.fecharColunasMenu();
-    else this.abrirColunasMenu();
-  }
-
-  abrirColunasMenu(): void {
-    this.clearColunasMenuAnimTimer();
-    this.colunasMenuMontado = true;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.colunasMenuAberto = true;
-      });
-    });
-  }
-
-  fecharColunasMenu(): void {
-    if (!this.colunasMenuMontado) return;
-    this.colunasMenuAberto = false;
-    this.clearColunasMenuAnimTimer();
-    this.colunasMenuAnimTimer = setTimeout(() => {
-      this.colunasMenuMontado = false;
-      this.colunasMenuAnimTimer = null;
-    }, this.colunasMenuAnimMs);
-  }
-
-  private clearColunasMenuAnimTimer(): void {
-    if (this.colunasMenuAnimTimer != null) {
-      clearTimeout(this.colunasMenuAnimTimer);
-      this.colunasMenuAnimTimer = null;
-    }
-  }
-
-  toggleColuna(id: ClienteColunaId, ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked;
-    if (checked) this.colunasVisiveis.add(id);
-    else this.colunasVisiveis.delete(id);
-    this.colunasVisiveis = new Set(this.colunasVisiveis);
-    this.salvarColunas();
-    this.fecharColunasMenu();
-  }
-
-  restaurarColunasPadrao(): void {
-    this.colunasVisiveis = new Set(CLIENTES_COLUNAS_PADRAO);
-    this.salvarColunas();
-  }
-
-  exibirCashback(c: Cliente): string {
-    const n = c.cashbackSaldo;
-    if (n == null || !Number.isFinite(n)) return '';
-    return n.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-  }
-
-  exibirRg(c: Cliente): string {
-    return String(c.rg ?? '').trim();
-  }
-
-  exibirCidade(c: Cliente): string {
-    return String(c.cidade ?? '').trim();
-  }
-
-  private carregarColunasSalvas(): void {
-    try {
-      const raw = localStorage.getItem(CLIENTES_COLUNAS_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return;
-      const valid = new Set(this.colunasOpcoes.map((c) => c.id));
-      const next = parsed.filter(
-        (id): id is ClienteColunaId =>
-          typeof id === 'string' && valid.has(id as ClienteColunaId),
-      );
-      if (next.length > 0) this.colunasVisiveis = new Set(next);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  private salvarColunas(): void {
-    try {
-      localStorage.setItem(
-        CLIENTES_COLUNAS_STORAGE_KEY,
-        JSON.stringify([...this.colunasVisiveis]),
-      );
-    } catch {
-      /* ignore */
-    }
+  apelidoLista(c: Cliente): string {
+    return String(c.apelido ?? '').trim();
   }
 
   @HostListener('document:keydown.escape', ['$event'])
@@ -1323,23 +856,11 @@ export class ClientesComponent implements OnInit, OnDestroy {
       }
       return;
     }
-    if (this.colunasMenuMontado) {
-      ev.preventDefault();
-      ev.stopImmediatePropagation();
-      this.fecharColunasMenu();
-      return;
-    }
     if (this.cadastroDrawer.isAberto) {
       // ESC da ficha/pilha: app-cliente-cadastro-drawer-host (um nível por vez).
       return;
     }
     if (this.filtrosAbertos) {
-      if (this.avaliacaoBalaoAberto) {
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-        this.avaliacaoBalaoAberto = false;
-        return;
-      }
       if (
         document.querySelector(
           '.periodo-filtro__panel--sheet.periodo-filtro__panel--open',
@@ -1383,13 +904,6 @@ export class ClientesComponent implements OnInit, OnDestroy {
       !t.closest('.list-footer__per-page')
     ) {
       this.perPageMenuAberto = false;
-    }
-    if (
-      this.colunasMenuMontado &&
-      t &&
-      !t.closest('.clientes-th-acoes-wrap')
-    ) {
-      this.fecharColunasMenu();
     }
   }
 }

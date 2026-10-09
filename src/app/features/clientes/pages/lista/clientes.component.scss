@@ -221,14 +221,15 @@
   background: #efefef;
 }
 
-/** Sem divisor entre Nome e E-mail (próximo th após `.col-nome`). */
+/** Sem divisor entre Nome e a coluna seguinte. */
 .clientes-table thead th.col-nome + th::before {
   display: none;
 }
 
 .clientes-table thead th.col-nome {
   background: #f0f0f0;
-  padding: 0;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .clientes-page .list-table-card {
@@ -239,7 +240,15 @@
 }
 
 .clientes-page .list-table-card > .table-wrap {
-  overflow: visible;
+  /**
+   * Rolagem horizontal só aqui: a tabela tem min-width maior que ~501px
+   * (menu expandido). `overflow-x: auto` impede scroll da página.
+   * O tip de ordenação fica fora deste wrap.
+   */
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+  min-width: 0;
   border-radius: 12px 12px 0 0;
 }
 
@@ -360,8 +369,8 @@
   vertical-align: middle;
 }
 
-/** E-mail → CPF (a partir da 3ª coluna de dados). */
-.clientes-table tbody td:nth-child(n + 3):not(.col-acoes) {
+/** Celular, e-mail, aniversário e status (colunas após Nome). */
+.clientes-table tbody td:not(.col-nome):not(.table-body__busy):not(.table-body__empty) {
   font-size: 14px;
   font-weight: normal;
   color: rgba(0, 0, 0, 0.75);
@@ -392,31 +401,73 @@
 
 .clientes-table tbody td.col-nome {
   background: #fafafa;
+  overflow: hidden;
 }
 
-.clientes-table .col-nome__link {
-  display: inline-block;
-  max-width: 100%;
-  margin: 0 0 0 5px !important;
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-family: inherit;
+.clientes-table thead th.col-celular,
+.clientes-table thead th.col-aniversario,
+.clientes-table thead th.col-status,
+.clientes-table tbody td.col-celular,
+.clientes-table tbody td.col-aniversario,
+.clientes-table tbody td.col-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clientes-table tbody td.col-email {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clientes-table .col-nome__identity {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.clientes-table .col-nome__nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 14px;
   font-weight: normal;
   line-height: inherit;
   color: var(--color-link);
-  cursor: pointer;
-  text-decoration: none;
-  text-align: left;
+}
+
+.clientes-table .col-nome__apelido {
+  flex: 0 1 40%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  vertical-align: middle;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: inherit;
+  color: rgba(0, 0, 0, 0.45);
+}
 
-  &:hover,
+.clientes-table tbody tr.clientes-table__row--abre {
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+  }
+
   &:focus-visible {
-    text-decoration: none;
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    outline-offset: -2px;
+  }
+
+  &:hover .col-nome__nome,
+  &:focus-visible .col-nome__nome {
     color: var(--color-link-hover);
   }
 }
@@ -439,27 +490,6 @@
   transition: border-color 0.3s ease;
 }
 
-col.clientes-table__col-check {
-  width: 40px;
-}
-
-.clientes-table thead th.col-check,
-.clientes-table tbody td.col-check {
-  width: 40px;
-  min-width: 40px;
-  max-width: 40px;
-  padding-left: 0;
-  padding-right: 0;
-  text-align: center;
-  vertical-align: middle;
-
-  input[type='checkbox'] {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
-
 .clientes-table thead th.col-creditos,
 .clientes-table tbody td.col-creditos {
   text-align: end;
@@ -473,6 +503,49 @@ col.clientes-table__col-check {
 .clientes-table .col-cpf {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.clientes-table {
+  /**
+   * Colunas curtas em rem (não encolhem com %). Nome e e-mail dividem o resto
+   * e a soma fecha em 100% — percentual + rem acima de 100% faria o browser
+   * comprimir inclusive as colunas em rem. O piso garante, no menu expandido
+   * (~501px), que o wrap role e Celular/Aniversário/Status não cortem.
+   * Piso: 7.5 + 6.5 + 4.75 + 8 + 8 = 34.75rem (556px @ 16px).
+   */
+  --clientes-col-celular: 7.5rem;
+  --clientes-col-aniversario: 6.5rem;
+  --clientes-col-status: 4.75rem;
+  --clientes-col-nome-piso: 8rem;
+  --clientes-col-email-piso: 8rem;
+  table-layout: fixed;
+  width: 100%;
+  min-width: calc(
+    var(--clientes-col-celular) + var(--clientes-col-aniversario) + var(--clientes-col-status) +
+      var(--clientes-col-nome-piso) + var(--clientes-col-email-piso)
+  );
+}
+
+.clientes-table__col-nome,
+.clientes-table__col-email {
+  width: calc(
+    (
+        100% - var(--clientes-col-celular) - var(--clientes-col-aniversario) -
+          var(--clientes-col-status)
+      ) / 2
+  );
+}
+
+.clientes-table__col-celular {
+  width: var(--clientes-col-celular);
+}
+
+.clientes-table__col-aniversario {
+  width: var(--clientes-col-aniversario);
+}
+
+.clientes-table__col-status {
+  width: var(--clientes-col-status);
 }
 
 .clientes-table__col-acoes {
@@ -909,6 +982,16 @@ col.clientes-table__col-check {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.clientes-mobile-card__status {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: rgba(0, 0, 0, 0.75);
 }
 
 .clientes-mobile-card__check-slot {

@@ -604,6 +604,20 @@ Filtro inicial Todos. Status operacional vem de `status_operacional`, com texto 
 
 Desktop, 768px ou mais: tabela, busca no header, filtros no painel lateral, Novo na toolbar, clique na linha abre o cadastro. Sem bottom navigation.
 
+Colunas da tabela, nesta ordem (L-C01):
+
+| Ordem | Coluna | Fonte | Regra |
+|---|---|---|---|
+| 1 | Nome | `nome_exibido` | Apelido pode aparecer como informação secundária na mesma célula. Sem coluna de Apelido. |
+| 2 | Celular | `celular` | Ausência = `Sem celular`. Sem fallback em `telefone` nem em `telefone_fixo`. |
+| 3 | E-mail | e-mail cadastrado | Ausência = `—`. |
+| 4 | Aniversário | `aniversario` | Exibição `DD/MM/AAAA`. Ausência = `—`. Filtro continua o contrato CC-09-B. |
+| 5 | Status | `status_operacional` | Texto `Ativo` ou `Inativo`. Não só cor. |
+
+Não há coluna de ações neste passo. Não há ordenação configurável por coluna. A ordenação da lista permanece `nome_exibido ASC`, `id_cliente ASC`.
+
+Fora da tabela: CPF, CNPJ, RG, endereço, Instagram, Facebook, crédito, desconto, dívida, avaliação, notificações, cashback, telefone legado, indicadores financeiros e qualquer campo que o contrato da lista não defina. Esta decisão não altera API, paginação (CC-09-A) nem busca/filtros (CC-09-B). Seleção (CC-09-D), exclusão em massa (CC-09-E) e estados pós-operação (CC-09-F) ficam fora.
+
 Mobile, 767px ou menos: cards. Barra normal: Menu, Filtro, Selecionar, Novo. Busca no header, não repetida na barra. Filtro em estado de aviso quando não é o padrão (Todos, sem os outros critérios). Painel de filtro em tela cheia, entrando da direita para a esquerda, com fechar visível, dentro da viewport.
 
 Card: nome, celular como contexto, status em texto. Seleção troca a barra para Cancelar, Selecionar tudo e Ações. Selecionar tudo vale para o conjunto filtrado. Ações abrem popover acima da barra. Excluir segue a seção 8, com confirmação. Filtros abertos fecham ao entrar em seleção.

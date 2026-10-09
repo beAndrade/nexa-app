@@ -585,7 +585,7 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 
 ---
 
-# Current Work — Cadastro de Cliente (2026-10-03)
+# Current Work — Cadastro de Cliente (2026-10-09)
 
 **Feature:** Cadastro de Cliente (EPIC-01 — Mobile Foundation)  
 **Estado da feature:** em andamento — **não** completa.
@@ -601,8 +601,9 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 | CC-07 FKs NO ACTION | ✅ |
 | CC-08 Formulário único | ✅ |
 | CC-09-A API listagem paginada | ✅ — commit `6df4f87` |
-| CC-09-B Search & Filters | ✅ — DOCUMENTATION UPDATED · QA APPROVED WITH MINOR ISSUES · **commit exclusivo pendente** |
-| CC-09-C…G | 🔒 aguardando (CC-09-C bloqueada até commit exclusivo CC-09-B) |
+| CC-09-B Search & Filters | ✅ — commit `9d1a444` · QA APPROVED WITH MINOR ISSUES |
+| CC-09-C Tabela e cards | Documentação pós-QA concluída · QA **Approved** · **commit exclusivo pendente** · **não** Done |
+| CC-09-D…G | 🔒 CC-09-D não inicia antes do commit exclusivo da CC-09-C |
 | CC-10–CC-12 | 🔒 aguardando |
 
 **Fechamento CC-05:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-05.md`  
@@ -611,7 +612,9 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 **Fechamento CC-08:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-08.md`  
 **Fechamento CC-09-A:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-09a.md`  
 **Fechamento CC-09-B:** `docs/03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md`  
-**Gates CC-09-B:** Implementation · AR Recheck APPROVED · AR pós-impl APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED WITH MINOR ISSUES · Documentation atualizada · Commit exclusivo pendente · sem push · F-09B-01…04 Low residuais (não bloqueiam; não corrigidos) · CC-09-C…F **não** implementadas.
+**Fechamento CC-09-C:** `docs/03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md`  
+**Gates CC-09-B:** QA APPROVED WITH MINOR ISSUES · commit exclusivo `9d1a444`.  
+**Gates CC-09-C:** Implementation · QA **Approved** · Documentation atualizada · commit exclusivo pendente · sem push · nenhum finding novo Critical/High/Medium · Low conhecidos não corrigidos · D/E/F **não** implementadas · CC-09 inteiro **não** concluído.
 
 Contrato canônico: Product Definition, UX Flow, Technical Design e Sprint Planning em `docs/01-product/epics/epic-01-mobile-foundation/10–13-*-cadastro-cliente.md`.
 

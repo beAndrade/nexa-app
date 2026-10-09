@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅; CC-09-B docs fechadas (commit exclusivo pendente); CC-09-C…G não iniciadas  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C documentação pós-QA (QA Approved; commit exclusivo pendente; não Done); CC-09-D…G não iniciadas  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -712,7 +712,7 @@ Contrato de listagem paginada disponível para o frontend; GET legado preservado
 ## CC-09-B — Busca e filtros server-side
 
 **Estado (2026-10-03):** ✅ Documentation UPDATED — Implementation · AR pré-impl APPROVED WITH MINOR ADJUSTMENTS · F-B01 CLOSED · AR Recheck APPROVED · AR pós-impl APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED WITH MINOR ISSUES · [fechamento](../../../03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md).  
-**Commit exclusivo:** pendente. **Próxima:** CC-09-C após o commit exclusivo; ainda **não iniciada**. CC-09-D…G e CC-10–CC-12 aguardam.
+**Commit exclusivo:** `9d1a444`. **CC-09-C:** documentação pós-QA em 2026-10-09 (QA Approved); commit exclusivo de C pendente. CC-09-D não inicia antes desse commit. CC-09-E…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -795,17 +795,20 @@ Busca e filtros server-side reproduzem o contrato Product/UX/Technical, inclusiv
 
 ## CC-09-C — Tabela e cards responsivos
 
+**Estado (2026-10-09):** implementação concluída · QA **Approved** · [fechamento](../../../03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md). Documentação pós-QA concluída neste passo.  
+**Commit exclusivo:** pendente. Unidade **não** Done antes do commit. **CC-09-D** não inicia antes desse commit. CC-09-E…G e CC-10–CC-12 aguardam. O CC-09 inteiro **não** está concluído.
+
 ### Objective
 
 Adaptar a superfície da lista ao contrato desktop/mobile sem criar novo formulário.
 
 ### Scope
 
-Desktop >=768px: tabela, busca no header, filtros laterais, Novo na toolbar. Mobile <=767px: cards, busca no header e barra Menu/Filtro/Selecionar/Novo. Clique abre CC-08.
+Desktop >=768px: tabela com as cinco colunas da L-C01 (Nome, Celular, E-mail, Aniversário, Status), busca no header, filtros laterais, Novo na toolbar. Mobile <=767px: cards, busca no header e barra Menu/Filtro/Selecionar/Novo. Clique abre CC-08.
 
 ### Out of Scope
 
-Seleção global, bulk delete, CC-10, CC-11 e redesign de outros módulos.
+Seleção global (CC-09-D), bulk delete (CC-09-E), estados completos pós-operação (CC-09-F), CC-10, CC-11 e redesign de outros módulos. L-C01 não altera paginação (CC-09-A) nem busca/filtros (CC-09-B).
 
 ### Likely Files
 
@@ -818,19 +821,27 @@ CC-08, CC-09-A e CC-09-B.
 
 ### Acceptance Criteria
 
-- [ ] Desktop usa tabela e não bottom navigation.
-- [ ] Mobile usa cards e barra contratada.
-- [ ] Lista inicia em Todos.
-- [ ] Card mostra nome, celular ou “Sem celular”, e status.
-- [ ] Novo e clique de cliente usam CC-08.
+- [x] Em viewport >= 768px, a lista é tabela e não usa bottom navigation.
+- [x] A tabela tem exatamente estas colunas, nesta ordem: Nome, Celular, E-mail, Aniversário, Status.
+- [x] Nome usa `nome_exibido`. Apelido, se aparecer, fica na mesma célula, sem coluna própria.
+- [x] Celular usa só `celular`. Sem fallback em `telefone` nem em `telefone_fixo`. Ausência: `Sem celular`.
+- [x] E-mail ausente: `—`. Aniversário usa `aniversario` em `DD/MM/AAAA`; ausência: `—`.
+- [x] Status usa só `status_operacional`, texto `Ativo` ou `Inativo`, não só cor.
+- [x] Sem colunas de CPF, CNPJ, RG, endereço, Instagram, Facebook, crédito, desconto, dívida, avaliação, notificações, cashback, telefone legado ou indicador financeiro.
+- [x] Sem coluna de ações e sem ordenação configurável. Ordem: `nome_exibido ASC`, `id_cliente ASC`.
+- [x] L-C01 não muda paginação (A), busca/filtros (B), seleção (D), bulk (E) nem estados pós-operação (F).
+- [x] Mobile usa cards e a barra Menu/Filtro/Selecionar/Novo. Card: nome, celular ou “Sem celular”, e status.
+- [x] Lista inicia em Todos. Novo e clique/toque abrem o CC-08.
 
 ### Manual Validation
 
 390×844 e 1280×800, verificando tabela/card, barra, busca, filtros e abertura do cadastro.
 
+Validação QA (2026-10-09): **Approved**. `npx ng build --configuration development` EXIT 0. Viewports 390, 767, 768 (menu recolhido e expandido) e 1280. Regressão de A, B e CC-08 confirmada. Testes automatizados da lista: N/A. Limitações: anel `:focus-visible` não observado pelo driver (Enter e Space funcionaram); não havia cliente Inativo para renderização real desse estado. Nenhum arquivo de implementação alterado no QA; sem commit e sem push. Detalhe: [fechamento CC-09-C](../../../03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md).
+
 ### Build / Test
 
-`npx ng build`.
+`npx ng build`. O QA executou `npx ng build --configuration development` (exit 0). Não houve suíte automatizada da lista.
 
 ### Risk
 
@@ -840,6 +851,8 @@ CC-08, CC-09-A e CC-09-B.
 
 Lista responsiva integrada ao formulário único.
 
+**DoD CC-09-C (2026-10-09):** atendido em código + QA + docs. Commit exclusivo ainda pendente. Unidade **não** Done antes do commit. CC-09-D…F **não** implementadas.
+
 ### Suggested Commit
 
 `feat(clientes): lista responsiva de clientes`
@@ -847,6 +860,8 @@ Lista responsiva integrada ao formulário único.
 ---
 
 ## CC-09-D — Seleção e seleção global
+
+**Estado:** não iniciada. Não liberar antes do commit exclusivo da CC-09-C. A documentação pós-QA de C não autoriza D.
 
 ### Objective
 
