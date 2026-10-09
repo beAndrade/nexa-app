@@ -3,7 +3,7 @@
 **Tipo:** documentação de fechamento (Phase 2 — Step 9)  
 **Feature:** Cadastro de Cliente  
 **Unidade:** CC-09-C — Tabela e cards responsivos  
-**Status:** IMPLEMENTADO → QA **Approved** → DOCUMENTATION UPDATED  
+**Status:** IMPLEMENTADO → QA **Approved** → DOCUMENTATION UPDATED → commit exclusivo `11dff65`  
 **Data de fechamento documental:** 2026-10-09  
 
 **Referências (contrato — não redefinidas neste passo):**
@@ -16,7 +16,7 @@
 - [Fechamento CC-09-A](./2026-10-02-cadastro-cliente-cc-09a.md)
 - [Fechamento CC-09-B](./2026-10-03-cadastro-cliente-cc-09b.md)
 
-Este arquivo registra o estado real da unidade CC-09-C após o QA. Não redefine o contrato de produto. Não marca a unidade como Done. O **commit exclusivo** da CC-09-C permanece **pendente**. CC-09-D não inicia antes desse commit. A feature Cadastro de Cliente e o CC-09 inteiro **não** estão fechados.
+Este arquivo registra o estado real da unidade CC-09-C. Não redefine o contrato de produto. A unidade está commitada em `11dff65` (`feat(clientes): lista responsiva de clientes`). CC-09-D não foi iniciada e permanece bloqueada até liberação explícita do usuário. O commit satisfaz a condição de Git e não libera D. A feature Cadastro de Cliente e o CC-09 inteiro **não** estão fechados.
 
 ---
 
@@ -27,14 +27,14 @@ Este arquivo registra o estado real da unidade CC-09-C após o QA. Não redefine
 | Implementation | Concluída (lista desktop/mobile) |
 | QA | **Approved** |
 | Documentation | Atualizada (este documento + marcadores de progresso) |
-| Commit exclusivo | **Pendente** |
+| Commit exclusivo | **`11dff65`** `feat(clientes): lista responsiva de clientes` |
 | Push | Não realizado |
 | Achados novos Critical / High / Medium | Nenhum |
 | Residuais | Contraste de “Sem celular”, CSS legado sem uso, hover da linha, seleção existente — Low, **não** bloqueantes, **não** corrigidos nesta etapa |
 | Testes automatizados da lista | **N/A** — não há suíte da lista; não foram executados |
 
-**Próximo gate operacional:** Git audit → commit exclusivo da CC-09-C.  
-**CC-09-D** só é liberada **após** esse commit. CC-09-E…G e CC-10–CC-12 permanecem não iniciadas.
+**Commit exclusivo:** realizado em `11dff65`.  
+**CC-09-D** não iniciada. Bloqueada até liberação explícita do usuário. O commit de C não a libera. CC-09-E…G e CC-10–CC-12 permanecem não iniciadas.
 
 ---
 
@@ -149,11 +149,10 @@ Não foram corrigidos nesta etapa.
 
 ## 5. Fora do escopo deste fechamento
 
-- Commit / push da CC-09-C.
-- CC-09-D, CC-09-E e CC-09-F.
+- Push da CC-09-C.
+- CC-09-D, CC-09-E e CC-09-F. D continua bloqueada até liberação explícita.
 - Correção dos findings Low.
 - Fechamento global da feature Cadastro de Cliente ou do CC-09 inteiro.
-- Marcar CC-09-C como Done antes do commit exclusivo.
 
 ---
 
@@ -164,8 +163,8 @@ Não foram corrigidos nesta etapa.
 | CC-01–CC-08 | ✅ |
 | CC-09-A | ✅ (commit `6df4f87`) |
 | CC-09-B | ✅ (commit `9d1a444`) |
-| CC-09-C | Documentação pós-QA concluída — QA **Approved**; **commit exclusivo pendente**; **não** Done |
-| CC-09-D | 🔒 não inicia antes do commit exclusivo da CC-09-C |
+| CC-09-C | ✅ commit `11dff65` — QA **Approved**; documentação pós-QA concluída |
+| CC-09-D | 🔒 não iniciada; bloqueada até liberação explícita. O commit de C não libera D |
 | CC-09-E…G | 🔒 aguardando |
 | CC-10–CC-12 | 🔒 aguardando |
 

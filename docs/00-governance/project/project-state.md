@@ -602,8 +602,8 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 | CC-08 Formulário único | ✅ |
 | CC-09-A API listagem paginada | ✅ — commit `6df4f87` |
 | CC-09-B Search & Filters | ✅ — commit `9d1a444` · QA APPROVED WITH MINOR ISSUES |
-| CC-09-C Tabela e cards | Documentação pós-QA concluída · QA **Approved** · **commit exclusivo pendente** · **não** Done |
-| CC-09-D…G | 🔒 CC-09-D não inicia antes do commit exclusivo da CC-09-C |
+| CC-09-C Tabela e cards | ✅ commitada · `11dff65` `feat(clientes): lista responsiva de clientes` · QA **Approved** · documentação pós-QA concluída |
+| CC-09-D…G | 🔒 CC-09-D não iniciada; bloqueada até liberação explícita do usuário. O commit de C satisfaz a condição de Git e não libera D |
 | CC-10–CC-12 | 🔒 aguardando |
 
 **Fechamento CC-05:** `docs/03-development/audits/2026-10-02-cadastro-cliente-cc-05.md`  
@@ -614,7 +614,7 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 **Fechamento CC-09-B:** `docs/03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md`  
 **Fechamento CC-09-C:** `docs/03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md`  
 **Gates CC-09-B:** QA APPROVED WITH MINOR ISSUES · commit exclusivo `9d1a444`.  
-**Gates CC-09-C:** Implementation · QA **Approved** · Documentation atualizada · commit exclusivo pendente · sem push · nenhum finding novo Critical/High/Medium · Low conhecidos não corrigidos · D/E/F **não** implementadas · CC-09 inteiro **não** concluído.
+**Gates CC-09-C:** Implementation · QA **Approved** · Documentation concluída · commit exclusivo `11dff65` · nenhum finding novo Critical/High/Medium · Low conhecidos não corrigidos · D/E/F **não** implementadas · CC-09 inteiro **não** concluído · CC-09-D bloqueada até liberação explícita.
 
 Contrato canônico: Product Definition, UX Flow, Technical Design e Sprint Planning em `docs/01-product/epics/epic-01-mobile-foundation/10–13-*-cadastro-cliente.md`.
 

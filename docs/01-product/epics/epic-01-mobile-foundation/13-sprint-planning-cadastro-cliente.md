@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C documentação pós-QA (QA Approved; commit exclusivo pendente; não Done); CC-09-D…G não iniciadas  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D…G não iniciadas (D bloqueada até liberação explícita)  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -712,7 +712,7 @@ Contrato de listagem paginada disponível para o frontend; GET legado preservado
 ## CC-09-B — Busca e filtros server-side
 
 **Estado (2026-10-03):** ✅ Documentation UPDATED — Implementation · AR pré-impl APPROVED WITH MINOR ADJUSTMENTS · F-B01 CLOSED · AR Recheck APPROVED · AR pós-impl APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED WITH MINOR ISSUES · [fechamento](../../../03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md).  
-**Commit exclusivo:** `9d1a444`. **CC-09-C:** documentação pós-QA em 2026-10-09 (QA Approved); commit exclusivo de C pendente. CC-09-D não inicia antes desse commit. CC-09-E…G e CC-10–CC-12 aguardam.
+**Commit exclusivo:** `9d1a444`. **CC-09-C:** commitada em `11dff65` (`feat(clientes): lista responsiva de clientes`); QA Approved; documentação pós-QA concluída. CC-09-D não iniciada e bloqueada até liberação explícita do usuário. O commit de C não libera D. CC-09-E…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -795,8 +795,8 @@ Busca e filtros server-side reproduzem o contrato Product/UX/Technical, inclusiv
 
 ## CC-09-C — Tabela e cards responsivos
 
-**Estado (2026-10-09):** implementação concluída · QA **Approved** · [fechamento](../../../03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md). Documentação pós-QA concluída neste passo.  
-**Commit exclusivo:** pendente. Unidade **não** Done antes do commit. **CC-09-D** não inicia antes desse commit. CC-09-E…G e CC-10–CC-12 aguardam. O CC-09 inteiro **não** está concluído.
+**Estado (2026-10-09):** implementação e fechamento commitados em `11dff65` (`feat(clientes): lista responsiva de clientes`) · QA **Approved** · documentação pós-QA concluída · [fechamento](../../../03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md).  
+**Commit exclusivo:** `11dff65`. O CC-09 inteiro **não** está concluído. **CC-09-D** não iniciada; bloqueada até liberação explícita do usuário. O commit de C satisfaz a condição de Git e não libera D. CC-09-E…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -851,7 +851,7 @@ Validação QA (2026-10-09): **Approved**. `npx ng build --configuration develop
 
 Lista responsiva integrada ao formulário único.
 
-**DoD CC-09-C (2026-10-09):** atendido em código + QA + docs. Commit exclusivo ainda pendente. Unidade **não** Done antes do commit. CC-09-D…F **não** implementadas.
+**DoD CC-09-C (2026-10-09):** atendido em código + QA + docs. Commit exclusivo `11dff65`. CC-09-D…F **não** implementadas. D permanece bloqueada até liberação explícita.
 
 ### Suggested Commit
 
@@ -861,7 +861,7 @@ Lista responsiva integrada ao formulário único.
 
 ## CC-09-D — Seleção e seleção global
 
-**Estado:** não iniciada. Não liberar antes do commit exclusivo da CC-09-C. A documentação pós-QA de C não autoriza D.
+**Estado:** não iniciada. Bloqueada até liberação explícita do usuário. O commit `11dff65` da CC-09-C satisfaz a condição de Git e não autoriza D.
 
 ### Objective
 
