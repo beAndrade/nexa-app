@@ -177,7 +177,7 @@ Não antecipar implementação.
 - Global Consistency Check: `docs/05-prompts/Phase-2/11-global-consistency-check.md`, quando a mudança tocar ou dever seguir padrão ou componente compartilhado. O recorte são esses padrões e as áreas relacionadas, não o produto inteiro.
 - Git Audit: `docs/05-prompts/Phase-2/12-git-audit.md`, antes do commit. Não há agente dedicado. Staging e commit continuam manuais.
 
-`01-vision.md` e `02-business-rules.md`, nesta pasta, são conteúdo do EPIC-01 (Product EPIC 01 — Mobile Foundation). Não são templates reutilizáveis. `03-ux-flows.md`, `04-technical-design.md`, `05-sprint-planning.md` e `09-documentation.md` são referências de navegação. Não são templates nem protocolos independentes.
+`01-vision.md` e `02-business-rules.md`, nesta pasta, são referências de navegação. A visão e as regras oficiais do EPIC-01 estão em `docs/01-product/epics/epic-01-mobile-foundation/`. Não são templates reutilizáveis. `03-ux-flows.md`, `04-technical-design.md`, `05-sprint-planning.md` e `09-documentation.md` são referências de navegação. Não são templates nem protocolos independentes.
 
 ---
 
