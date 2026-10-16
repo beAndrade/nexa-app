@@ -142,19 +142,11 @@ Protect visual identity.
 
 # General Rules
 
-Before implementing any feature:
+Antes de implementar qualquer funcionalidade, siga `docs/05-prompts/Phase-2/00-phase2-system.md`.
 
-1. Read Project-State.md
+Esse documento determina quando a implementação pode começar. Não inicie antes de a unidade estar definida e de cumprir os gates de arquitetura exigidos pelo fluxo canônico.
 
-2. Read Architecture.md
-
-3. Read Product.md
-
-4. Read Modules.md
-
-5. Read Development.md
-
-Only then begin implementation.
+Não replique neste arquivo a tabela de riscos nem a sequência de gates.
 
 ---
 

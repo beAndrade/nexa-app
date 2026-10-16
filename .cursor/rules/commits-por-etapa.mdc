@@ -1,9 +1,14 @@
 ---
-description: Ao concluir uma etapa de trabalho, versionar com Git (commit claro em PT-BR).
+description: Commit de etapa só quando o usuário pedir, depois do Git Audit, em PT-BR.
 alwaysApply: false
 ---
 # Commits por etapa
 
-- Ao **terminar uma etapa** (feature, bugfix, documentação, config), faça **`git add`** nos ficheiros pertinentes e um **`git commit`** com mensagem curta e clara em **português** (imperativo ou descritivo: "Corrige listen da API no Node", "Atualiza README e fluxo com Postgres").
-- **Não** acumule várias frentes grandes num único commit sem necessidade; prefira commits pequenos e legíveis.
-- Se o repositório ainda não tiver `git init`, pergunte ao utilizador antes de inicializar, exceto se ele já pediu fluxo Git explicitamente.
+A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`. O Git Audit está em `docs/05-prompts/Phase-2/12-git-audit.md`.
+
+- Esta regra não copia o fluxo canônico.
+- Staging e commit são manuais. Só acontecem quando o usuário pede, depois das validações e do Git Audit exigidos pelo canônico.
+- Quando o usuário pedir o commit, prefira um commit pequeno e exclusivo da unidade. Não misture várias frentes grandes sem necessidade.
+- A mensagem fica em português do Brasil, curta e clara.
+- Não faça push, merge, rebase nem troca de branch sem autorização explícita do usuário.
+- Se o repositório ainda não tiver `git init`, pergunte ao usuário antes de inicializar, exceto se ele já tiver pedido o fluxo Git.
