@@ -1,5 +1,5 @@
 ---
-description: PT-BR no chat; feature em branch feature/* a partir de main; avisar push no fim.
+description: PT-BR no chat; feature/* a partir de main só após autorização para trocar de branch; avisar push no fim.
 alwaysApply: false
 ---
 # Idioma
@@ -9,5 +9,9 @@ alwaysApply: false
 
 # Git (projeto solo)
 
-- **Nova feature:** `git fetch origin` → `git checkout main && git pull origin main` → `git checkout -b feature/nome-curto` (resolver `git status` antes se houver alterações por commitar).
-- **Ao terminar a feature:** `git add` / `git commit` (PT-BR, regra *commits-por-etapa*) → **avisar** o usuário para fazer `git push -u origin feature/<nome>` (push é sempre dele).
+A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`. Commit e troca de branch seguem `.cursor/rules/commits-por-etapa.mdc`.
+
+- Não execute `git add` nem `git commit` ao terminar a feature. Staging e commit são manuais e só quando o usuário pede, depois das validações que o canônico exige para o nível da unidade.
+- Quando o canônico exigir Git Audit, o procedimento é `docs/05-prompts/Phase-2/12-git-audit.md`. Esta regra não copia a tabela de risco nem a sequência.
+- Quando o usuário pedir o commit, prefira um commit pequeno e exclusivo da unidade.
+- Não faça push, merge, rebase nem troca de branch sem autorização explícita do usuário. Se o push for o passo seguinte, avise e deixe o comando com ele.
