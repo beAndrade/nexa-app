@@ -19,7 +19,9 @@ isProject: false
 
 # Sprint 1A — Project Structure (plano de migração)
 
-**Status:** aguardando aprovação (nenhuma implementação até você confirmar).
+**Nota histórica:** Este plano está obsoleto e não deve ser executado. O Sprint 1A está concluído. `docs/00-governance/START-HERE.md` não existe e não possui substituto confirmado. O link e os demais caminhos desta página permanecem como estavam.
+
+**Status:** Histórico — Sprint 1A concluído; plano obsoleto, não executar.
 
 **Fontes:** [START-HERE.md](docs/00-governance/START-HERE.md), [Migration-Plan.md](docs/02-architecture/Migration-Plan.md), [Architecture.md](docs/02-architecture/Architecture.md), [Development.md](docs/03-development/Development.md), ADRs 001–005.
 
