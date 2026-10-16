@@ -141,12 +141,12 @@ Impeccable não é gate padrão. Entra somente quando a unidade pede acabamento 
 
 | Nível | Quando | Architecture Review | Design & UX | Consistência global | QA | Documentação | Git |
 |---|---|---|---|---|---|---|---|
-| L1 | Ajuste local sem comportamento novo e sem UI visível | Não; registrar o motivo | Não | Não, se não houver padrão compartilhado | Lê o contrato do comportamento tocado | Só se um marcador mudar | Auditoria antes do commit; staging e commit manuais |
-| L2 | Comportamento já contratado, num módulo | Sim se houver API, schema, serviço compartilhado ou mais de um módulo; senão, justificativa | Sim se houver impacto de UI/UX | Sim se usar ou dever seguir padrão ou componente compartilhado | Lê o contrato do comportamento afetado e a regressão nomeada nesse contrato | Estado da unidade, se mudar | Igual ao L1; commit exclusivo da unidade, manual |
-| L3 | Contrato novo ou alterado, tela nova ou payload | Sim | Sim se houver impacto de UI/UX | Sim, só nos padrões e consumidores citados no documento do padrão | Protocolo de validação sobre os documentos da unidade | Fechamento da unidade | Auditoria; commit manual depois da documentação |
-| L4 | Padrão compartilhado, autenticação, migration destrutiva ou arquitetura | Sim | Sim se o padrão tiver UI | Consumidores listados no documento do padrão, não o produto inteiro | Protocolo de validação mais essa lista de consumidores | Padrão e, se a arquitetura mudar, ADR | Auditoria; commit manual |
+| L1 | Ajuste local sem comportamento novo e sem UI visível | Não; registrar o motivo | Não | Não, se não houver padrão compartilhado | Lê o contrato do comportamento tocado | Só se um marcador mudar | Revisão dirigida do diff; staging e commit manuais |
+| L2 | Comportamento já contratado, num módulo | Sim se houver API, schema, serviço compartilhado ou mais de um módulo; senão, justificativa | Sim se houver impacto de UI/UX | Sim se usar ou dever seguir padrão ou componente compartilhado | Lê o contrato do comportamento afetado e a regressão nomeada nesse contrato | Estado da unidade, se mudar | Protocolo completo se o Architecture Review for exigido; senão, revisão dirigida. Commit exclusivo da unidade, manual |
+| L3 | Contrato novo ou alterado, tela nova ou payload | Sim | Sim se houver impacto de UI/UX | Sim, só nos padrões e consumidores citados no documento do padrão | Protocolo de validação sobre os documentos da unidade | Fechamento da unidade | Protocolo completo; commit manual depois da documentação |
+| L4 | Padrão compartilhado, autenticação, migration destrutiva ou arquitetura | Sim | Sim se o padrão tiver UI | Consumidores listados no documento do padrão, não o produto inteiro | Protocolo de validação mais essa lista de consumidores | Padrão e, se a arquitetura mudar, ADR | Protocolo completo; commit manual |
 
-Nenhum nível dispensa implementação fora do que foi autorizado, QA quando o comportamento muda, documentação quando o estado ou o contrato muda, nem Git Audit antes de um commit.
+Nenhum nível dispensa implementação fora do que foi autorizado, QA quando o comportamento muda, documentação quando o estado ou o contrato muda, nem a verificação Git antes de um commit. A revisão dirigida confere o diff e não substitui o protocolo completo. O protocolo completo vale para L3, L4 e para L2 quando o Architecture Review for exigido. Também vale, qualquer que seja o nível nominal, quando a mudança tocar autenticação, schema ou migration, operação destrutiva, arquitetura, ou a governança do próprio fluxo. Risco misto ou incerto usa o modo mais rigoroso presente na unidade.
 
 ---
 
@@ -159,7 +159,7 @@ Nenhum nível dispensa implementação fora do que foi autorizado, QA quando o c
 5. Global Consistency Check, quando a mudança tocar ou dever seguir padrão ou componente compartilhado. O recorte são esses padrões, componentes e áreas, não o produto inteiro.
 6. Validation. Gate funcional, independente dos reviews visuais.
 7. Documentação, quando o estado ou o contrato mudar.
-8. Git Audit, antes do commit.
+8. Verificação Git, antes do commit. Revisão dirigida ou protocolo completo, conforme a coluna Git e as condições acima.
 9. Staging e commit manuais, sob controle do usuário.
 
 PDR não é um passo numerado. Quando existe, é entrada da definição, não uma segunda sequência.
@@ -175,7 +175,7 @@ Não antecipar implementação.
 - Implementation: `.cursor/agents/nexa-implementation.md`. O arquivo `07-implementation.md` desta pasta é referência de navegação e não é o protocolo.
 - Design & UX Review: `docs/05-prompts/Phase-2/10-design-ux-review.md`, quando houver impacto de UI/UX. Sem esse impacto, registra-se uma linha de dispensa.
 - Global Consistency Check: `docs/05-prompts/Phase-2/11-global-consistency-check.md`, quando a mudança tocar ou dever seguir padrão ou componente compartilhado. O recorte são esses padrões e as áreas relacionadas, não o produto inteiro.
-- Git Audit: `docs/05-prompts/Phase-2/12-git-audit.md`, antes do commit. Não há agente dedicado. Staging e commit continuam manuais.
+- Verificação Git: `docs/05-prompts/Phase-2/12-git-audit.md`. O canônico escolhe revisão dirigida ou protocolo completo. Não há agente dedicado. Staging e commit continuam manuais.
 
 `01-vision.md` e `02-business-rules.md`, nesta pasta, são referências de navegação. A visão e as regras oficiais do EPIC-01 estão em `docs/01-product/epics/epic-01-mobile-foundation/`. Não são templates reutilizáveis. `03-ux-flows.md`, `04-technical-design.md`, `05-sprint-planning.md` e `09-documentation.md` são referências de navegação. Não são templates nem protocolos independentes.
 

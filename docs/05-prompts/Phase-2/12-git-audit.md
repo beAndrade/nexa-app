@@ -2,15 +2,25 @@
 
 ## Objetivo e aplicabilidade
 
-Este protocolo executa o Git Audit antes do commit.
+Este arquivo tem dois modos. O canônico, em `docs/05-prompts/Phase-2/00-phase2-system.md`, escolhe qual usar. Este arquivo não repete a tabela L1–L4.
 
-Quando o gate entra está em `docs/05-prompts/Phase-2/00-phase2-system.md`. Este arquivo não repete a classificação de risco.
+Os dois modos são somente leitura. Não há agente dedicado. A execução para antes do staging. Staging e commit continuam manuais, sob controle do usuário.
 
-A auditoria é somente leitura. Confere se a árvore de trabalho contém apenas o escopo aprovado da unidade.
+## Revisão dirigida
 
-Não há agente dedicado. Qualquer execução autorizada segue este procedimento e para antes do staging.
+Use este modo só quando o canônico o indicar. Ele é somente leitura e não faz staging.
 
-Staging e commit continuam manuais, sob controle do usuário.
+1. Confirme a branch, o HEAD e `git status --short`.
+2. Liste os caminhos alterados e leia o conteúdo efetivo do diff de cada um. `git diff --stat` não basta como evidência.
+3. Confirme que cada caminho e o conteúdo da alteração pertencem à unidade autorizada.
+4. Se aparecer arquivo fora da unidade, segredo, dúvida relevante sobre um caminho, ou problema que impeça o uso seguro da unidade, pare. O resultado é `BLOCKED`. Não faça staging.
+5. Se todas as verificações passarem, o resultado é `DIRECT REVIEW PASSED`. Esse resultado não equivale a `READY FOR STAGING` e não autoriza staging nem commit.
+
+Comandos de leitura permitidos: `git status`, `git branch`, `git rev-parse`, `git log`, `git diff`. Não use outros comandos Git.
+
+## Protocolo completo
+
+O restante deste arquivo é o protocolo completo. Use-o em L3, L4 e em L2 quando o Architecture Review for exigido. Use-o também, qualquer que seja o nível nominal, quando a mudança tocar autenticação, schema ou migration, operação destrutiva, arquitetura, ou a governança do próprio fluxo. Risco misto ou incerto usa este modo.
 
 ---
 

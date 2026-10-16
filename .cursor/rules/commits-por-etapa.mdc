@@ -1,13 +1,13 @@
 ---
-description: Commit de etapa só quando o usuário pedir, depois do Git Audit, em PT-BR.
+description: Commit de etapa só quando o usuário pedir, depois da verificação Git exigida pelo canônico, em PT-BR.
 alwaysApply: false
 ---
 # Commits por etapa
 
-A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`. O Git Audit está em `docs/05-prompts/Phase-2/12-git-audit.md`.
+A sequência de produto está em `docs/05-prompts/Phase-2/00-phase2-system.md`. A verificação Git está em `docs/05-prompts/Phase-2/12-git-audit.md`.
 
 - Esta regra não copia o fluxo canônico.
-- Staging e commit são manuais. Só acontecem quando o usuário pede, depois das validações e do Git Audit exigidos pelo canônico.
+- Staging e commit são manuais. Só acontecem quando o usuário pede, depois das validações e da verificação Git exigida pelo canônico.
 - Quando o usuário pedir o commit, prefira um commit pequeno e exclusivo da unidade. Não misture várias frentes grandes sem necessidade.
 - A mensagem fica em português do Brasil, curta e clara.
 - Não faça push, merge, rebase nem troca de branch sem autorização explícita do usuário.
