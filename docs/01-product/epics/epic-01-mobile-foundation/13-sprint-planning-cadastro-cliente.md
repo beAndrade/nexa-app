@@ -712,7 +712,7 @@ Contrato de listagem paginada disponível para o frontend; GET legado preservado
 ## CC-09-B — Busca e filtros server-side
 
 **Estado (2026-10-03):** ✅ Documentation UPDATED — Implementation · AR pré-impl APPROVED WITH MINOR ADJUSTMENTS · F-B01 CLOSED · AR Recheck APPROVED · AR pós-impl APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED WITH MINOR ISSUES · [fechamento](../../../03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md).  
-**Commit exclusivo:** `9d1a444`. **CC-09-C:** commitada em `11dff65` (`feat(clientes): lista responsiva de clientes`); QA Approved; documentação pós-QA concluída. CC-09-D não iniciada e bloqueada até liberação explícita do usuário. O commit de C não libera D. CC-09-E…G e CC-10–CC-12 aguardam.
+**Commit exclusivo:** `9d1a444`. **CC-09-C:** commitada em `11dff65` (`feat(clientes): lista responsiva de clientes`); QA Approved; documentação pós-QA concluída. CC-09-D está concluída na worktree, com QA independente **Approved** (2026-10-20) e sem commit exclusivo. CC-09-E…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -796,7 +796,7 @@ Busca e filtros server-side reproduzem o contrato Product/UX/Technical, inclusiv
 ## CC-09-C — Tabela e cards responsivos
 
 **Estado (2026-10-09):** implementação e fechamento commitados em `11dff65` (`feat(clientes): lista responsiva de clientes`) · QA **Approved** · documentação pós-QA concluída · [fechamento](../../../03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md).  
-**Commit exclusivo:** `11dff65`. O CC-09 inteiro **não** está concluído. **CC-09-D** não iniciada; bloqueada até liberação explícita do usuário. O commit de C satisfaz a condição de Git e não libera D. CC-09-E…G e CC-10–CC-12 aguardam.
+**Commit exclusivo:** `11dff65`. O CC-09 inteiro **não** está concluído. **CC-09-D** está concluída na worktree, com QA independente **Approved** (2026-10-20) e sem commit exclusivo. CC-09-E…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -851,7 +851,7 @@ Validação QA (2026-10-09): **Approved**. `npx ng build --configuration develop
 
 Lista responsiva integrada ao formulário único.
 
-**DoD CC-09-C (2026-10-09):** atendido em código + QA + docs. Commit exclusivo `11dff65`. CC-09-D…F **não** implementadas. D permanece bloqueada até liberação explícita.
+**DoD CC-09-C (2026-10-09):** atendido em código + QA + docs. Commit exclusivo `11dff65`. CC-09-E e CC-09-F **não** implementadas. CC-09-D foi concluída depois, em 2026-10-20.
 
 ### Suggested Commit
 
@@ -861,7 +861,11 @@ Lista responsiva integrada ao formulário único.
 
 ## CC-09-D — Seleção e seleção global
 
-**Estado:** não iniciada. Bloqueada até liberação explícita do usuário. O commit `11dff65` da CC-09-C satisfaz a condição de Git e não autoriza D.
+**Estado (2026-10-20):** implementação concluída na worktree. QA independente **Approved**. Unidade fechada nesse gate. Não há commit exclusivo. O contrato permanece `allFiltered` + snapshot + `excludedIds`. A CC-09-D não envia `excludedIds` à API. A CC-09-E não foi iniciada: a ação em lote futura, no modo `allFiltered`, deve respeitar essas exceções.
+
+**Limitação de UX, não bloqueadora:** na jornada móvel de 390×844, o rodapé de paginação estava oculto e o botão real “Página seguinte” tinha área de interação 0×0. A jornada do Critério B foi executada por esse botão e pelas consultas `GET /api/clientes?page=2&pageSize=20` e `page=1`. Isso não comprova que a paginação móvel esteja visível ou utilizável pelo toque. A classificação como dívida de UX ou pendência de refinamento cabe ao Project Orchestrator. Não altera o contrato de paginação nem de seleção e não abre outra unidade.
+
+**Fora desta unidade:** as três falhas de `AppComponent` (`No provider for HttpClient!`) permanecem fora do escopo. A configuração de testes não foi alterada por este fechamento.
 
 ### Objective
 
@@ -914,6 +918,7 @@ Selecionar em página 1, mudar para 2, aplicar busca/filtro, mudar page size e c
 ### Definition of Done
 
 Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | ids | allFiltered+snapshot`).
+**DoD CC-09-D (2026-10-20):** implementação concluída na worktree e QA independente **Approved**. Sem commit exclusivo. A CC-09-E não está iniciada. A limitação do rodapé oculto não reabre esta unidade.
 
 ### Suggested Commit
 
