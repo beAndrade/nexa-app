@@ -23,8 +23,14 @@ export interface MobileBottomNavAction {
   icon: MobileBottomNavIconId;
   /** Destaque visual (ex.: Criar / Novo). */
   accent?: boolean;
-  /** Estado expandido / ativo (aria + estilo). */
+  /** Destaque visual de ligado. Não define sozinho o atributo ARIA. */
   active?: boolean;
+  /**
+   * Como `active` é anunciado.
+   * Omisso ou `expanded`: painel/menu aberto (`aria-expanded`).
+   * `pressed`: estado sem conteúdo expansível (`aria-pressed`).
+   */
+  activeAria?: 'expanded' | 'pressed';
   /** Destaque âmbar (ex.: filtros aplicados). */
   warn?: boolean;
   /** Feedback breve no ícone. Não atrasa o onClick. */

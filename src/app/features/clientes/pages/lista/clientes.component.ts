@@ -22,17 +22,24 @@ import {
   MobileListActionMenuItem,
   MobileListActionsMenuComponent,
 } from '../../../../shared/components/mobile-list-actions-menu/mobile-list-actions-menu.component';
-import {
-  areAllSelected,
-  buildSelectionBottomNavActions,
-  selectAllIds,
-  selectionCount,
-  toggleId,
-} from '../../../../shared/mobile-list-selection/mobile-list-selection';
+import { buildSelectionBottomNavActions } from '../../../../shared/mobile-list-selection/mobile-list-selection';
 import { ymdValido } from '../../../../shared/cliente-drawer-periodo-filtro/cliente-periodo-filtro.util';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
 import { mediaQueryMin } from '../../../../styles/breakpoints';
+import {
+  applyIndividualDeleteToSelection,
+  clearClientesSelection,
+  emptyClientesSelection,
+  hasActiveSelection,
+  isItemSelected,
+  isSelectAllPressed,
+  selectAllFiltered,
+  snapshotFromListParams,
+  toggleClientesSelectionItem,
+  type ClientesListFilterPredicates,
+  type ClientesSelectionState,
+} from './clientes-selection-state';
 
 const CLIENTES_BOTTOM_NAV_OWNER = 'clientes';
 const CLIENTES_SEARCH_DEBOUNCE_MS = 300;
@@ -111,7 +118,8 @@ export class ClientesComponent implements OnInit, OnDestroy {
   totalPaginasServidor = 0;
   perPageMenuAberto = false;
 
-  selecionados = new Set<string>();
+  /** Seleção mobile: vazia | ids | allFiltered+snapshot+excludedIds (CC-09-D). */
+  selectionState: ClientesSelectionState = emptyClientesSelection();
   excluindoId: string | null = null;
   excluirModalAberto = false;
   /** Mantém o modal no DOM até a saída mobile terminar. */
@@ -152,10 +160,16 @@ export class ClientesComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Page reset + limpa seleção ao mudar search/filtros (seleção UI = CC-09-D). */
+  /**
+   * Page reset + limpa seleção ao mudar search/filtros (seleção UI = CC-09-D).
+   * Fecha o menu de ações para o popover não permanecer com seleção vazia.
+   * A bottom nav sincroniza aqui para a busca seguir o mesmo efeito dos filtros.
+   */
   private resetPageAndSelection(): void {
     this.pagina = 1;
-    this.selecionados.clear();
+    this.selectionState = clearClientesSelection();
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
   }
 
   private normalizePageSize(raw: number): (typeof CLIENTES_PAGE_SIZES)[number] {
@@ -173,7 +187,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
       this.shellBottomNavEligible = !shellDesktopMq.matches;
       if (!this.shellBottomNavEligible && this.modoSelecao) {
         this.modoSelecao = false;
-        this.selecionados.clear();
+        this.selectionState = clearClientesSelection();
       }
       if (!this.shellBottomNavEligible) {
         this.acoesMenuAberto = false;
@@ -215,7 +229,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
       const acoes = actions.find((action) => action.id === 'acoes');
       if (acoes) acoes.active = this.acoesMenuAberto;
       const selecionarTudo = actions.find((action) => action.id === 'selecionar-tudo');
-      if (selecionarTudo) selecionarTudo.busy = this.selecionarTudoBusy;
+      if (selecionarTudo) {
+        selecionarTudo.busy = this.selecionarTudoBusy;
+        selecionarTudo.activeAria = 'pressed';
+      }
       this.shellUi.setMobileBottomNavActions(CLIENTES_BOTTOM_NAV_OWNER, actions);
       return;
     }
@@ -298,9 +315,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
       default:
         break;
     }
-    this.pagina = 1;
-    this.selecionados.clear();
-    this.syncShellBottomNavActions();
+    this.resetPageAndSelection();
     this.carregarLista();
   }
 
@@ -314,7 +329,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
     this.modoSelecao = false;
     this.acoesMenuAberto = false;
     this.limparFeedbackSelecionarTudo();
-    this.selecionados.clear();
+    this.selectionState = clearClientesSelection();
     this.syncShellBottomNavActions();
   }
 
@@ -324,17 +339,15 @@ export class ClientesComponent implements OnInit, OnDestroy {
     else this.entrarModoSelecao();
   }
 
+  /** Pressionado só com o conjunto filtrado inteiro, sem exceções. */
   todosFiltradosSelecionados(): boolean {
-    return areAllSelected(
-      this.filtrados().map((c) => c.id),
-      this.selecionados,
-    );
+    return isSelectAllPressed(this.selectionState);
   }
 
+  /** Ativa allFiltered + snapshot; não faz fetch de todos os itens. */
   selecionarTodosMobile(): void {
-    this.selecionados = selectAllIds(
-      this.selecionados,
-      this.filtrados().map((c) => c.id),
+    this.selectionState = selectAllFiltered(
+      snapshotFromListParams(this.predicadosListagem()),
     );
     this.dispararFeedbackSelecionarTudo();
     this.syncShellBottomNavActions();
@@ -377,8 +390,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onAcoesSelecao(): void {
-    if (selectionCount(this.selecionados) === 0) {
-      this.toast.showWarning('Selecione ao menos um cliente.');
+    if (!hasActiveSelection(this.selectionState, this.totalServidor)) {
+      this.toast.showWarning(
+        'Selecione pelo menos um cliente para acessar as ações.',
+      );
       if (this.acoesMenuAberto) {
         this.acoesMenuAberto = false;
         this.syncShellBottomNavActions();
@@ -390,13 +405,17 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   acoesMenuItens(): MobileListActionMenuItem[] {
+    // Exclusão em massa = CC-09-E; aqui só exclusão individual (1 id explícito).
+    const umIdExplicito =
+      !this.selectionState.allFiltered &&
+      this.selectionState.selecionados.size === 1;
     return [
       {
         id: 'excluir',
         label: 'Excluir',
         icon: 'trash',
         danger: true,
-        disabled: this.selecionados.size !== 1,
+        disabled: !umIdExplicito,
       },
     ];
   }
@@ -408,8 +427,14 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onItemAcaoSelecao(item: MobileListActionMenuItem): void {
-    if (item.id !== 'excluir' || this.selecionados.size !== 1) return;
-    const id = [...this.selecionados][0];
+    if (
+      item.id !== 'excluir' ||
+      this.selectionState.allFiltered ||
+      this.selectionState.selecionados.size !== 1
+    ) {
+      return;
+    }
+    const id = [...this.selectionState.selecionados][0];
     const cliente = this.itens.find((c) => c.id === id);
     if (!cliente) return;
     this.onExcluirCliente(cliente);
@@ -450,29 +475,12 @@ export class ClientesComponent implements OnInit, OnDestroy {
       });
   }
 
-  private montarParamsListagem(): {
-    page: number;
-    pageSize: number;
-    search?: string;
-    status?: string;
-    hasCellphone?: boolean;
-    birthdayFrom?: string;
-    birthdayTo?: string;
-  } {
-    const pageSize = this.normalizePageSize(this.itensPorPagina);
-    this.itensPorPagina = pageSize;
-    const params: {
-      page: number;
-      pageSize: number;
-      search?: string;
-      status?: string;
-      hasCellphone?: boolean;
-      birthdayFrom?: string;
-      birthdayTo?: string;
-    } = {
-      page: this.pagina,
-      pageSize,
-    };
+  /**
+   * Predicados de busca/filtros com a mesma semântica do GET
+   * (chave omitida = sem filtro). Usado no snapshot de allFiltered.
+   */
+  private predicadosListagem(): ClientesListFilterPredicates {
+    const params: ClientesListFilterPredicates = {};
 
     const q = this.buscaAplicada.trim();
     if (q) params.search = q;
@@ -495,6 +503,24 @@ export class ClientesComponent implements OnInit, OnDestroy {
     if (ymdValido(fim)) params.birthdayTo = fim;
 
     return params;
+  }
+
+  private montarParamsListagem(): {
+    page: number;
+    pageSize: number;
+    search?: string;
+    status?: string;
+    hasCellphone?: boolean;
+    birthdayFrom?: string;
+    birthdayTo?: string;
+  } {
+    const pageSize = this.normalizePageSize(this.itensPorPagina);
+    this.itensPorPagina = pageSize;
+    return {
+      page: this.pagina,
+      pageSize,
+      ...this.predicadosListagem(),
+    };
   }
 
   get buscaPlaceholder(): string {
@@ -578,7 +604,12 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   private toggleSelecionadoCliente(c: Cliente): void {
-    this.selecionados = toggleId(this.selecionados, c.id);
+    const pageIds = this.itensPagina().map((item) => item.id);
+    this.selectionState = toggleClientesSelectionItem(
+      this.selectionState,
+      c.id,
+      pageIds,
+    );
   }
 
   toggleFiltroStatus(which: 'ativos' | 'inativos', ev: Event): void {
@@ -586,7 +617,6 @@ export class ClientesComponent implements OnInit, OnDestroy {
     if (which === 'ativos') this.filtroStatusAtivos = checked;
     else this.filtroStatusInativos = checked;
     this.resetPageAndSelection();
-    this.syncShellBottomNavActions();
     this.carregarLista();
   }
 
@@ -595,13 +625,11 @@ export class ClientesComponent implements OnInit, OnDestroy {
     if (which === 'com') this.filtroComCelular = checked;
     else this.filtroSemCelular = checked;
     this.resetPageAndSelection();
-    this.syncShellBottomNavActions();
     this.carregarLista();
   }
 
   onAniversarioPeriodoAlterado(): void {
     this.resetPageAndSelection();
-    this.syncShellBottomNavActions();
     this.carregarLista();
   }
 
@@ -718,7 +746,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
         this.excluindoId = null;
         this.excluindoClienteModal = false;
         this.descartarModalExcluirCliente();
-        this.selecionados.delete(id);
+        this.selectionState = applyIndividualDeleteToSelection(
+          this.selectionState,
+          id,
+        );
         if (this.cadastroDrawer.clienteId === id) {
           this.cadastroDrawer.fechar();
         }
@@ -813,7 +844,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   estaSelecionado(id: string): boolean {
-    return this.selecionados.has(id);
+    return isItemSelected(this.selectionState, id);
   }
 
   /** Celular da lista: só `celular`. Sem telefone fixo nem telefone legado. */

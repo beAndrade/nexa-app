@@ -39,7 +39,8 @@
       [class.shell-bottom-nav__btn--acoes]="action.id === 'acoes'"
       (click)="executar(action, $event)"
       [attr.aria-label]="action.ariaLabel ?? action.label"
-      [attr.aria-expanded]="action.active ?? null"
+      [attr.aria-expanded]="action.activeAria === 'pressed' ? null : (action.active ?? null)"
+      [attr.aria-pressed]="action.activeAria === 'pressed' ? (action.active ? 'true' : 'false') : null"
       [attr.aria-busy]="action.busy ? 'true' : null"
     >
       @if (action.busy) {
