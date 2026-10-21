@@ -620,7 +620,7 @@ Fora da tabela: CPF, CNPJ, RG, endereço, Instagram, Facebook, crédito, descont
 
 Mobile, 767px ou menos: cards. Barra normal: Menu, Filtro, Selecionar, Novo. Busca no header, não repetida na barra. Filtro em estado de aviso quando não é o padrão (Todos, sem os outros critérios). Painel de filtro em tela cheia, entrando da direita para a esquerda, com fechar visível, dentro da viewport.
 
-Card: nome, celular como contexto, status em texto. Seleção troca a barra para Cancelar, Selecionar tudo e Ações. Selecionar tudo vale para o conjunto filtrado. Ações abrem popover acima da barra. Excluir segue a seção 8, com confirmação. Filtros abertos fecham ao entrar em seleção.
+Card: nome, celular como contexto, status em texto. Seleção troca a barra para Cancelar, Selecionar tudo e Ações. Selecionar tudo vale para o conjunto filtrado. Com seleção, Ações abre o popover acima da barra. Sem seleção, Ações continua clicável, não abre o popover e apresenta `Selecione pelo menos um cliente para acessar as ações.` Excluir segue a seção 8, com confirmação. Filtros abertos fecham ao entrar em seleção.
 
 Estados: vazio global com Novo cliente; vazio de busca ou filtro com texto diferente; carregando com skeleton e barra utilizável; erro com tentar de novo.
 
@@ -711,15 +711,102 @@ Não é filtro de “aniversário do mês”, “próximos N dias” nem compara
 
 ### Seleção global
 
-A seleção global é estado de interface, não exige materializar todos os registros. O modelo de estado é exatamente um destes:
+A seleção global é estado de interface. O contrato desta seção é o da Architecture Review “seleção global com exceções” (`allFiltered` + snapshot + `excludedIds`). O colapso que desliga `allFiltered` e fica só com os IDs da página carregada não é o contrato.
+
+O modelo de estado é exatamente um destes:
 
 1. **vazia** — nenhum selecionado;
-2. **ids** — conjunto explícito de `id_cliente`;
-3. **allFiltered + snapshot** — “todos os registros que satisfazem o snapshot atual de busca/filtros” (mesmos predicados do GET paginado), **sem** carregar todos os IDs.
+2. **ids** — conjunto explícito de `id_cliente` em `selecionados`;
+3. **allFiltered + snapshot + excludedIds** — todos os registros que satisfazem o snapshot atual de busca e filtros (os mesmos predicados do GET paginado), exceto os IDs em `excludedIds`, **sem** carregar todos os IDs.
 
-A troca de página preserva seleção. Mudança de busca ou filtro invalida a seleção. Mudança de page size preserva a seleção. Cancelar limpa.
+Nomes já fixados para o estado no frontend: `selecionados`, `allFiltered`, `snapshot` (`ClientesSelectionFilterSnapshot` ou `null`) e `excludedIds`. Enquanto `allFiltered` está ativo, `selecionados` permanece vazio. `excludedIds` contém somente IDs que o usuário desmarcou na seleção global vigente. Não é a lista de quem está fora do filtro.
 
-Quando `allFiltered` estiver ativo, a exclusão em massa deve operar sobre os critérios do snapshot, e não somente sobre os IDs da página carregada.
+#### Invariantes
+
+- Sem `allFiltered`: `snapshot` é nulo e `excludedIds` está vazio. O estado é vazio ou `ids`.
+- Com `allFiltered`: `snapshot` está preenchido e `selecionados` está vazio. `excludedIds` pode estar vazio.
+- `selecionados` e `excludedIds` não se misturam. `excludedIds` só vale com `allFiltered`.
+- `excludedIds` não admite duplicata. Incluir de novo o mesmo ID não muda o tamanho. ID em branco é ignorado.
+- Só o botão “Selecionar tudo” entra em `allFiltered`. Marcar todos os cards visíveis não promove a seleção para o modo global.
+- `allFiltered` não materializa todos os IDs do conjunto filtrado. O servidor continua sendo a autoridade do conjunto positivo.
+- Contagem efetiva zero não apaga o modo. O usuário ainda pode remarcar um ID excluído.
+- As transições devolvem estado novo e não mutam o conjunto recebido.
+- A consulta por ID no modo `ids` é a pertinência a `selecionados`. No modo `allFiltered`, o ID está selecionado quando não está em `excludedIds`. Isso responde “não foi desmarcado”; não prova, sozinho, que o ID pertence ao snapshot. Quem chama é o card da página já filtrada. Ação em lote futura não monta o conjunto chamando essa consulta em IDs soltos.
+- A contagem efetiva em `allFiltered` é `max(0, total do servidor − tamanho de excludedIds)`. No modo `ids`, é o tamanho de `selecionados`. Seleção ativa usa essa contagem. A contagem é o que a tela pode estimar; o conjunto de uma exclusão futura é o que o servidor resolver. A lista não precisa exibir esse número, mas a contagem não devolve o total bruto quando há exceções.
+- ID que sai do resultado e depois volta continua em `excludedIds` até limpar, cancelar ou “Selecionar tudo” de novo. ID excluído que já não satisfaz o snapshot não entra no resultado do servidor; a conta do cliente pode ficar menor que o conjunto real. ID novo que passa a satisfazer o snapshot entra selecionado se não estiver em `excludedIds`.
+
+#### Transições
+
+1. **Selecionar tudo.** `allFiltered` fica verdadeiro, o snapshot é a cópia dos predicados vigentes da listagem, `selecionados` fica vazio e `excludedIds` fica vazio. Não há fetch da lista inteira. Exceções ou IDs avulsos anteriores saem: o conjunto passa a ser o filtrado completo. Se já estava completo, o clique repete o mesmo estado. Quem limpa é Cancelar, não um segundo clique.
+2. **Desmarcar um ID com `allFiltered`.** O ID entra em `excludedIds`. `allFiltered` e o snapshot permanecem. Os IDs da página carregada não substituem o conjunto. Uma página com um único item não zera a seleção das outras páginas.
+3. **Marcar de novo esse ID.** O ID sai de `excludedIds`. O modo global continua. As outras exceções ficam.
+4. **Desmarcar ou marcar fora de `allFiltered`.** Alterna o ID em `selecionados`. `excludedIds` permanece vazio.
+5. **Página anterior ou seguinte.** Só mudam a página e recarregam a lista. O estado, inclusive as exceções, permanece.
+6. **Page size.** A ação que muda somente o page size volta à página 1 e não limpa nem reconstrói `selectionState`. Exceções permanecem. O controle não precisa ficar visível durante a seleção, e a regra não autoriza mover o controle, alterar o layout ou o breakpoint de 768 px para criar essa jornada.
+7. **Busca ou filtro.** Limpa integralmente o estado: modo desligado, snapshot nulo, `selecionados` e `excludedIds` vazios, página 1. Inclui debounce, Enter, badge e aniversário.
+8. **Cancelar, sair do modo ou cruzar 768 px.** O mesmo clear, inclusive snapshot e `excludedIds`. Não há obrigação de preservar a seleção ao cruzar o breakpoint.
+9. **Resposta da lista com os mesmos predicados.** Itens, total e página atualizam. A seleção não é limpa nem reescrita. Resposta atrasada é descartada e não grava seleção.
+10. **Atualização local de um cliente na lista, sem nova consulta.** Não altera a seleção. A linha pode continuar na página até o próximo carregamento.
+11. **Exclusão individual já existente.** No modo `ids`, o ID sai de `selecionados`. Em `allFiltered`, o modo permanece; se o ID estava em `excludedIds`, sai de lá para a contagem não subtrair um registro já removido. Essa poda não usa a transição que substitui a seleção global pelos IDs da página.
+
+#### Representação visual
+
+Não existe controle de “selecionar a página”. A tabela desktop não tem checkbox de linha. O único “Selecionar tudo” é o botão da barra mobile. `aria-pressed` reflete se o conjunto filtrado inteiro está selecionado.
+
+- **Pressionado** (`aria-pressed="true"`) só quando `allFiltered` está ligado, o snapshot existe e `excludedIds` está vazio.
+- **Não pressionado** (`aria-pressed="false"`) com seleção vazia, com IDs avulsos, ou com `allFiltered` e ao menos uma exceção.
+- O card usa o estado efetivo daquele ID, respeitando `excludedIds`.
+- “Todos os visíveis desta página estão marcados” não alimenta o botão da barra. Pode ser verdade com o botão solto, se a exceção estiver em outra página ou se a seleção for só de IDs.
+- O modo global continua verdadeiro com ou sem exceção, para a ação futura saber que o modo é `allFiltered`. Esse fato não pressiona o botão.
+
+Ações na barra:
+
+1. Seleção efetiva vazia, inclusive quando as exceções cobrem o total conhecido: Ações continua habilitado e clicável. A apresentação visual não muda só porque a seleção está vazia.
+2. Clique com seleção efetiva vazia: apresenta `Selecione pelo menos um cliente para acessar as ações.` e não abre o menu.
+3. Seleção efetiva não vazia (`ids`, ou `allFiltered` com contagem maior que zero): abre as ações já contratadas.
+4. O clique em Ações não muda os IDs selecionados, o snapshot nem `excludedIds`.
+
+#### Frontend e API nesta unidade
+
+A CC-09-D mantém e interpreta `excludedIds` no estado de seleção do frontend. Não envia `excludedIds` à API, não o coloca no GET e não implementa endpoint nem payload de ação em lote. Não habilita a exclusão em massa no modo global.
+
+A CC-09-E é dependência futura. Ao executar ação em lote no modo `allFiltered`, deverá receber e respeitar as exceções, no contrato de API formalizado para essa tarefa. Não apaga nem processa os registros de `excludedIds` como se estivessem selecionados. A contagem estimada no cliente não autoriza essa exclusão.
+
+#### Critérios técnicos de teste
+
+Estes critérios descrevem o resultado observável a validar. Não estão declarados aqui como criados ou executados. Nenhum deles aprova QA. Verificar só a assinatura de um helper, sem o estado resultante, não satisfaz o critério.
+
+No modelo de estado:
+
+- Desmarcar em `allFiltered` mantém o modo e o snapshot, e `excludedIds` fica só com aquele ID. Uma página de um único ID não zera o restante.
+- Remarcar remove só essa exceção.
+- A segunda exclusão do mesmo ID não duplica.
+- Um ID de outra página continua selecionado.
+- A consulta do ID excluído é falsa; a de um ID não excluído, mesmo de outra página, é verdadeira.
+- “Selecionar tudo” depois de exceções zera `excludedIds`.
+- Busca, filtro, Cancelar e clear zeram `excludedIds`.
+- A mudança de page size não é critério deste modelo puro, porque a função não recebe page size.
+- A contagem subtrai exceções e não fica negativa. A seleção ativa fica falsa quando as exceções cobrem o total, e o estado continua `allFiltered`.
+- O modo `ids` não liga `allFiltered` e não preenche `excludedIds`.
+
+No componente, sobre o estado real depois da ação:
+
+- Depois de desmarcar um card, “Selecionar tudo” fica inativo e a barra expressa `aria-pressed="false"`. Outro ID do estado continua selecionado.
+- Clicar de novo em “Selecionar tudo” zera a exceção e o botão volta a ficar ativo.
+- Critério A: com `excludedIds` conhecido, invocar a alteração isolada de page size e verificar que o estado de seleção do componente, inclusive as exceções, permanece intacto na página 1. Esse teste não comprova a navegação entre páginas.
+- Busca e filtro deixam `excludedIds` vazio.
+- Ações com contagem efetiva zero mostra a mensagem exata e não abre o menu. Ações com exceção parcial e contagem maior que zero abre o menu. Excluir em massa continua indisponível no modo global.
+- O estado visual do card segue a seleção efetiva. A jornada de UI continua obrigatória para a navegação entre páginas; o teste de componente não a substitui.
+
+Na interface, no gate de validação:
+
+- Selecionar tudo, desmarcar um item na página 2, voltar à página 1 e ver os demais marcados, o item excluído desmarcado e o botão global solto.
+- “Selecionar tudo” não dispara fetch de todos os itens.
+- Cancelar limpa. Busca ou filtro limpa.
+
+O teste que exige sair de `allFiltered` e ficar com os IDs da página, snapshot nulo e ausência de `excludedIds`, codifica o comportamento rejeitado. Não é critério de aceite.
+
+A seleção ao navegar entre páginas permanece sujeita a evidência executada de UI, em jornada válida, independente do teste de page size.
 
 ### Ações e exclusão em massa
 
@@ -749,6 +836,8 @@ Body — dois modos:
 ```
 
 No modo `allFiltered`, os predicados são os **mesmos** do GET paginado da lista. Campos omitidos/`null` significam “sem esse filtro”.
+
+Contrato futuro da CC-09-E, ainda não implementado e não enviado pela CC-09-D: no modo `allFiltered`, o body também recebe `excludedIds`, lista de strings já sem duplicata. Lista vazia ou campo ausente significa o conjunto filtrado sem exceção. O servidor aplica os mesmos predicados da lista e não trata esses IDs como selecionados. IDs que não estão no conjunto filtrado não alteram o efeito. Se a confirmação citar quantidade, essa quantidade é resolvida no servidor com o mesmo predicado e as mesmas exceções; `total − excludedIds` no cliente pode ficar abaixo do que o servidor apaga quando algum ID excluído já saiu do snapshot.
 
 Para cada `id_cliente` resolvido: aplicar a **mesma** lógica de domínio de `deleteClienteById` (CC-05). Sem apagar filhos. Sem transação única que aborte o lote inteiro. Falha de um cliente (409/`HAS_RELATED`, 404 ou outro) **não** cancela exclusões válidas dos demais.
 

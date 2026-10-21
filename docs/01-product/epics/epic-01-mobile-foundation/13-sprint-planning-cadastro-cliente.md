@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D…G não iniciadas (D bloqueada até liberação explícita)  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D concluída na worktree, QA independente **Approved** (2026-10-20), sem commit exclusivo; CC-09-E…G não iniciadas  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -873,13 +873,17 @@ Implementar seleção individual, persistência entre páginas e seleção globa
 
 ### Scope
 
-Modelo de estado (Architecture Review — GAP-03):
+Modelo de estado (Architecture Review — GAP-03, estendido pela review “seleção global com exceções”):
 
 1. `vazia` — nenhum selecionado;
-2. `ids` — conjunto explícito de `id_cliente`;
-3. `allFiltered` + snapshot de busca/filtros — todos os registros do conjunto atual, **sem** carregar todos os IDs.
+2. `ids` — conjunto explícito de `id_cliente` em `selecionados`;
+3. `allFiltered` + snapshot + `excludedIds` — todos os registros do conjunto atual, exceto os IDs desmarcados, **sem** carregar todos os IDs.
 
-Troca de página preserva seleção; busca/filtro limpa; page size preserva; Cancelar limpa. “Selecionar tudo” ativa `allFiltered` com o snapshot atual. Helpers atuais de `Set` de IDs podem permanecer para seleção parcial; o estado `allFiltered` é específico da feature.
+Enquanto `allFiltered` está ativo, `selecionados` permanece vazio. `excludedIds` guarda só as exceções explícitas. Desmarcar não materializa a página nem desliga o modo. Remarcar remove só a exceção. Troca de página e page size preservam o conjunto e as exceções. Busca, filtro, Cancelar e saída do modo limpam snapshot e `excludedIds`. “Selecionar tudo” ativa de novo o conjunto filtrado completo e zera as exceções. O botão fica pressionado só sem exceções; o card reflete a seleção efetiva. Helpers atuais de `Set` de IDs permanecem para seleção parcial; o estado global é específico da feature. O helper genérico não implementa `allFiltered`.
+
+Invariantes e transições normativas: Technical Design, seção Seleção global. O teste que exige colapsar `allFiltered` para os IDs da página atual não é aceite.
+
+A CC-09-D interpreta `excludedIds` no frontend e não o envia à API. A CC-09-E é dependência futura para a ação em lote: deverá receber e respeitar essas exceções. Esta unidade não a implementa.
 
 ### Out of Scope
 
@@ -896,16 +900,26 @@ CC-09-A, CC-09-B e CC-09-C.
 
 ### Acceptance Criteria
 
-- [ ] Seleção individual funciona (`ids`).
-- [ ] Selecionar tudo representa o conjunto filtrado completo (`allFiltered` + snapshot).
-- [ ] Seleção persiste ao trocar de página.
-- [ ] Busca/filtro limpa seleção.
-- [ ] Page size preserva seleção.
-- [ ] Não é necessário carregar todos os registros.
+- [ ] Seleção individual funciona (`ids`) e não preenche `excludedIds`.
+- [ ] Selecionar tudo representa o conjunto filtrado completo (`allFiltered` + snapshot) e zera `excludedIds`, sem carregar todos os registros.
+- [ ] Desmarcar um cliente em `allFiltered` mantém o modo e o snapshot e inclui só esse ID em `excludedIds`. Os demais, inclusive de outras páginas, permanecem selecionados. Uma página com um único item não zera o restante.
+- [ ] Remarcar remove somente esse ID de `excludedIds`. A segunda inclusão do mesmo ID não duplica.
+- [ ] Com ao menos uma exceção, “Selecionar tudo” fica com `aria-pressed="false"`. O card desmarcado fica desmarcado e os demais cards selecionados refletem o estado efetivo.
+- [ ] Critério B — Paginação entre páginas: selecionar tudo, desmarcar um item na página 2 e voltar à página 1 deixa os demais marcados, o item excluído desmarcado e o botão global solto. A evidência requerida é uma jornada de UI executada, com a seleção registrada antes e depois. Este critério não é aprovado pela evidência do Critério A.
+- [ ] Busca, filtro, Cancelar e saída do modo de seleção limpam integralmente o estado, inclusive snapshot e `excludedIds`.
+- [ ] Critério A — Page size: a ação isolada de alteração do page size preserva o estado de seleção que recebe, inclusive `excludedIds`, sem limpá-lo nem reconstruí-lo. A evidência requerida pode ser um teste automatizado de componente que estabelece um estado conhecido, invoca a ação e verifica o estado de seleção real do componente na página 1. Este critério não é aprovado pela evidência do Critério B. O texto deste critério não muda com o fechamento.
+- [ ] A contagem efetiva em `allFiltered` subtrai as exceções e não fica negativa. Quando essa contagem é zero, o modo permanece, Ações não abre o menu e a mensagem é exatamente `Selecione pelo menos um cliente para acessar as ações.`
+- [ ] Com zero clientes selecionados, Ações permanece clicável e não é desabilitado só por seleção vazia.
+- [ ] Com seleção efetiva não vazia, Ações abre as ações disponíveis. Excluir em massa continua fora desta unidade, inclusive no modo global.
+- [ ] A CC-09-D não envia `excludedIds` à API e não implementa endpoint nem payload de ação em lote.
 
 ### Manual Validation
 
-Selecionar em página 1, mudar para 2, aplicar busca/filtro, mudar page size e cancelar. Confirmar que “Selecionar tudo” não dispara fetch de todos os itens.
+Critério B, jornada de UI executada em 2026-10-20, viewport 390×844, com 21 clientes: “Selecionar tudo” marcou os 20 cards da página 1; `GET /api/clientes?page=2&pageSize=20` mostrou o único cliente selecionado; desmarcar esse cliente manteve a seleção global com exceção; a volta à página 1 deixou os outros 20 marcados; o retorno à página 2 manteve esse cliente desmarcado. O botão global ficou solto enquanto havia exceção. O rodapé de paginação estava oculto e “Página seguinte” media 0×0; a jornada usou esse botão real, não um teste de componente. Essa jornada não valida o Critério A. Busca, filtro e Cancelar não foram repetidos nessa tela.
+
+Critério A, teste de componente executado na validação: estado conhecido com exceção, ação isolada de page size, estado real do componente preservado na página 1. Esse teste não valida o Critério B. A regra não exige tornar o controle de page size acessível durante a seleção, nem preservar a seleção ao cruzar 768 px.
+
+Os demais resultados do modelo e do componente estão no Technical Design, seção Seleção global. O QA **Approved** não converte limitação de visibilidade do rodapé em comportamento novo.
 
 ### Build / Test
 
@@ -913,11 +927,12 @@ Selecionar em página 1, mudar para 2, aplicar busca/filtro, mudar page size e c
 
 ### Risk
 
-**Alto.** Confundir “selecionar tudo” com página carregada produz exclusões incompletas.
+**Alto.** Confundir “selecionar tudo” com a página carregada, ou omitir `excludedIds` numa exclusão futura, trata como selecionado quem foi desmarcado.
 
 ### Definition of Done
 
-Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | ids | allFiltered+snapshot`).
+Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | ids | allFiltered + snapshot + excludedIds`), sem enviar exceções à API nesta unidade.
+
 **DoD CC-09-D (2026-10-20):** implementação concluída na worktree e QA independente **Approved**. Sem commit exclusivo. A CC-09-E não está iniciada. A limitação do rodapé oculto não reabre esta unidade.
 
 ### Suggested Commit
@@ -934,12 +949,12 @@ Implementar a única ação em massa, Excluir, respeitando CC-05, inclusive com 
 
 ### Scope
 
-Ações desabilitada com zero; Excluir com um ou mais. Confirmação obrigatória. Processamento tolerante a falhas individuais, sem apagar filhos. Resultado consolidado `deleted`, `blocked`, `notFound`.
+Com zero selecionados, Ações permanece clicável, não abre o menu e informa `Selecione pelo menos um cliente para acessar as ações.` Com seleção, Excluir com um ou mais. Confirmação obrigatória. Processamento tolerante a falhas individuais, sem apagar filhos. Resultado consolidado `deleted`, `blocked`, `notFound`.
 
 **Operação dedicada (Architecture Review — GAP-02):**
 
 - Rota: `POST /api/clientes/excluir-em-massa` (padrão `POST …/excluir` do projeto).
-- Body `mode: 'ids'` + `ids[]` **ou** `mode: 'allFiltered'` + predicados iguais ao GET paginado (`search`, `status`, `hasCellphone`, `birthdayFrom`, `birthdayTo`).
+- Body `mode: 'ids'` + `ids[]` **ou** `mode: 'allFiltered'` + predicados iguais ao GET paginado (`search`, `status`, `hasCellphone`, `birthdayFrom`, `birthdayTo`). No modo `allFiltered`, o contrato futuro também recebe `excludedIds` (lista de strings, sem duplicata). Lista vazia ou campo ausente significa sem exceção. O servidor não trata esses IDs como selecionados. A CC-09-D não envia esse campo; o detalhe restante do payload fica para o review da CC-09-E.
 - Para cada id: mesma lógica de `deleteClienteById` (CC-05). Sem transação única que aborte o lote.
 - Resposta: `deleted`, `blocked` (com `tipo` quando houver), `notFound`.
 - Após: limpar seleção; preservar busca/filtros/page size; recalcular página; informar parcial.
@@ -963,6 +978,7 @@ CC-05, CC-07, CC-09-D (e predicados de CC-09-A/B para `allFiltered`).
 
 - [ ] Confirmação existe para exclusão.
 - [ ] Modo `ids` e modo `allFiltered` estão implementados.
+- [ ] No modo `allFiltered`, os IDs em `excludedIds` não são apagados nem processados como selecionados.
 - [ ] Cada cliente respeita 404/409/200 do DELETE CC-05.
 - [ ] Falha individual não cancela exclusões válidas.
 - [ ] Resultado informa excluídos, bloqueados e não encontrados.
@@ -980,7 +996,7 @@ Testes da API/UI e `npx ng build`.
 
 ### Risk
 
-**Alto.** Bulk delete pode contornar a proteção de CC-05 se criar uma lógica paralela de exclusão. Loop só com IDs da página deixa `allFiltered` incompleto.
+**Alto.** Bulk delete pode contornar a proteção de CC-05 se criar uma lógica paralela de exclusão. Loop só com IDs da página deixa `allFiltered` incompleto. Resolver o snapshot sem `excludedIds` apaga também os clientes desmarcados.
 
 ### Definition of Done
 
@@ -1055,7 +1071,7 @@ Após a implementação das unidades CC-09-A…F, validar o contrato executável
 
 ### Scope
 
-Cobrir paginação (legado × paginado), matching, filtros, seleção (`vazia | ids | allFiltered`), bulk delete (`ids` + `allFiltered`), estados, integração CC-08 e ausência de antecipação de CC-10/CC-11. Registra evidências de validação; não declara aprovação de QA ou Documentation.
+Cobrir paginação (legado × paginado), matching, filtros, seleção (`vazia | ids | allFiltered` + snapshot + `excludedIds`), bulk delete (`ids` + `allFiltered`, respeitando exceções), estados, integração CC-08 e ausência de antecipação de CC-10/CC-11. Registra evidências de validação; não declara aprovação de QA ou Documentation.
 
 ### Out of Scope
 

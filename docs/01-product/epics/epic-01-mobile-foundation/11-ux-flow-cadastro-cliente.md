@@ -73,19 +73,33 @@ A lista inicia em Todos. Alterar filtro (incluindo aniversário) leva à página
 
 A paginação é server-side e usa offset. O padrão é 20 registros por página; as opções são 20, 50 e 100. A interface mostra a página atual, page size, total e navegação disponível.
 
-A troca de página preserva busca, filtros e seleção. Alterar page size volta para a página 1, mas preserva a seleção existente. Se uma operação reduzir o total e a página atual deixar de existir, a interface recua para a última página válida.
+A troca de página preserva busca, filtros e seleção. Alterar page size volta para a página 1, mas preserva a seleção existente. Essa preservação é a regra da ação que muda somente o page size: o estado de seleção recebido não é limpo nem reconstruído. Ela não exige que o controle de page size esteja acessível durante a seleção na interface atual. Se uma operação reduzir o total e a página atual deixar de existir, a interface recua para a última página válida.
 
 A ordenação padrão é determinística por `nome_exibido ASC`, depois `id_cliente ASC`. CC-09 não cria ordenação configurável.
 
 ### Seleção
 
-A seleção individual usa IDs explícitos. “Selecionar tudo” representa todo o conjunto filtrado pela busca e pelos filtros atuais, inclusive páginas ainda não carregadas; não exige carregar todos os registros. A seleção persiste ao trocar de página.
+A seleção individual usa IDs explícitos. “Selecionar tudo” representa todo o conjunto filtrado pela busca e pelos filtros atuais, inclusive páginas ainda não carregadas; não exige carregar todos os registros.
 
-Mudar busca ou filtro invalida e limpa a seleção. Mudar somente page size não altera o conjunto selecionado. Cancelar limpa toda a seleção.
+Desmarcar um cliente durante “Selecionar tudo” tira somente esse cliente da seleção. Marcar o mesmo cliente de novo devolve somente ele. Os demais clientes do conjunto continuam selecionados, na página atual e nas outras. Cada card mostra o estado efetivo desse cliente: selecionado se pertence ao conjunto filtrado e não foi desmarcado.
+
+“Selecionar tudo” fica pressionado, com `aria-pressed="true"`, só quando o conjunto filtrado inteiro está selecionado, sem exceção. Com ao menos um cliente desmarcado, o botão fica visualmente desmarcado e usa `aria-pressed="false"`. Acioná-lo nesse estado seleciona de novo o conjunto filtrado inteiro e remove as exceções. O botão não significa “marcar só esta página” nem “desmarcar tudo”. O fato de todos os cards visíveis da página estarem marcados não pressiona o botão quando a exceção está em outra página ou quando a seleção é só de IDs avulsos.
+
+A seleção, com as exceções, persiste ao trocar de página. Mudar somente page size não altera o conjunto selecionado nem as exceções e volta para a página 1. Isso não implica que o controle de page size esteja acessível durante a seleção na interface atual. Mudar busca ou filtro invalida e limpa a seleção. Cancelar ou sair do modo de seleção limpa toda a seleção. Quando nenhum cliente permanece selecionado, inclusive porque todas as exceções cobrem o conjunto contável, Ações continua clicável, não abre o menu e mostra `Selecione pelo menos um cliente para acessar as ações.`
 
 ### Ações
 
-Com zero selecionados, Ações fica desabilitado. Com um ou mais selecionados, Ações oferece somente Excluir. Não existem nesta CC ações em massa de ativar, inativar, editar, exportar ou WhatsApp.
+#### Ação Ações sem seleção
+
+- A ação **Ações** permanece clicável quando a seleção está vazia.
+- Ao ser acionada sem clientes selecionados, não abre o menu de ações.
+- A interface apresenta a mensagem: `Selecione pelo menos um cliente para acessar as ações.`
+- O botão não é desabilitado exclusivamente porque a seleção está vazia.
+- Sua apresentação visual permanece consistente entre os estados de seleção.
+- Quando existe seleção, o botão abre as ações disponíveis.
+- Esta decisão não altera quais ações em massa existem nem seus critérios de disponibilidade.
+
+Com um ou mais selecionados, Ações oferece somente Excluir. Não existem nesta CC ações em massa de ativar, inativar, editar, exportar ou WhatsApp.
 
 Excluir exige confirmação. A operação respeita o DELETE protegido da CC-05. Em uma exclusão em massa, uma falha individual não cancela as exclusões válidas dos demais. Ao final, o resultado informa `deleted`, `blocked` e `notFound` conforme o retorno operacional disponível. A seleção é limpa e a lista é recarregada preservando busca, filtros e page size; a página é recalculada quando necessário.
 

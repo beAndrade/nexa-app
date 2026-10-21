@@ -554,11 +554,13 @@ A lista de clientes utiliza paginação server-side por offset. O tamanho padrã
 
 ### BR-14 — Seleção do conjunto filtrado
 
-“Selecionar tudo” significa todos os clientes do conjunto resultante da busca e dos filtros atuais, inclusive registros de páginas ainda não carregadas. A seleção persiste ao trocar de página. Alterar busca ou filtro limpa a seleção; alterar somente o page size preserva a seleção.
+“Selecionar tudo” significa todos os clientes do conjunto resultante da busca e dos filtros atuais, inclusive registros de páginas ainda não carregadas. Desmarcar um cliente durante essa seleção tira somente esse cliente do conjunto; os demais permanecem selecionados, em qualquer página. Marcar de novo esse cliente devolve somente ele à seleção. Enquanto houver cliente desmarcado, “Selecionar tudo” aparece desmarcado; acioná-lo outra vez volta a selecionar o conjunto filtrado inteiro.
+
+A seleção, com essas exceções, persiste ao trocar de página e ao alterar somente o page size. Alterar busca ou filtro limpa a seleção. Cancelar ou sair do modo de seleção também limpa a seleção. O estado visual de cada cliente corresponde a essa seleção efetiva.
 
 ### BR-15 — Ação em massa
 
-A única ação em massa desta CC é Excluir. A exclusão em massa exige confirmação e respeita as mesmas proteções de histórico da exclusão individual. Falhas de clientes individuais não cancelam exclusões válidas dos demais; o resultado deve distinguir excluídos, bloqueados e não encontrados.
+A única ação em massa desta CC é Excluir. A exclusão em massa exige confirmação e respeita as mesmas proteções de histórico da exclusão individual. Falhas de clientes individuais não cancelam exclusões válidas dos demais; o resultado deve distinguir excluídos, bloqueados e não encontrados. Cliente desmarcado na seleção global não é tratado como selecionado nessa ação.
 
 ### BR-16 — Matching da busca
 
@@ -799,8 +801,8 @@ CC-10 (WhatsApp) e CC-11 (remoção física de `telefone`) permanecem fora desta
 7. Paginação é server-side por offset, com 20 por padrão e opções 20/50/100, total e totalPages.
 8. A ordenação padrão é determinística por `nome_exibido ASC`, depois `id_cliente ASC`.
 9. Busca e filtros persistem entre páginas; alterar busca/filtro volta à página 1 e limpa seleção.
-10. Selecionar tudo representa o conjunto filtrado completo e a seleção persiste entre páginas.
-11. Alterar somente page size preserva seleção; Cancelar limpa.
+10. Selecionar tudo representa o conjunto filtrado completo. Desmarcar um cliente nessa seleção tira só esse cliente; os demais permanecem selecionados entre páginas. Com alguma exceção, “Selecionar tudo” fica desmarcado.
+11. Alterar somente page size preserva a seleção e suas exceções. Cancelar ou sair do modo de seleção limpa a seleção.
 12. A única ação em massa é Excluir.
 13. Exclusão exige confirmação e respeita CC-05 sem apagar filhos.
 14. Falhas individuais não cancelam exclusões válidas e o resultado consolida deleted/blocked/notFound.
