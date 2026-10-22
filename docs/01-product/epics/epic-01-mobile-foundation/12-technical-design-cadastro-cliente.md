@@ -831,13 +831,14 @@ Body — dois modos:
   "status": null,
   "hasCellphone": null,
   "birthdayFrom": null,
-  "birthdayTo": null
+  "birthdayTo": null,
+  "excludedIds": []
 }
 ```
 
-No modo `allFiltered`, os predicados são os **mesmos** do GET paginado da lista. Campos omitidos/`null` significam “sem esse filtro”.
+No modo `allFiltered`, os predicados são os **mesmos** do GET paginado da lista. Campos omitidos/`null` significam “sem esse filtro”. `excludedIds` é uma lista de strings já sem duplicata. Lista vazia ou campo ausente significa o conjunto filtrado sem exceção. O servidor aplica os mesmos predicados da lista e não trata esses IDs como selecionados. IDs que não estão no conjunto filtrado não alteram o efeito. A CC-09-D não envia esse campo. A CC-09-E ainda não está implementada.
 
-Contrato futuro da CC-09-E, ainda não implementado e não enviado pela CC-09-D: no modo `allFiltered`, o body também recebe `excludedIds`, lista de strings já sem duplicata. Lista vazia ou campo ausente significa o conjunto filtrado sem exceção. O servidor aplica os mesmos predicados da lista e não trata esses IDs como selecionados. IDs que não estão no conjunto filtrado não alteram o efeito. Se a confirmação citar quantidade, essa quantidade é resolvida no servidor com o mesmo predicado e as mesmas exceções; `total − excludedIds` no cliente pode ficar abaixo do que o servidor apaga quando algum ID excluído já saiu do snapshot.
+A confirmação não exibe quantidade e não chama endpoint de prévia. A estimativa `max(0, total − excludedIds)` não autoriza a exclusão. O texto e o fluxo estão no UX Flow, seção 9.
 
 Para cada `id_cliente` resolvido: aplicar a **mesma** lógica de domínio de `deleteClienteById` (CC-05). Sem apagar filhos. Sem transação única que aborte o lote inteiro. Falha de um cliente (409/`HAS_RELATED`, 404 ou outro) **não** cancela exclusões válidas dos demais.
 
@@ -847,7 +848,7 @@ Resposta semântica (envelope `ok`/`fail` existente):
 - `blocked` — itens bloqueados (incluir `tipo` operacional quando a CC-05 o fornecer);
 - `notFound` — ids inexistentes.
 
-Após a operação na UI: limpar seleção; recarregar a lista preservando busca, filtros e page size; se a página atual deixar de existir, recuar para a última página válida; informar resultado parcial ao usuário.
+Após resposta operacional na UI: limpar seleção; recarregar a lista preservando busca, filtros e page size; se a página atual deixar de existir, recuar para a última página válida. As três mensagens e o resumo dos grupos estão no UX Flow, seção 9. A resposta identifica ids. Em `blocked`, inclui `tipo` quando a CC-05 o fornecer. Não traz nome de cliente. O resumo usa só esses dados. Pedido inválido não apaga ninguém e não limpa a seleção. Falha de comunicação sem resposta operacional não é sucesso e não limpa a seleção; o tratamento de transporte ainda depende de validação técnica e não cria código HTTP nem payload novos.
 
 Essa rota **não** redefine o DELETE individual da CC-05.
 

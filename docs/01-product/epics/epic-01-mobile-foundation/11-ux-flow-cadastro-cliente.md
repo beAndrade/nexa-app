@@ -101,7 +101,7 @@ A seleção, com as exceções, persiste ao trocar de página. Mudar somente pag
 
 Com um ou mais selecionados, Ações oferece somente Excluir. Não existem nesta CC ações em massa de ativar, inativar, editar, exportar ou WhatsApp.
 
-Excluir exige confirmação. A operação respeita o DELETE protegido da CC-05. Em uma exclusão em massa, uma falha individual não cancela as exclusões válidas dos demais. Ao final, o resultado informa `deleted`, `blocked` e `notFound` conforme o retorno operacional disponível. A seleção é limpa e a lista é recarregada preservando busca, filtros e page size; a página é recalculada quando necessário.
+Excluir em massa segue a seção 9. A operação respeita o DELETE protegido da CC-05. Uma falha individual não cancela as exclusões válidas dos demais.
 
 ---
 
@@ -163,9 +163,43 @@ A regra de inatividade e a interação entre modo manual/automático pertencem �
 
 ## 9. Delete
 
-Exclusão individual e em massa exigem confirmação. O DELETE individual é o contrato da CC-05: cliente inexistente retorna 404; relação protegida retorna 409; cliente sem relação pode ser removido. Nenhuma UI apaga filhos para liberar exclusão.
+Exclusão individual e em massa exigem confirmação. O DELETE individual é o contrato da CC-05: cliente inexistente retorna 404; relação protegida retorna 409; cliente sem relação pode ser removido. A confirmação individual mostra o nome e diz que a exclusão é definitiva. Nenhuma UI apaga filhos para liberar exclusão.
 
-Na exclusão em massa, cada cliente é processado segundo a mesma proteção. O resultado parcial não transforma um bloqueio em exclusão nem interrompe exclusões válidas dos demais.
+### Exclusão em massa
+
+A única ação é Excluir. Cada cliente segue a mesma proteção. Um bloqueio não vira exclusão e não interrompe as exclusões válidas dos demais. A confirmação não mostra quantidade. Uma estimativa em outro ponto da tela não autoriza a exclusão e não dispara consulta de contagem.
+
+O fluxo é:
+
+1. O usuário aciona Excluir no menu de ações.
+2. A interface só segue se a seleção atual for acionável.
+3. A confirmação aparece antes do POST.
+4. Cancelar fecha a confirmação, não envia o POST e mantém a seleção.
+5. Confirmar envia `POST /api/clientes/excluir-em-massa` com o contrato já aprovado (`ids` ou `allFiltered` + snapshot + `excludedIds`).
+6. Enquanto a operação corre, a interface indica que está em andamento e não dispara o mesmo envio de novo.
+7. Pedido inválido: nenhum registro é apagado, a seleção permanece, e o erro não diz que a exclusão foi concluída.
+8. Resposta operacional: a interface mostra o resultado dos grupos retornados, limpa a seleção e recarrega a lista.
+9. A busca, os filtros e o page size permanecem.
+10. Se a página atual não existir mais, a lista vai para a última página válida e carrega essa página.
+11. Falha de comunicação, sem resposta operacional: a interface não declara sucesso e não limpa a seleção como se a exclusão tivesse terminado. Mostra erro e deixa o usuário decidir o próximo passo, sem reenviar sozinha. Esse passo é comportamento de UX e ainda precisa de validação técnica. Não define código HTTP nem payload novo.
+
+A confirmação usa exatamente este texto:
+
+**Deseja excluir os clientes selecionados?**
+
+Os clientes com registros vinculados não poderão ser excluídos. Essa ação não pode ser desfeita.
+
+Deseja continuar?
+
+O feedback usa exatamente uma destas mensagens, conforme os grupos da resposta:
+
+- Sucesso total, quando `deleted` tem itens e `blocked` e `notFound` estão vazios: `Clientes excluídos com sucesso.`
+- Sucesso parcial, quando `deleted` tem itens e `blocked` ou `notFound` também tem: `Exclusão parcialmente concluída. Alguns clientes foram excluídos, mas outros não puderam ser excluídos. Consulte os detalhes do resultado.`
+- Nenhuma exclusão concluída, quando `deleted` está vazio e há itens em `blocked` ou `notFound`: `Nenhum cliente foi excluído. Alguns registros possuem vínculos que impedem a exclusão ou não foram encontrados. Consulte os detalhes do resultado.`
+
+A mensagem de sucesso total não aparece se `blocked` ou `notFound` tiver itens.
+
+O resumo lista, em linguagem corrente, somente o que a API devolveu: excluídos, bloqueados e não encontrados. Não completa nomes nem motivos que não tenham vindo na resposta. No bloqueio, o motivo aparece só quando o contrato trouxer `tipo`. Não encontrado entra no grupo “Não encontrados” e não é descrito como excluído. Se a resposta só identificar ids, o resumo mostra esses ids e o `tipo` quando existir. Nome de cliente no resumo não faz parte deste contrato e fica para análise técnica posterior, sem rota nem payload novos.
 
 ---
 
@@ -190,7 +224,7 @@ Reutilizar o shell e componentes já existentes: `list-page-shell`, `table-card-
 - **Empty global:** nenhum cliente, com Novo cliente.
 - **Empty por busca/filtro:** mensagem distinta do vazio global e preservação do critério aplicado.
 - **Saving/operation:** ação em andamento sem disparos duplicados.
-- **Partial bulk result:** informa excluídos, bloqueados e não encontrados quando aplicável.
+- **Partial bulk result:** uma das três mensagens da seção 9, mais o resumo dos grupos devolvidos. Sucesso total não aparece se houver bloqueado ou não encontrado.
 
 ---
 

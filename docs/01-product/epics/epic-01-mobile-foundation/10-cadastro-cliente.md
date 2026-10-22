@@ -560,7 +560,7 @@ A seleção, com essas exceções, persiste ao trocar de página e ao alterar so
 
 ### BR-15 — Ação em massa
 
-A única ação em massa desta CC é Excluir. A exclusão em massa exige confirmação e respeita as mesmas proteções de histórico da exclusão individual. Falhas de clientes individuais não cancelam exclusões válidas dos demais; o resultado deve distinguir excluídos, bloqueados e não encontrados. Cliente desmarcado na seleção global não é tratado como selecionado nessa ação.
+A única ação em massa desta CC é Excluir. A exclusão em massa exige confirmação antes do envio e respeita as mesmas proteções de histórico da exclusão individual. A confirmação não exibe quantidade. Cancelar não envia a exclusão e mantém a seleção. Falhas de clientes individuais não cancelam exclusões válidas dos demais; o resultado deve distinguir excluídos, bloqueados e não encontrados. Cliente desmarcado na seleção global não é tratado como selecionado nessa ação. A estimativa mostrada na tela não autoriza a exclusão. O texto da confirmação e das três respostas está no UX Flow, seção 9.
 
 ### BR-16 — Matching da busca
 

@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D concluída na worktree, QA independente **Approved** (2026-10-20), sem commit exclusivo; CC-09-E…G não iniciadas  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D concluída na worktree, QA independente **Approved** (2026-10-20), sem commit exclusivo; CC-09-E não iniciada, UX formalizada, implementação não autorizada; CC-09-F…G não iniciadas  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -943,6 +943,8 @@ Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | 
 
 ## CC-09-E — Ações e exclusão protegida
 
+**Estado (2026-10-21):** não iniciada. Implementação **não** autorizada. Architecture Review **APPROVED WITH MINOR ADJUSTMENTS**. Os ajustes de Produto/UX dessa revisão estão formalizados no UX Flow, seção 9, e abaixo. Essa formalização não muda o veredito da revisão. Nomes de cliente em `blocked` e `notFound` não estão no payload aprovado e continuam pendentes de verificação técnica. Os critérios seguem desmarcados.
+
 ### Objective
 
 Implementar a única ação em massa, Excluir, respeitando CC-05, inclusive com seleção `allFiltered`.
@@ -954,10 +956,10 @@ Com zero selecionados, Ações permanece clicável, não abre o menu e informa `
 **Operação dedicada (Architecture Review — GAP-02):**
 
 - Rota: `POST /api/clientes/excluir-em-massa` (padrão `POST …/excluir` do projeto).
-- Body `mode: 'ids'` + `ids[]` **ou** `mode: 'allFiltered'` + predicados iguais ao GET paginado (`search`, `status`, `hasCellphone`, `birthdayFrom`, `birthdayTo`). No modo `allFiltered`, o contrato futuro também recebe `excludedIds` (lista de strings, sem duplicata). Lista vazia ou campo ausente significa sem exceção. O servidor não trata esses IDs como selecionados. A CC-09-D não envia esse campo; o detalhe restante do payload fica para o review da CC-09-E.
+- Body `mode: 'ids'` + `ids[]` **ou** `mode: 'allFiltered'` + predicados iguais ao GET paginado (`search`, `status`, `hasCellphone`, `birthdayFrom`, `birthdayTo`) + `excludedIds`. Lista vazia ou campo ausente significa sem exceção. O servidor não trata esses IDs como selecionados. A CC-09-D não envia esse campo. Não há endpoint de prévia, PIN financeiro, permissão extra nem teto numérico de lote.
 - Para cada id: mesma lógica de `deleteClienteById` (CC-05). Sem transação única que aborte o lote.
 - Resposta: `deleted`, `blocked` (com `tipo` quando houver), `notFound`.
-- Após: limpar seleção; preservar busca/filtros/page size; recalcular página; informar parcial.
+- Após resposta operacional: limpar seleção; preservar busca/filtros/page size; recalcular página; mostrar uma das três mensagens do UX Flow, seção 9, e o resumo dos grupos devolvidos. Pedido inválido não apaga e não limpa a seleção. A confirmação não exibe quantidade. Cancelar não envia o POST.
 
 ### Out of Scope
 
@@ -976,6 +978,14 @@ CC-05, CC-07, CC-09-D (e predicados de CC-09-A/B para `allFiltered`).
 
 ### Acceptance Criteria
 
+Produto/UX já decididos. Continuam desmarcados porque a unidade não foi implementada:
+
+- [ ] A confirmação usa o texto da seção 9 do UX Flow, sem quantidade. Cancelar não envia o POST e mantém a seleção.
+- [ ] Sucesso total, parcial e nenhuma exclusão usam as três mensagens exatas dessa seção, sem sucesso total quando `blocked` ou `notFound` tem itens.
+- [ ] O resumo distingue excluídos, bloqueados e não encontrados só com os dados da resposta. `tipo` só aparece quando a resposta o trouxer.
+
+Técnicos, ainda não implementados e não marcados como aprovados por esta formalização:
+
 - [ ] Confirmação existe para exclusão.
 - [ ] Modo `ids` e modo `allFiltered` estão implementados.
 - [ ] No modo `allFiltered`, os IDs em `excludedIds` não são apagados nem processados como selecionados.
@@ -983,12 +993,15 @@ CC-05, CC-07, CC-09-D (e predicados de CC-09-A/B para `allFiltered`).
 - [ ] Falha individual não cancela exclusões válidas.
 - [ ] Resultado informa excluídos, bloqueados e não encontrados.
 - [ ] Nenhum filho é apagado.
-- [ ] Seleção é limpa após a operação.
+- [ ] Seleção é limpa só após resposta operacional.
 - [ ] Busca, filtros e page size são preservados; página recalculada se necessário.
+- [ ] Pedido inválido não apaga registros e não altera a seleção.
+
+Listar nome de cliente no resumo exigiria campo que o payload aprovado não tem. Esse critério não está aprovado para implementação.
 
 ### Manual Validation
 
-Misturar clientes sem relação e com cada tipo de relação protegida; validar resultado parcial. Testar Excluir com seleção da página e com “Selecionar tudo” (`allFiltered`) sem carregar todos os IDs no cliente.
+Misturar clientes sem relação e com cada tipo de relação protegida. Conferir as três mensagens e o resumo. Cancelar não envia o POST. Testar Excluir com seleção da página e com “Selecionar tudo” (`allFiltered`) sem carregar todos os IDs no cliente. Esta descrição não marca a jornada como executada.
 
 ### Build / Test
 
