@@ -603,7 +603,7 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 | CC-09-A API listagem paginada | ✅ — commit `6df4f87` |
 | CC-09-B Search & Filters | ✅ — commit `9d1a444` · QA APPROVED WITH MINOR ISSUES |
 | CC-09-C Tabela e cards | ✅ commitada · `11dff65` `feat(clientes): lista responsiva de clientes` · QA **Approved** · documentação pós-QA concluída |
-| CC-09-D Seleção e seleção global | ✅ implementação na worktree · QA independente **Approved** (2026-10-20) · sem commit exclusivo · `allFiltered` + snapshot + `excludedIds` só no frontend |
+| CC-09-D Seleção e seleção global | ✅ commit `2526ee6` `feat(clientes): seleção global de clientes` · contrato `55f4c96` · QA independente **Approved** (2026-10-20) · `allFiltered` + snapshot + `excludedIds` só no frontend |
 | CC-09-E Ações em lote | 🔒 não iniciada · UX formalizada (2026-10-21) · Architecture Review **APPROVED WITH MINOR ADJUSTMENTS** · implementação não autorizada · deve respeitar `excludedIds` |
 | CC-09-F…G | 🔒 não iniciadas |
 | CC-10–CC-12 | 🔒 aguardando |
@@ -618,7 +618,7 @@ Migration-Plan Sprint 1A–6 is complete. Prioritize a **post-migration backlog*
 **Fechamento CC-09-D:** relatório de QA independente de 2026-10-20, disposição **Approved**. Não há arquivo correspondente em `docs/03-development/audits/`.  
 **Gates CC-09-B:** QA APPROVED WITH MINOR ISSUES · commit exclusivo `9d1a444`.  
 **Gates CC-09-C:** Implementation · QA **Approved** · Documentation concluída · commit exclusivo `11dff65` · nenhum finding novo Critical/High/Medium · Low conhecidos não corrigidos.  
-**Gates CC-09-D:** Implementation na worktree · QA independente **Approved** · sem commit exclusivo · nenhum finding Critical/High/Medium · Critério A por teste de componente · Critério B por jornada de UI. Na viewport 390×844 o rodapé de paginação estava oculto e “Página seguinte” media 0×0; a jornada usou esse botão real. A classificação dessa limitação como dívida de UX ou refinamento aguarda o Project Orchestrator e não reabre a unidade. As três falhas de `AppComponent` (`No provider for HttpClient!`) ficam fora desta CC. A CC-09-E não foi iniciada. O UX da exclusão em massa foi formalizado em 2026-10-21, sem autorização de implementação. O CC-09 inteiro **não** está concluído.
+**Gates CC-09-D:** Implementation · commit `2526ee6` · QA independente **Approved** · nenhum finding Critical/High/Medium · Critério A por teste de componente · Critério B por jornada de UI. Na viewport 390×844 o rodapé de paginação estava oculto e “Página seguinte” media 0×0; a jornada usou esse botão real. A classificação dessa limitação como dívida de UX ou refinamento aguarda o Project Orchestrator e não reabre a unidade. As três falhas de `AppComponent` (`No provider for HttpClient!`) ficam fora desta CC. A CC-09-E não foi iniciada. Architecture Review da E: **APPROVED WITH MINOR ADJUSTMENTS**, inclusive o check final da exceção inesperada, sem autorização de implementação. O CC-09 inteiro **não** está concluído. O EPIC-01 permanece aberto.
 
 Contrato canônico: Product Definition, UX Flow, Technical Design e Sprint Planning em `docs/01-product/epics/epic-01-mobile-foundation/10–13-*-cadastro-cliente.md`.
 

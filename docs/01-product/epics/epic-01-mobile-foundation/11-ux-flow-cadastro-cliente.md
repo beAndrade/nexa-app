@@ -181,7 +181,7 @@ O fluxo é:
 8. Resposta operacional: a interface mostra o resultado dos grupos retornados, limpa a seleção e recarrega a lista.
 9. A busca, os filtros e o page size permanecem.
 10. Se a página atual não existir mais, a lista vai para a última página válida e carrega essa página.
-11. Falha de comunicação, sem resposta operacional: a interface não declara sucesso e não limpa a seleção como se a exclusão tivesse terminado. Mostra erro e deixa o usuário decidir o próximo passo, sem reenviar sozinha. Esse passo é comportamento de UX e ainda precisa de validação técnica. Não define código HTTP nem payload novo.
+11. Sem envelope operacional, inclusive falha de comunicação ou exceção inesperada de `deleteClienteById`: a interface não declara sucesso, não mostra as três mensagens de resultado e não limpa a seleção. Mostra erro e deixa o usuário decidir o próximo passo, sem reenviar sozinha. Não define código HTTP nem payload novo. Exclusões já commitadas antes da exceção permanecem.
 
 A confirmação usa exatamente este texto:
 

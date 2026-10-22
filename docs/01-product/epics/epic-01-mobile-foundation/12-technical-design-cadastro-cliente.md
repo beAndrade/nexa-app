@@ -840,15 +840,19 @@ No modo `allFiltered`, os predicados são os **mesmos** do GET paginado da lista
 
 A confirmação não exibe quantidade e não chama endpoint de prévia. A estimativa `max(0, total − excludedIds)` não autoriza a exclusão. O texto e o fluxo estão no UX Flow, seção 9.
 
-Para cada `id_cliente` resolvido: aplicar a **mesma** lógica de domínio de `deleteClienteById` (CC-05). Sem apagar filhos. Sem transação única que aborte o lote inteiro. Falha de um cliente (409/`HAS_RELATED`, 404 ou outro) **não** cancela exclusões válidas dos demais.
+Para cada `id_cliente` resolvido: aplicar a **mesma** lógica de domínio de `deleteClienteById` (CC-05). Sem apagar filhos. Sem transação única que aborte o lote inteiro.
 
-Resposta semântica (envelope `ok`/`fail` existente):
+Resultados normais de negócio não interrompem o lote. `not_found` entra em `notFound`. `has_related` entra em `blocked`, com `tipo`. Essas falhas não desfazem exclusões já commitadas nas chamadas anteriores.
+
+Se `deleteClienteById` lançar exceção, o processamento dos itens seguintes para. A resposta não é o envelope operacional dos três grupos. O item da exceção não entra em `deleted`, `blocked` nem `notFound`. Não há quarto grupo, campo novo nem status HTTP novo: o desenho reutiliza o `fail` já usado no `catch` do DELETE individual. Exclusões já commitadas permanecem, porque cada chamada tem a própria transação. O frontend não mostra as três mensagens de resultado, não trata a resposta como sucesso e não reenvia sozinho. A seleção permanece.
+
+Resposta operacional (envelope `ok` existente), só quando não houve essa exceção:
 
 - `deleted` — ids excluídos com sucesso;
 - `blocked` — itens bloqueados (incluir `tipo` operacional quando a CC-05 o fornecer);
 - `notFound` — ids inexistentes.
 
-Após resposta operacional na UI: limpar seleção; recarregar a lista preservando busca, filtros e page size; se a página atual deixar de existir, recuar para a última página válida. As três mensagens e o resumo dos grupos estão no UX Flow, seção 9. A resposta identifica ids. Em `blocked`, inclui `tipo` quando a CC-05 o fornecer. Não traz nome de cliente. O resumo usa só esses dados. Pedido inválido não apaga ninguém e não limpa a seleção. Falha de comunicação sem resposta operacional não é sucesso e não limpa a seleção; o tratamento de transporte ainda depende de validação técnica e não cria código HTTP nem payload novos.
+Após resposta operacional na UI: limpar seleção; recarregar a lista preservando busca, filtros e page size; se a página atual deixar de existir, recuar para a última página válida. As três mensagens e o resumo dos grupos estão no UX Flow, seção 9. A resposta identifica ids. Em `blocked`, inclui `tipo` quando a CC-05 o fornecer. Não traz nome de cliente. O resumo usa só esses dados. Pedido inválido não apaga ninguém e não limpa a seleção. Falha de comunicação, e a exceção acima, não são sucesso e não limpam a seleção. Não há reenvio automático. Não se cria código HTTP nem payload novos.
 
 Essa rota **não** redefine o DELETE individual da CC-05.
 

@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D concluída na worktree, QA independente **Approved** (2026-10-20), sem commit exclusivo; CC-09-E não iniciada, UX formalizada, implementação não autorizada; CC-09-F…G não iniciadas  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D ✅ (`2526ee6`, QA independente **Approved** em 2026-10-20); CC-09-E não iniciada, implementação não autorizada; CC-09-F…G não iniciadas  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -712,7 +712,7 @@ Contrato de listagem paginada disponível para o frontend; GET legado preservado
 ## CC-09-B — Busca e filtros server-side
 
 **Estado (2026-10-03):** ✅ Documentation UPDATED — Implementation · AR pré-impl APPROVED WITH MINOR ADJUSTMENTS · F-B01 CLOSED · AR Recheck APPROVED · AR pós-impl APPROVED WITH MINOR ADJUSTMENTS · QA APPROVED WITH MINOR ISSUES · [fechamento](../../../03-development/audits/2026-10-03-cadastro-cliente-cc-09b.md).  
-**Commit exclusivo:** `9d1a444`. **CC-09-C:** commitada em `11dff65` (`feat(clientes): lista responsiva de clientes`); QA Approved; documentação pós-QA concluída. CC-09-D está concluída na worktree, com QA independente **Approved** (2026-10-20) e sem commit exclusivo. CC-09-E…G e CC-10–CC-12 aguardam.
+**Commit exclusivo:** `9d1a444`. **CC-09-C:** commitada em `11dff65` (`feat(clientes): lista responsiva de clientes`); QA Approved; documentação pós-QA concluída. CC-09-D está concluída em `2526ee6`, com QA independente **Approved** (2026-10-20). CC-09-E não foi iniciada. CC-09-F…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -796,7 +796,7 @@ Busca e filtros server-side reproduzem o contrato Product/UX/Technical, inclusiv
 ## CC-09-C — Tabela e cards responsivos
 
 **Estado (2026-10-09):** implementação e fechamento commitados em `11dff65` (`feat(clientes): lista responsiva de clientes`) · QA **Approved** · documentação pós-QA concluída · [fechamento](../../../03-development/audits/2026-10-09-cadastro-cliente-cc-09c.md).  
-**Commit exclusivo:** `11dff65`. O CC-09 inteiro **não** está concluído. **CC-09-D** está concluída na worktree, com QA independente **Approved** (2026-10-20) e sem commit exclusivo. CC-09-E…G e CC-10–CC-12 aguardam.
+**Commit exclusivo:** `11dff65`. O CC-09 inteiro **não** está concluído. **CC-09-D** está concluída em `2526ee6`, com QA independente **Approved** (2026-10-20). CC-09-E não foi iniciada. CC-09-F…G e CC-10–CC-12 aguardam.
 
 ### Objective
 
@@ -861,7 +861,7 @@ Lista responsiva integrada ao formulário único.
 
 ## CC-09-D — Seleção e seleção global
 
-**Estado (2026-10-20):** implementação concluída na worktree. QA independente **Approved**. Unidade fechada nesse gate. Não há commit exclusivo. O contrato permanece `allFiltered` + snapshot + `excludedIds`. A CC-09-D não envia `excludedIds` à API. A CC-09-E não foi iniciada: a ação em lote futura, no modo `allFiltered`, deve respeitar essas exceções.
+**Estado (2026-10-20):** implementação concluída. QA independente **Approved**. Unidade fechada nesse gate. Commit `2526ee6`. O contrato permanece `allFiltered` + snapshot + `excludedIds`. A CC-09-D não envia `excludedIds` à API. A CC-09-E não foi iniciada: a ação em lote futura, no modo `allFiltered`, deve respeitar essas exceções.
 
 **Limitação de UX, não bloqueadora:** na jornada móvel de 390×844, o rodapé de paginação estava oculto e o botão real “Página seguinte” tinha área de interação 0×0. A jornada do Critério B foi executada por esse botão e pelas consultas `GET /api/clientes?page=2&pageSize=20` e `page=1`. Isso não comprova que a paginação móvel esteja visível ou utilizável pelo toque. A classificação como dívida de UX ou pendência de refinamento cabe ao Project Orchestrator. Não altera o contrato de paginação nem de seleção e não abre outra unidade.
 
@@ -933,7 +933,7 @@ Os demais resultados do modelo e do componente estão no Technical Design, seç�
 
 Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | ids | allFiltered + snapshot + excludedIds`), sem enviar exceções à API nesta unidade.
 
-**DoD CC-09-D (2026-10-20):** implementação concluída na worktree e QA independente **Approved**. Sem commit exclusivo. A CC-09-E não está iniciada. A limitação do rodapé oculto não reabre esta unidade.
+**DoD CC-09-D (2026-10-20):** implementação concluída e QA independente **Approved**. Commit `2526ee6`. A CC-09-E não está iniciada. A limitação do rodapé oculto não reabre esta unidade.
 
 ### Suggested Commit
 
@@ -943,7 +943,7 @@ Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | 
 
 ## CC-09-E — Ações e exclusão protegida
 
-**Estado (2026-10-21):** não iniciada. Implementação **não** autorizada. Architecture Review **APPROVED WITH MINOR ADJUSTMENTS**. Os ajustes de Produto/UX dessa revisão estão formalizados no UX Flow, seção 9, e abaixo. Essa formalização não muda o veredito da revisão. Nomes de cliente em `blocked` e `notFound` não estão no payload aprovado e continuam pendentes de verificação técnica. Os critérios seguem desmarcados.
+**Estado (2026-10-21):** não iniciada. Implementação **não** autorizada. Architecture Review **APPROVED WITH MINOR ADJUSTMENTS**. O check final registra a exceção inesperada e não eleva o veredito a aprovação plena. Os ajustes de Produto/UX estão no UX Flow, seção 9. O resumo usa ids e, em `blocked`, `tipo`. Nome de cliente não entra no payload. Os critérios seguem desmarcados.
 
 ### Objective
 
@@ -958,7 +958,8 @@ Com zero selecionados, Ações permanece clicável, não abre o menu e informa `
 - Rota: `POST /api/clientes/excluir-em-massa` (padrão `POST …/excluir` do projeto).
 - Body `mode: 'ids'` + `ids[]` **ou** `mode: 'allFiltered'` + predicados iguais ao GET paginado (`search`, `status`, `hasCellphone`, `birthdayFrom`, `birthdayTo`) + `excludedIds`. Lista vazia ou campo ausente significa sem exceção. O servidor não trata esses IDs como selecionados. A CC-09-D não envia esse campo. Não há endpoint de prévia, PIN financeiro, permissão extra nem teto numérico de lote.
 - Para cada id: mesma lógica de `deleteClienteById` (CC-05). Sem transação única que aborte o lote.
-- Resposta: `deleted`, `blocked` (com `tipo` quando houver), `notFound`.
+- Resposta operacional: `deleted`, `blocked` (com `tipo` quando houver), `notFound`. São só resultados normais de negócio. `not_found` e `has_related` não interrompem o lote e não desfazem exclusões já commitadas.
+- Se `deleteClienteById` lançar exceção, os itens seguintes não são processados. A resposta não é o envelope dos três grupos. O item da exceção não entra em nenhum deles. Não há quarto grupo. Exclusões já commitadas permanecem. O frontend não mostra as três mensagens, não trata como sucesso e não reenvia sozinho. A seleção permanece.
 - Após resposta operacional: limpar seleção; preservar busca/filtros/page size; recalcular página; mostrar uma das três mensagens do UX Flow, seção 9, e o resumo dos grupos devolvidos. Pedido inválido não apaga e não limpa a seleção. A confirmação não exibe quantidade. Cancelar não envia o POST.
 
 ### Out of Scope
@@ -996,6 +997,7 @@ Técnicos, ainda não implementados e não marcados como aprovados por esta form
 - [ ] Seleção é limpa só após resposta operacional.
 - [ ] Busca, filtros e page size são preservados; página recalculada se necessário.
 - [ ] Pedido inválido não apaga registros e não altera a seleção.
+- [ ] Exceção inesperada de `deleteClienteById` interrompe os itens seguintes, não devolve o envelope dos três grupos e mantém a seleção. O item da exceção não entra em `deleted`, `blocked` nem `notFound`.
 
 Listar nome de cliente no resumo exigiria campo que o payload aprovado não tem. Esse critério não está aprovado para implementação.
 
