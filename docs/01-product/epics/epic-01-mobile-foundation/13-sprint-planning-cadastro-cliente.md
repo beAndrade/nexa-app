@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D ✅ (`2526ee6`, QA independente **Approved** em 2026-10-20); CC-09-E não iniciada, implementação não autorizada; CC-09-F…G não iniciadas  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D ✅ (`2526ee6`, QA independente **Approved** em 2026-10-20); CC-09-E implementada na worktree, sem commit, Validation original **Approved with Minor Issues** preservada, Validation da correção do achado Medium **Approved** (2026-10-22), unidade aberta, achado Low aberto; CC-09-F…G não iniciadas  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -943,7 +943,25 @@ Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | 
 
 ## CC-09-E — Ações e exclusão protegida
 
-**Estado (2026-10-21):** não iniciada. Implementação **não** autorizada. Architecture Review **APPROVED WITH MINOR ADJUSTMENTS**. O check final registra a exceção inesperada e não eleva o veredito a aprovação plena. Os ajustes de Produto/UX estão no UX Flow, seção 9. O resumo usa ids e, em `blocked`, `tipo`. Nome de cliente não entra no payload. Os critérios seguem desmarcados.
+**Estado (2026-10-22):** implementação presente na worktree, sem commit. A autorização de implementação veio do Architecture Review **APPROVED**. Design & UX Review **APPROVED**. Global Consistency Check **CONSISTENT**. A Validation original permanece **Approved with Minor Issues**. A correção do achado Medium passou por Architecture Review **APPROVED**, Design & UX Review **APPROVED** e Validation **Approved**. A unidade **não** está fechada. O achado Medium está corrigido na worktree e validado. O achado Low permanece aberto. Os ajustes de Produto/UX estão no UX Flow, seção 9. O resumo usa ids e, em `blocked`, `tipo`. Nome de cliente não entra no payload. Os critérios seguem desmarcados.
+
+### Validation (2026-10-22)
+
+Disposição **Approved with Minor Issues**. Nenhum achado Critical ou High. Não há arquivo em `docs/03-development/audits/`. Esta seção não marca a jornada manual como executada e não marca os critérios.
+
+**Medium.** Quando a seleção tem exatamente um id e esse id não está em `this.itens` da página atual, Excluir retorna sem abrir confirmação e sem enviar `DELETE /api/clientes/:id` nem `POST /api/clientes/excluir-em-massa`. A seleção da CC-09-D persiste ao trocar de página, então a ação disponível não funciona nesse caso. Voltar à página em que o card aparece é uma limitação, não a correção. A correção é condição para fechar a CC-09-E e não faz parte deste registro. Não foi reproduzida na tela: os 11 clientes cabiam em uma página de 20. Evidência lida em `src/app/features/clientes/pages/lista/clientes.component.ts`, no retorno quando o id não está na página.
+
+**Low.** A confirmação de um id visível mostra «Tem certeza que deseja excluir esse cliente?» e não mostra o nome. Não bloqueia o uso nem, sozinho, o fechamento.
+
+Evidência executada nesta Validation: 10 testes da API passaram e 45 testes da lista passaram. Em 390×844, um id visível abriu a confirmação individual e o cancelamento não excluiu cliente. Não houve exclusão real nem chamada dessa ação ao Postgres.
+
+### Validation da correção do achado Medium (2026-10-22)
+
+Disposição **Approved**. Nenhum achado Critical, High ou Medium nesta passagem. O registro anterior **Approved with Minor Issues** permanece com o veredito original. Esta seção não marca a jornada manual como executada e não marca os critérios. Não há arquivo em `docs/03-development/audits/`.
+
+**Medium — corrigido na worktree e validado.** A correção está em `src/app/features/clientes/pages/lista/clientes.component.ts` e `src/app/features/clientes/pages/lista/clientes.component.spec.ts`. O relatório de QA desta Validation atribui à suíte focada da lista e da seleção global o resultado 48 SUCCESS, exit 0, no comando `npx ng test --no-watch --browsers=ChromeHeadless` com esses dois specs. Um único id ausente de `this.itens` abre a confirmação individual. Abrir e cancelar não enviam DELETE nem POST. Confirmar chama `deleteCliente(id)` uma vez e não chama o POST em massa. A falha controlada do DELETE, feita com double e sem exclusão real, preserva a seleção e exibe o erro. A lista local tinha 11 clientes e cabia numa página de 20; o caminho fora da página não foi reproduzido pela paginação.
+
+**Low — aberto.** A confirmação individual continua «Tem certeza que deseja excluir esse cliente?». Não mostra o nome do cliente e não afirma que a exclusão é definitiva, como descreve a seção 9 do UX Flow. Não bloqueia o uso nem, sozinho, o fechamento. Esta correção não o resolve.
 
 ### Objective
 
@@ -979,13 +997,13 @@ CC-05, CC-07, CC-09-D (e predicados de CC-09-A/B para `allFiltered`).
 
 ### Acceptance Criteria
 
-Produto/UX já decididos. Continuam desmarcados porque a unidade não foi implementada:
+Produto/UX já decididos. Continuam desmarcados. Nem a Validation **Approved with Minor Issues** nem a Validation **Approved** da correção os marcam como concluídos:
 
 - [ ] A confirmação usa o texto da seção 9 do UX Flow, sem quantidade. Cancelar não envia o POST e mantém a seleção.
 - [ ] Sucesso total, parcial e nenhuma exclusão usam as três mensagens exatas dessa seção, sem sucesso total quando `blocked` ou `notFound` tem itens.
 - [ ] O resumo distingue excluídos, bloqueados e não encontrados só com os dados da resposta. `tipo` só aparece quando a resposta o trouxer.
 
-Técnicos, ainda não implementados e não marcados como aprovados por esta formalização:
+Técnicos. Continuam desmarcados. Nem a Validation original nem a Validation da correção os marcam como concluídos:
 
 - [ ] Confirmação existe para exclusão.
 - [ ] Modo `ids` e modo `allFiltered` estão implementados.

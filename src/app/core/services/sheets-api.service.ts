@@ -23,6 +23,8 @@ import {
   ClienteCadastroPayload,
   ClienteCreditoMovimento,
   ClientesListaPaginada,
+  ExcluirClientesEmMassaPayload,
+  ExcluirClientesEmMassaResultado,
   CriarClienteCreditoMovimentoPayload,
   CriarClienteCreditoMovimentoResponse,
   CreateAtendimentoPayload,
@@ -1403,6 +1405,18 @@ export class SheetsApiService {
         this.url(`/api/clientes/${encodeURIComponent(clienteId)}`),
       )
       .pipe(map((raw) => this.unwrap(raw)), map(() => undefined));
+  }
+
+  /** Exclusão em massa (CC-09-E). O envelope operacional sai de `unwrap`. */
+  excluirClientesEmMassa(
+    payload: ExcluirClientesEmMassaPayload,
+  ): Observable<ExcluirClientesEmMassaResultado> {
+    return this.http
+      .post<ApiResponse<ExcluirClientesEmMassaResultado>>(
+        this.url('/api/clientes/excluir-em-massa'),
+        payload,
+      )
+      .pipe(map((raw) => this.unwrap(raw)));
   }
 
   createAgendamento(

@@ -12,7 +12,11 @@ import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
 import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
-import { Cliente } from '../../../../core/models/api.models';
+import { extractApiErrorMessage } from '../../../../core/utils/api-error-message';
+import {
+  Cliente,
+  ExcluirClientesEmMassaPayload,
+} from '../../../../core/models/api.models';
 import { ClienteCadastroDrawerService } from '../../../../shared/cliente-cadastro-drawer/cliente-cadastro-drawer.service';
 import { ClienteAvatarComponent } from '../../../../shared/cliente-avatar/cliente-avatar.component';
 import { AppToastService } from '../../../../shared/app-toast/app-toast.service';
@@ -40,6 +44,12 @@ import {
   type ClientesListFilterPredicates,
   type ClientesSelectionState,
 } from './clientes-selection-state';
+import {
+  envelopeExclusaoMassa,
+  payloadAllFiltered,
+  resumoExclusaoMassa,
+  type ResumoExclusaoMassa,
+} from './clientes-exclusao-massa';
 
 const CLIENTES_BOTTOM_NAV_OWNER = 'clientes';
 const CLIENTES_SEARCH_DEBOUNCE_MS = 300;
@@ -128,8 +138,14 @@ export class ClientesComponent implements OnInit, OnDestroy {
   excluirModalSaindo = false;
   /** Deslocamento do centro do popover até o centro da tela. */
   excluirModalOrigem = { x: 0, y: 0 };
-  clientePendenteExclusao: Cliente | null = null;
+  /** Cliente da página, ou só o id quando a seleção explícita está em outra página. */
+  clientePendenteExclusao: Cliente | { id: string } | null = null;
   excluindoClienteModal = false;
+  /** Confirmação da exclusão em massa (CC-09-E), no mesmo modal. */
+  exclusaoEmMassaPendente = false;
+  excluindoEmMassa = false;
+  erroExclusaoMassa = '';
+  resultadoExclusaoMassa: ResumoExclusaoMassa | null = null;
   private readonly excluirModalSaidaMs = 200;
   private excluirModalTimer: ReturnType<typeof setTimeout> | null = null;
   private excluirModalRaf = 0;
@@ -405,17 +421,17 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   acoesMenuItens(): MobileListActionMenuItem[] {
-    // Exclusão em massa = CC-09-E; aqui só exclusão individual (1 id explícito).
-    const umIdExplicito =
-      !this.selectionState.allFiltered &&
-      this.selectionState.selecionados.size === 1;
+    const acionavel = hasActiveSelection(
+      this.selectionState,
+      this.totalServidor,
+    );
     return [
       {
         id: 'excluir',
         label: 'Excluir',
         icon: 'trash',
         danger: true,
-        disabled: !umIdExplicito,
+        disabled: !acionavel,
       },
     ];
   }
@@ -427,35 +443,52 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onItemAcaoSelecao(item: MobileListActionMenuItem): void {
+    if (item.id !== 'excluir' || item.disabled) return;
+    if (this.excluindoClienteModal || this.excluindoEmMassa) return;
+    if (!hasActiveSelection(this.selectionState, this.totalServidor)) return;
+
     if (
-      item.id !== 'excluir' ||
-      this.selectionState.allFiltered ||
-      this.selectionState.selecionados.size !== 1
+      !this.selectionState.allFiltered &&
+      this.selectionState.selecionados.size === 1
     ) {
+      const id = [...this.selectionState.selecionados][0]?.trim();
+      if (!id) return;
+      const cliente = this.itens.find((c) => c.id === id);
+      this.abrirConfirmacaoExclusaoIndividual(cliente ?? { id });
       return;
     }
-    const id = [...this.selectionState.selecionados][0];
-    const cliente = this.itens.find((c) => c.id === id);
-    if (!cliente) return;
-    this.onExcluirCliente(cliente);
+
+    this.abrirConfirmacaoExclusaoMassa();
   }
 
   carregar(): void {
     this.carregarLista();
   }
 
-  /** Recarrega a página atual da lista paginada (CC-09-A/B). */
-  private carregarLista(): void {
+  /**
+   * Recarrega a página atual da lista paginada (CC-09-A/B).
+   * `recuarSePaginaInexistente` só depois da exclusão em massa: se a página
+   * pedida passou do fim, busca a última página válida.
+   */
+  private carregarLista(recuarSePaginaInexistente = false): void {
     const seq = ++this.listaLoadSeq;
     this.listaLoadSub?.unsubscribe();
     this.carregando = true;
     this.erro = '';
+    const paginaPedida = this.pagina;
 
     this.listaLoadSub = this.api
       .listClientesPaginado(this.montarParamsListagem())
       .subscribe({
         next: (data) => {
           if (seq !== this.listaLoadSeq) return;
+          const totalPages = Number(data.totalPages ?? 0);
+          const ultimaValida = totalPages > 0 ? totalPages : 1;
+          if (recuarSePaginaInexistente && paginaPedida > ultimaValida) {
+            this.pagina = ultimaValida;
+            this.carregarLista(true);
+            return;
+          }
           this.itens = data.items ?? [];
           this.totalServidor = Number(data.total ?? 0);
           this.totalPaginasServidor = Number(data.totalPages ?? 0);
@@ -640,9 +673,20 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   onExcluirCliente(c: Cliente): void {
+    this.abrirConfirmacaoExclusaoIndividual(c);
+  }
+
+  /**
+   * Confirmação individual antes do DELETE. Sem o card na página, guarda só o id:
+   * o texto atual não usa nome e esta unidade não busca o cliente de novo.
+   */
+  private abrirConfirmacaoExclusaoIndividual(
+    c: Cliente | { id: string },
+  ): void {
     const id = c.id?.trim();
-    if (!id || this.excluindoClienteModal) return;
-    this.clientePendenteExclusao = c;
+    if (!id || this.excluindoClienteModal || this.excluindoEmMassa) return;
+    this.exclusaoEmMassaPendente = false;
+    this.clientePendenteExclusao = 'nome' in c ? c : { id };
     if (!this.shellBottomNavEligible) {
       this.excluirModalMontado = true;
       this.excluirModalAberto = true;
@@ -662,7 +706,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   fecharModalExcluirCliente(): void {
-    if (this.excluindoClienteModal) return;
+    if (this.excluindoClienteModal || this.excluindoEmMassa) return;
     if (!this.shellBottomNavEligible) {
       this.descartarModalExcluirCliente();
       return;
@@ -687,6 +731,7 @@ export class ClientesComponent implements OnInit, OnDestroy {
     this.excluirModalSaindo = false;
     this.excluirModalMontado = false;
     this.clientePendenteExclusao = null;
+    this.exclusaoEmMassaPendente = false;
   }
 
   private duracaoSaidaExcluirCliente(): number {
@@ -732,6 +777,10 @@ export class ClientesComponent implements OnInit, OnDestroy {
   }
 
   confirmarExcluirCliente(): void {
+    if (this.exclusaoEmMassaPendente) {
+      this.confirmarExcluirEmMassa();
+      return;
+    }
     const c = this.clientePendenteExclusao;
     const id = c?.id?.trim();
     if (!id || this.excluindoClienteModal) {
@@ -760,6 +809,104 @@ export class ClientesComponent implements OnInit, OnDestroy {
         this.excluindoClienteModal = false;
         this.erro =
           e.message || 'Não foi possível excluir o cliente. Tente novamente.';
+      },
+    });
+  }
+
+  textoIdsExclusaoMassa(ids: readonly string[]): string {
+    return ids.length ? ids.join(', ') : 'nenhum';
+  }
+
+  textoBloqueadosExclusaoMassa(
+    itens: readonly { id: string; tipo: string | null }[],
+  ): string {
+    if (!itens.length) return 'nenhum';
+    return itens
+      .map((item) => (item.tipo ? `${item.id} (${item.tipo})` : item.id))
+      .join(', ');
+  }
+
+  private payloadExclusaoMassa(): ExcluirClientesEmMassaPayload | null {
+    const state = this.selectionState;
+    if (!hasActiveSelection(state, this.totalServidor)) return null;
+    if (state.allFiltered) {
+      if (!state.snapshot) return null;
+      return payloadAllFiltered(state.snapshot, state.excludedIds);
+    }
+    if (state.selecionados.size < 2) return null;
+    return { mode: 'ids', ids: [...state.selecionados] };
+  }
+
+  private abrirConfirmacaoExclusaoMassa(): void {
+    if (this.excluindoEmMassa || this.excluindoClienteModal) return;
+    if (!this.payloadExclusaoMassa()) return;
+    this.exclusaoEmMassaPendente = true;
+    this.clientePendenteExclusao = null;
+    this.erroExclusaoMassa = '';
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
+    if (!this.shellBottomNavEligible) {
+      this.excluirModalMontado = true;
+      this.excluirModalAberto = true;
+      return;
+    }
+    this.excluirModalOrigem = this.medirOrigemPopoverAcoes();
+    this.limparAnimacaoExcluirCliente();
+    this.excluirModalSaindo = false;
+    this.excluirModalMontado = true;
+    this.excluirModalAberto = false;
+    this.excluirModalRaf = requestAnimationFrame(() => {
+      this.excluirModalRaf = requestAnimationFrame(() => {
+        this.excluirModalRaf = 0;
+        this.excluirModalAberto = true;
+      });
+    });
+  }
+
+  private confirmarExcluirEmMassa(): void {
+    if (this.excluindoEmMassa) return;
+    const payload = this.payloadExclusaoMassa();
+    if (!payload) {
+      this.fecharModalExcluirCliente();
+      return;
+    }
+    this.excluindoEmMassa = true;
+    this.erroExclusaoMassa = '';
+    this.api.excluirClientesEmMassa(payload).subscribe({
+      next: (data) => {
+        this.excluindoEmMassa = false;
+        if (!envelopeExclusaoMassa(data)) {
+          this.resultadoExclusaoMassa = null;
+          this.erroExclusaoMassa =
+            'Não foi possível excluir os clientes. Tente novamente.';
+          this.toast.showWarning(this.erroExclusaoMassa);
+          return;
+        }
+        const resumo = resumoExclusaoMassa(data);
+        this.descartarModalExcluirCliente();
+        this.resultadoExclusaoMassa = resumo;
+        this.erroExclusaoMassa = '';
+        if (resumo.mensagem) {
+          const sucessoTotal =
+            data.deleted.length > 0 &&
+            data.blocked.length === 0 &&
+            data.notFound.length === 0;
+          if (sucessoTotal) this.toast.show(resumo.mensagem);
+          else this.toast.showWarning(resumo.mensagem);
+        }
+        this.selectionState = clearClientesSelection();
+        this.acoesMenuAberto = false;
+        this.syncShellBottomNavActions();
+        this.carregarLista(true);
+      },
+      error: (e: unknown) => {
+        this.excluindoEmMassa = false;
+        this.resultadoExclusaoMassa = null;
+        this.erroExclusaoMassa = extractApiErrorMessage(
+          e,
+          'Não foi possível excluir os clientes. Tente novamente.',
+        );
+        this.toast.showWarning(this.erroExclusaoMassa);
       },
     });
   }

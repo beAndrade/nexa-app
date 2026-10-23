@@ -82,6 +82,39 @@ export type ClientesListaPaginada = {
   totalPages: number;
 };
 
+/** POST `/api/clientes/excluir-em-massa` — modo ids (CC-09-E). */
+export type ExcluirClientesEmMassaIdsPayload = {
+  mode: 'ids';
+  ids: string[];
+};
+
+/** POST `/api/clientes/excluir-em-massa` — modo allFiltered (CC-09-E). */
+export type ExcluirClientesEmMassaAllFilteredPayload = {
+  mode: 'allFiltered';
+  search: string | null;
+  status: string | null;
+  hasCellphone: boolean | null;
+  birthdayFrom: string | null;
+  birthdayTo: string | null;
+  excludedIds: string[];
+};
+
+export type ExcluirClientesEmMassaPayload =
+  | ExcluirClientesEmMassaIdsPayload
+  | ExcluirClientesEmMassaAllFilteredPayload;
+
+export type ExcluirClientesEmMassaBloqueado = {
+  id: string;
+  tipo?: string | null;
+};
+
+/** Envelope operacional da exclusão em massa. Os três grupos vêm sempre. */
+export type ExcluirClientesEmMassaResultado = {
+  deleted: string[];
+  blocked: ExcluirClientesEmMassaBloqueado[];
+  notFound: string[];
+};
+
 /** Linha do extrato de crédito (`GET /api/clientes/:id/credito-movimentos`). */
 export interface ClienteCreditoMovimento {
   id: string;

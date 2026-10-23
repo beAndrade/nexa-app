@@ -98,6 +98,7 @@ import {
   listClientesPaginado,
   parseClientesListFiltrosFromQuery,
 } from './services/clientes-listagem';
+import { executarExcluirClientesEmMassa } from './services/clientes-exclusao-massa';
 import { parseClienteCadastroBody } from './services/clientes-cadastro-normalize';
 import type { ClienteCadastroBody } from './services/clientes-cadastro-normalize';
 import {
@@ -1164,6 +1165,15 @@ const app = new Elysia({ adapter: node() })
     });
     return ok(data);
   })
+  .post(
+    '/api/clientes/excluir-em-massa',
+    async ({ body, set }) => {
+      const result = await executarExcluirClientesEmMassa(db, body);
+      set.status = result.status;
+      return result.body;
+    },
+    { body: t.Any() },
+  )
   .get(
     '/api/clientes/:id',
     async ({ params, set }) => {

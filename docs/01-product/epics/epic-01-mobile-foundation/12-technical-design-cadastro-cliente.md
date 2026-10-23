@@ -770,7 +770,7 @@ Ações na barra:
 
 A CC-09-D mantém e interpreta `excludedIds` no estado de seleção do frontend. Não envia `excludedIds` à API, não o coloca no GET e não implementa endpoint nem payload de ação em lote. Não habilita a exclusão em massa no modo global.
 
-A CC-09-E é dependência futura. Ao executar ação em lote no modo `allFiltered`, deverá receber e respeitar as exceções, no contrato de API formalizado para essa tarefa. Não apaga nem processa os registros de `excludedIds` como se estivessem selecionados. A contagem estimada no cliente não autoriza essa exclusão.
+A CC-09-E está implementada na worktree e não está fechada. Ao executar ação em lote no modo `allFiltered`, recebe e respeita as exceções, no contrato de API desta tarefa. Não apaga nem processa os registros de `excludedIds` como se estivessem selecionados. A contagem estimada no cliente não autoriza essa exclusão.
 
 #### Critérios técnicos de teste
 
@@ -836,7 +836,7 @@ Body — dois modos:
 }
 ```
 
-No modo `allFiltered`, os predicados são os **mesmos** do GET paginado da lista. Campos omitidos/`null` significam “sem esse filtro”. `excludedIds` é uma lista de strings já sem duplicata. Lista vazia ou campo ausente significa o conjunto filtrado sem exceção. O servidor aplica os mesmos predicados da lista e não trata esses IDs como selecionados. IDs que não estão no conjunto filtrado não alteram o efeito. A CC-09-D não envia esse campo. A CC-09-E ainda não está implementada.
+No modo `allFiltered`, os predicados são os **mesmos** do GET paginado da lista. Campos omitidos/`null` significam “sem esse filtro”. `excludedIds` é uma lista de strings já sem duplicata. Lista vazia ou campo ausente significa o conjunto filtrado sem exceção. O servidor aplica os mesmos predicados da lista e não trata esses IDs como selecionados. IDs que não estão no conjunto filtrado não alteram o efeito. A CC-09-D não envia esse campo. A CC-09-E está implementada na worktree, sem commit, e permanece aberta. A Validation original **Approved with Minor Issues** fica preservada. A Validation da correção do achado Medium está **Approved**.
 
 A confirmação não exibe quantidade e não chama endpoint de prévia. A estimativa `max(0, total − excludedIds)` não autoriza a exclusão. O texto e o fluxo estão no UX Flow, seção 9.
 

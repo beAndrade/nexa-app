@@ -220,6 +220,21 @@
     </aside>
 
     <div class="list-layout__main">
+      @if (resultadoExclusaoMassa) {
+        <div class="clientes-exclusao-massa-resultado" role="status">
+          @if (resultadoExclusaoMassa.mensagem) {
+            <p>{{ resultadoExclusaoMassa.mensagem }}</p>
+          }
+          <p>Excluídos: {{ textoIdsExclusaoMassa(resultadoExclusaoMassa.excluidos) }}</p>
+          <p>Bloqueados: {{ textoBloqueadosExclusaoMassa(resultadoExclusaoMassa.bloqueados) }}</p>
+          <p>Não encontrados: {{ textoIdsExclusaoMassa(resultadoExclusaoMassa.naoEncontrados) }}</p>
+        </div>
+      }
+
+      @if (erroExclusaoMassa) {
+        <p class="alert" role="alert">{{ erroExclusaoMassa }}</p>
+      }
+
       @if (erro) {
         <p class="alert" role="alert">{{ erro }}</p>
       }
@@ -575,17 +590,27 @@
       <div class="comandas-modal__icon-wrap" aria-hidden="true">
         <span class="comandas-modal__icon">!</span>
       </div>
-      <h3 id="clientes-excluir-modal-title" class="comandas-modal__title">
-        Atenção
-      </h3>
-      <p class="comandas-modal__text">
-        Tem certeza que deseja excluir esse cliente?
-      </p>
+      @if (exclusaoEmMassaPendente) {
+        <h3 id="clientes-excluir-modal-title" class="comandas-modal__title">
+          Deseja excluir os clientes selecionados?
+        </h3>
+        <p class="comandas-modal__text">
+          Os clientes com registros vinculados não poderão ser excluídos. Essa ação não pode ser desfeita.
+        </p>
+        <p class="comandas-modal__text">Deseja continuar?</p>
+      } @else {
+        <h3 id="clientes-excluir-modal-title" class="comandas-modal__title">
+          Atenção
+        </h3>
+        <p class="comandas-modal__text">
+          Tem certeza que deseja excluir esse cliente?
+        </p>
+      }
       <div class="comandas-modal__actions">
         <button
           type="button"
           class="comandas-modal__btn comandas-modal__btn--cancel"
-          [disabled]="excluindoClienteModal"
+          [disabled]="excluindoClienteModal || excluindoEmMassa"
           (click)="fecharModalExcluirCliente()"
         >
           Cancelar
@@ -593,10 +618,10 @@
         <button
           type="button"
           class="comandas-modal__btn comandas-modal__btn--confirm"
-          [disabled]="excluindoClienteModal"
+          [disabled]="excluindoClienteModal || excluindoEmMassa"
           (click)="confirmarExcluirCliente()"
         >
-          {{ excluindoClienteModal ? 'Excluindo…' : 'Sim, excluir' }}
+          {{ excluindoClienteModal || excluindoEmMassa ? 'Excluindo…' : 'Sim, excluir' }}
         </button>
       </div>
     </div>
