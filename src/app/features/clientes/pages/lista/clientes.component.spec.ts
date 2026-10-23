@@ -850,6 +850,11 @@ describe('ClientesComponent busca e bottom nav (CC-09-D)', () => {
 
 describe('ClientesComponent texto da confirmação em massa', () => {
   let fixture: ComponentFixture<ClientesComponent>;
+  let api: {
+    listClientesPaginado: jasmine.Spy;
+    deleteCliente: jasmine.Spy;
+    excluirClientesEmMassa: jasmine.Spy;
+  };
 
   beforeEach(async () => {
     spyOn(window, 'matchMedia').and.returnValue({
@@ -863,24 +868,28 @@ describe('ClientesComponent texto da confirmação em massa', () => {
       dispatchEvent: () => false,
     } as unknown as MediaQueryList);
 
+    api = {
+      listClientesPaginado: jasmine.createSpy('listClientesPaginado').and.returnValue(
+        of({
+          items: [],
+          total: 0,
+          totalPages: 0,
+          page: 1,
+          pageSize: 20,
+        }),
+      ),
+      deleteCliente: jasmine.createSpy('deleteCliente').and.returnValue(of(undefined)),
+      excluirClientesEmMassa: jasmine
+        .createSpy('excluirClientesEmMassa')
+        .and.returnValue(of({ deleted: [], blocked: [], notFound: [] })),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ClientesComponent],
       providers: [
         {
           provide: SheetsApiService,
-          useValue: {
-            listClientesPaginado: () =>
-              of({
-                items: [],
-                total: 0,
-                totalPages: 0,
-                page: 1,
-                pageSize: 20,
-              }),
-            deleteCliente: () => of(undefined),
-            excluirClientesEmMassa: () =>
-              of({ deleted: [], blocked: [], notFound: [] }),
-          },
+          useValue: api,
         },
         { provide: ClienteCadastroDrawerService, useValue: { isAberto: false } },
         {
@@ -927,5 +936,124 @@ describe('ClientesComponent texto da confirmação em massa', () => {
     );
     expect(texto).toContain('Deseja continuar?');
     expect(texto).not.toContain('cliente selecionado');
+  });
+
+  it('mostra o nome carregado e não dispara exclusão antes da confirmação', () => {
+    const component = fixture.componentInstance;
+    component.shellBottomNavEligible = false;
+
+    component.onExcluirCliente({ id: 'c1', nome: 'Maria Souza' } as Cliente);
+    fixture.detectChanges();
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Atenção');
+    expect(texto).toContain(
+      'Tem certeza que deseja excluir Maria Souza? Essa ação não pode ser desfeita.',
+    );
+    expect(api.deleteCliente).not.toHaveBeenCalled();
+    expect(api.excluirClientesEmMassa).not.toHaveBeenCalled();
+  });
+
+  it('nome ausente usa o fallback, não mostra o id e não dispara exclusão antes da confirmação', () => {
+    const component = fixture.componentInstance;
+    component.shellBottomNavEligible = false;
+
+    component.onExcluirCliente({
+      id: 'id-ausente',
+      nome: undefined,
+    } as unknown as Cliente);
+    fixture.detectChanges();
+
+    const texto =
+      (fixture.nativeElement.querySelector('.comandas-modal') as HTMLElement).textContent ??
+      '';
+    expect(texto).toContain('Atenção');
+    expect(texto).toContain(
+      'Tem certeza que deseja excluir esse cliente? Essa ação não pode ser desfeita.',
+    );
+    expect(texto).not.toContain('id-ausente');
+    expect(api.deleteCliente).not.toHaveBeenCalled();
+    expect(api.excluirClientesEmMassa).not.toHaveBeenCalled();
+  });
+
+  it('nome vazio ou só com espaços usa o fallback e não mostra o id', () => {
+    const component = fixture.componentInstance;
+    component.shellBottomNavEligible = false;
+
+    component.onExcluirCliente({ id: 'id-oculto', nome: '' } as Cliente);
+    fixture.detectChanges();
+
+    let texto = (fixture.nativeElement.querySelector('.comandas-modal') as HTMLElement)
+      .textContent ?? '';
+    expect(texto).toContain(
+      'Tem certeza que deseja excluir esse cliente? Essa ação não pode ser desfeita.',
+    );
+    expect(texto).not.toContain('id-oculto');
+
+    component.fecharModalExcluirCliente();
+    component.onExcluirCliente({ id: 'id-espacos', nome: '   ' } as Cliente);
+    fixture.detectChanges();
+
+    texto = (fixture.nativeElement.querySelector('.comandas-modal') as HTMLElement)
+      .textContent ?? '';
+    expect(texto).toContain('Atenção');
+    expect(texto).toContain(
+      'Tem certeza que deseja excluir esse cliente? Essa ação não pode ser desfeita.',
+    );
+    expect(texto).not.toContain('id-oculto');
+    expect(texto).not.toContain('id-espacos');
+    expect(texto).not.toContain('Maria Souza');
+    expect(api.deleteCliente).not.toHaveBeenCalled();
+    expect(api.excluirClientesEmMassa).not.toHaveBeenCalled();
+  });
+
+  it('id fora da página usa o fallback; cancelar não chama API e confirmar chama deleteCliente uma vez', () => {
+    const component = fixture.componentInstance;
+    component.shellBottomNavEligible = false;
+    component.itens = [{ id: 'na-pagina', nome: 'Na Página' } as Cliente];
+    component.totalServidor = 2;
+    component.selectionState = {
+      selecionados: new Set(['id-fora']),
+      allFiltered: false,
+      snapshot: null,
+      excludedIds: new Set(),
+    };
+
+    component.onItemAcaoSelecao({
+      id: 'excluir',
+      label: 'Excluir',
+      icon: 'trash',
+      danger: true,
+    });
+    fixture.detectChanges();
+
+    expect(component.clientePendenteExclusao).toEqual({ id: 'id-fora' });
+    const modal = fixture.nativeElement.querySelector('.comandas-modal') as HTMLElement;
+    const texto = modal.textContent ?? '';
+    expect(texto).toContain(
+      'Tem certeza que deseja excluir esse cliente? Essa ação não pode ser desfeita.',
+    );
+    expect(texto).not.toContain('id-fora');
+    expect(texto).not.toContain('Na Página');
+    expect(api.deleteCliente).not.toHaveBeenCalled();
+    expect(api.excluirClientesEmMassa).not.toHaveBeenCalled();
+
+    component.fecharModalExcluirCliente();
+    fixture.detectChanges();
+
+    expect(api.deleteCliente).not.toHaveBeenCalled();
+    expect(api.excluirClientesEmMassa).not.toHaveBeenCalled();
+    expect([...component.selectionState.selecionados]).toEqual(['id-fora']);
+
+    component.onItemAcaoSelecao({
+      id: 'excluir',
+      label: 'Excluir',
+      icon: 'trash',
+      danger: true,
+    });
+    component.confirmarExcluirCliente();
+
+    expect(api.deleteCliente).toHaveBeenCalledOnceWith('id-fora');
+    expect(api.excluirClientesEmMassa).not.toHaveBeenCalled();
   });
 });

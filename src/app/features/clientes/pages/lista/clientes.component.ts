@@ -676,9 +676,16 @@ export class ClientesComponent implements OnInit, OnDestroy {
     this.abrirConfirmacaoExclusaoIndividual(c);
   }
 
+  nomeConfirmacaoIndividual(): string | null {
+    const pendente = this.clientePendenteExclusao;
+    if (!pendente || !('nome' in pendente)) return null;
+    const nome = pendente.nome?.trim();
+    return nome ? nome : null;
+  }
+
   /**
-   * Confirmação individual antes do DELETE. Sem o card na página, guarda só o id:
-   * o texto atual não usa nome e esta unidade não busca o cliente de novo.
+   * Confirmação individual antes do DELETE. Sem o card na página, guarda só o id.
+   * O texto usa o nome já carregado e esta unidade não busca o cliente de novo.
    */
   private abrirConfirmacaoExclusaoIndividual(
     c: Cliente | { id: string },
