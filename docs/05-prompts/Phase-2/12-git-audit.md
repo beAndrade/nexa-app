@@ -13,10 +13,10 @@ Use este modo só quando o canônico o indicar. Ele é somente leitura e não fa
 1. Confirme a branch, o HEAD e `git status --short`.
 2. Liste os caminhos alterados e leia o conteúdo efetivo do diff de cada um. `git diff --stat` não basta como evidência.
 3. Confirme que cada caminho e o conteúdo da alteração pertencem à unidade autorizada.
-4. Se aparecer arquivo fora da unidade, segredo, dúvida relevante sobre um caminho, ou problema que impeça o uso seguro da unidade, pare. O resultado é `BLOCKED`. Não faça staging.
+4. Se aparecer segredo, dúvida relevante sobre um caminho, ou problema que impeça o uso seguro da unidade, pare. O resultado é `BLOCKED`. Não faça staging. Arquivo fora da unidade também produz `BLOCKED`. A exceção de line endings se aplica exclusivamente ao caminho que cumprir integralmente todas as condições da seção “Diferença exclusiva de line endings”: registre esse caminho no relatório; ele, sozinho, não produz `BLOCKED`. Qualquer outro caminho fora da unidade autorizada produz `BLOCKED`.
 5. Se todas as verificações passarem, o resultado é `DIRECT REVIEW PASSED`. Esse resultado não equivale a `READY FOR STAGING` e não autoriza staging nem commit.
 
-Comandos de leitura permitidos: `git status`, `git branch`, `git rev-parse`, `git log`, `git diff`. Não use outros comandos Git.
+Comandos de leitura permitidos: `git status`, `git branch`, `git rev-parse`, `git log`, `git diff`. `git hash-object` e `git cat-file -s` são comandos adicionais, permitidos exclusivamente para verificar as condições da seção “Diferença exclusiva de line endings”. Esses dois comandos são só leitura. Essa permissão não substitui a lista geral de comandos de leitura nem autoriza outros comandos Git. Nenhum deles autoriza `git add`, `git update-index`, checkout, restore, reset nem mudança de line endings.
 
 ## Protocolo completo
 
@@ -42,18 +42,38 @@ Sem a lista autorizada, o status é `BLOCKED`. Não monte o escopo a partir do q
 1. Confirme a branch atual, o HEAD e `git status --short`.
 2. Separe o que está staged, unstaged e untracked.
 3. Leia `git diff --stat` e o diff dos caminhos relevantes, incluindo staged e unstaged.
-4. Compare cada caminho modificado, staged ou untracked com a lista autorizada e com as exclusões.
-5. Marque contaminação de outra unidade, arquivo inesperado, exclusão violada e alteração fora do escopo.
+4. Compare cada caminho modificado, staged ou untracked com a lista autorizada e com as exclusões. O caminho da exclusão explícita que cumprir a seção “Diferença exclusiva de line endings” não entra na conta de caminhos alterados e não é alteração real de conteúdo fora da lista. O relatório registra o caminho, a causa confirmada e os comandos usados. A leitura dos demais caminhos continua obrigatória.
+5. Marque contaminação de outra unidade, arquivo inesperado, exclusão violada e alteração fora do escopo. Essa marcação não se aplica ao caminho retirado da conta no passo 4.
 6. Se a unidade já tiver mensagem de commit aprovada, reproduza essa mensagem. Se não tiver, sugira uma mensagem no estilo do repositório. Não execute o commit.
 7. Se o status for `READY FOR STAGING`, entregue a lista exata de caminhos para seleção manual no SourceTree.
 
-Comandos de leitura permitidos: `git status`, `git branch`, `git rev-parse`, `git log`, `git diff`. Não use outros comandos Git.
+Comandos de leitura permitidos: `git status`, `git branch`, `git rev-parse`, `git log`, `git diff`. `git hash-object` e `git cat-file -s` são comandos adicionais, permitidos exclusivamente para verificar as condições da seção “Diferença exclusiva de line endings”. Esses dois comandos são só leitura. Essa permissão não substitui a lista geral de comandos de leitura nem autoriza outros comandos Git. Nenhum deles autoriza `git add`, `git update-index`, checkout, restore, reset nem mudança de line endings.
+
+---
+
+## Diferença exclusiva de line endings
+
+Esta seção não autoriza staging, commit, push, checkout, restore, reset, `git add`, `git update-index` nem normalização. Não altera arquivo, configuração Git, índice nem worktree.
+
+O caminho só cumpre esta seção quando todas as verificações abaixo forem verdadeiras. Compare os valores sem gravar o arquivo:
+
+a. O caminho está na exclusão explícita da unidade.
+b. O blob do HEAD, saída de `git rev-parse "HEAD:<caminho>"`, e o blob do índice, saída de `git rev-parse ":<caminho>"`, são o mesmo identificador.
+c. `git diff --cached -- <caminho>` não mostra hunk. Não há conteúdo staged desse caminho.
+d. Estes comandos também não mostram hunk: `git diff -- <caminho>`, `git diff HEAD -- <caminho>`, `git diff --raw -- <caminho>` e `git diff --numstat -- <caminho>`.
+e. `git hash-object --no-filters -- <caminho>` é diferente desse identificador.
+f. `git hash-object --path=<caminho> -- <caminho>` é igual a esse identificador. Esse comando aplica a conversão limpa do repositório para esse caminho.
+g. `git cat-file -s <identificador>` é o tamanho do blob, em bytes. No arquivo em disco, conte os bytes CR (13) e LF (10). O tamanho em disco menos a quantidade de CR é igual ao tamanho do blob. A quantidade de CR é igual à de LF.
+
+Se uma condição falhar, o caminho continua alterado e fora da lista. Diff vazio, sem essa prova, não basta. Status sujo com o hash cru igual ao blob também não cumpre esta seção: não há diferença exclusiva de line endings.
+
+Arquivo untracked continua obrigatório na comparação com a lista. Conteúdo staged fora da lista continua bloqueando. Diferença real de conteúdo fora da lista continua bloqueando.
 
 ---
 
 ## Critérios de bloqueio
 
-`READY FOR STAGING` somente quando todos os caminhos alterados estão na lista autorizada, nenhum caminho autorizado obrigatório ficou de fora sem justificativa da unidade, e branch e HEAD batem com o estado esperado.
+`READY FOR STAGING` somente quando cada caminho alterado está na lista autorizada ou cumpre a seção “Diferença exclusiva de line endings”, nenhum caminho autorizado obrigatório ficou de fora sem justificativa da unidade, e branch e HEAD batem com o estado esperado.
 
 `BLOCKED` quando houver contaminação, arquivo inesperado, exclusão violada, dúvida sobre um caminho, ou estado Git inconsistente com o que a tarefa informou.
 
