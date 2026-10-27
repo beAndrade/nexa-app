@@ -1,7 +1,7 @@
 # Sprint Plan — Cadastro de Cliente
 
 **Tipo:** Sprint Planning  
-**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D ✅ (`2526ee6`, QA independente **Approved** em 2026-10-20); CC-09-E: implementação original commitada em `4783fdb172f8c51f49ab136030170bb78857c2af` (`feat(clientes): exclusão em massa de clientes`), atualização anterior do estado commitada em `1cc3a224da7cffe84a696e18c5546acb1a28d2c0` (`docs(clientes): atualiza estado da CC-09-E`), correção do achado Low e atualizações documentais correspondentes commitadas em `b7186b2e3a33dc2c0fc583f0fe3c0c891f6dca11` (`fix(clientes): melhora confirmação de exclusão individual`), Validation original **Approved with Minor Issues** preservada, Validation da correção do achado Medium **Approved** (2026-10-22), correção do achado Low com Design & UX **APPROVED** e Validation **Approved** (2026-10-23), unidade aberta, critérios desmarcados; CC-09-F…G não iniciadas  
+**Status:** Em execução — CC-01 a CC-08 ✅; CC-09-A ✅ (`6df4f87`); CC-09-B ✅ (`9d1a444`); CC-09-C ✅ (`11dff65`, QA Approved, documentação concluída); CC-09-D ✅ (`2526ee6`, QA independente **Approved** em 2026-10-20); CC-09-E: implementação original commitada em `4783fdb172f8c51f49ab136030170bb78857c2af` (`feat(clientes): exclusão em massa de clientes`), atualização anterior do estado commitada em `1cc3a224da7cffe84a696e18c5546acb1a28d2c0` (`docs(clientes): atualiza estado da CC-09-E`), correção do achado Low e atualizações documentais correspondentes commitadas em `b7186b2e3a33dc2c0fc583f0fe3c0c891f6dca11` (`fix(clientes): melhora confirmação de exclusão individual`), Validation original **Approved with Minor Issues** preservada, Validation da correção do achado Medium **Approved** (2026-10-22), correção do achado Low com Design & UX **APPROVED** e Validation **Approved** (2026-10-23). Jornada manual executada em 2026-10-23; unidade fechada; critérios comprovados nessa jornada marcados; pedido inválido e exceção inesperada permanecem desmarcados. Esta passagem não refaz QA. CC-09-F…G não iniciadas  
 **Feature:** Cadastro de Cliente  
 **Epic:** EPIC-01 — Mobile Foundation  
 
@@ -943,7 +943,7 @@ Modelo de seleção reproduz a semântica global do conjunto filtrado (`vazia | 
 
 ## CC-09-E — Ações e exclusão protegida
 
-**Estado (2026-10-23):** implementação original commitada em `4783fdb172f8c51f49ab136030170bb78857c2af` (`feat(clientes): exclusão em massa de clientes`). Atualização anterior do estado commitada em `1cc3a224da7cffe84a696e18c5546acb1a28d2c0` (`docs(clientes): atualiza estado da CC-09-E`). Correção do achado Low e atualizações documentais correspondentes commitadas em `b7186b2e3a33dc2c0fc583f0fe3c0c891f6dca11` (`fix(clientes): melhora confirmação de exclusão individual`). A autorização de implementação veio do Architecture Review **APPROVED**. Design & UX Review **APPROVED**. Global Consistency Check **CONSISTENT**. A Validation original permanece **Approved with Minor Issues**. A correção do achado Medium passou por Architecture Review **APPROVED**, Design & UX Review **APPROVED** e Validation **Approved**. A correção do achado Low passou por Design & UX Review **APPROVED** e Validation **Approved** (2026-10-23). A unidade **não** está fechada. O achado Medium está corrigido e validado. O achado Low está corrigido e validado. O commit da correção do Low e das atualizações documentais correspondentes não fecha a unidade. Os ajustes de Produto/UX estão no UX Flow, seção 9. O resumo usa ids e, em `blocked`, `tipo`. Nome de cliente não entra no payload. Os critérios seguem desmarcados.
+**Estado (2026-10-23):** implementação original commitada em `4783fdb172f8c51f49ab136030170bb78857c2af` (`feat(clientes): exclusão em massa de clientes`). Atualização anterior do estado commitada em `1cc3a224da7cffe84a696e18c5546acb1a28d2c0` (`docs(clientes): atualiza estado da CC-09-E`). Correção do achado Low e atualizações documentais correspondentes commitadas em `b7186b2e3a33dc2c0fc583f0fe3c0c891f6dca11` (`fix(clientes): melhora confirmação de exclusão individual`). A autorização de implementação veio do Architecture Review **APPROVED**. Design & UX Review **APPROVED**. Global Consistency Check **CONSISTENT**. A Validation original permanece **Approved with Minor Issues**. A correção do achado Medium passou por Architecture Review **APPROVED**, Design & UX Review **APPROVED** e Validation **Approved**. A correção do achado Low passou por Design & UX Review **APPROVED** e Validation **Approved** (2026-10-23). O achado Medium está corrigido e validado. O achado Low está corrigido e validado. O commit da correção do Low e das atualizações documentais correspondentes não fecha a unidade. Os ajustes de Produto/UX estão no UX Flow, seção 9. O resumo usa ids e, em `blocked`, `tipo`. Nome de cliente não entra no payload. Jornada manual executada em 2026-10-23 no navegador, em 390×844, com a lista já autenticada. Visto: cancelar a confirmação em massa não enviou `POST /api/clientes/excluir-em-massa` nem `DELETE /api/clientes/:id` e manteve Alpha (CL0013) e Bravo (CL0014) selecionados; o texto foi o da seção 9, sem quantidade. DELETE individual de CL0013, com a seleção ainda marcada em «Excluindo…» e limpa só depois da resposta 200; a recarga manteve `search=CC09EVAL`, `hasCellphone=true` e `pageSize=50`. POST `mode: allFiltered` com `search: CC09EVAL`, `hasCellphone: true` e `excludedIds` CL0014, CL0018 e CL0019; `deleted` CL0015, CL0016 e CL0017; os três excluídos saíram e os desmarcados ficaram; o cliente não carregou a lista positiva de ids. POST `mode: ids` com `ids` CL0018 e CL0019 depois de CL0018 já ter sido removido: `deleted` CL0019 e `notFound` CL0018. POST `allFiltered` da busca `Joana`: `blocked` CL0009 com `tipo` `atendimentos`, `deleted` vazio. POST `ids` de CL0014 e CL0009: `deleted` CL0014 e `blocked` CL0009 com `tipo` `atendimentos`. Joana permaneceu; 1 atendimento e 1 comanda antes e depois. As três mensagens da seção 9 apareceram com o texto exato. O resumo usou só ids e, no bloqueio, `tipo`. Pedido inválido e exceção inesperada de `deleteClienteById` não foram exercidos; esses critérios permanecem desmarcados. Os demais critérios comprovados por esta jornada estão marcados. Esta passagem não refaz QA. A unidade fica fechada.
 
 ### Validation (2026-10-22)
 
@@ -1003,23 +1003,23 @@ CC-05, CC-07, CC-09-D (e predicados de CC-09-A/B para `allFiltered`).
 
 ### Acceptance Criteria
 
-Produto/UX já decididos. Continuam desmarcados. Nem a Validation **Approved with Minor Issues**, nem a Validation **Approved** da correção do Medium, nem a Validation **Approved** da correção do Low os marcam como concluídos:
+Produto/UX já decididos. As Validations anteriores não os marcam. A jornada manual de 2026-10-23 marca os três:
 
-- [ ] A confirmação usa o texto da seção 9 do UX Flow, sem quantidade. Cancelar não envia o POST e mantém a seleção.
-- [ ] Sucesso total, parcial e nenhuma exclusão usam as três mensagens exatas dessa seção, sem sucesso total quando `blocked` ou `notFound` tem itens.
-- [ ] O resumo distingue excluídos, bloqueados e não encontrados só com os dados da resposta. `tipo` só aparece quando a resposta o trouxer.
+- [x] A confirmação usa o texto da seção 9 do UX Flow, sem quantidade. Cancelar não envia o POST e mantém a seleção.
+- [x] Sucesso total, parcial e nenhuma exclusão usam as três mensagens exatas dessa seção, sem sucesso total quando `blocked` ou `notFound` tem itens.
+- [x] O resumo distingue excluídos, bloqueados e não encontrados só com os dados da resposta. `tipo` só aparece quando a resposta o trouxer.
 
-Técnicos. Continuam desmarcados. Nem a Validation original, nem a Validation da correção do Medium, nem a Validation da correção do Low os marcam como concluídos:
+Técnicos. As Validations anteriores não os marcam. A jornada manual de 2026-10-23 marca os que foram comprovados. Pedido inválido e exceção inesperada permanecem desmarcados:
 
-- [ ] Confirmação existe para exclusão.
-- [ ] Modo `ids` e modo `allFiltered` estão implementados.
-- [ ] No modo `allFiltered`, os IDs em `excludedIds` não são apagados nem processados como selecionados.
-- [ ] Cada cliente respeita 404/409/200 do DELETE CC-05.
-- [ ] Falha individual não cancela exclusões válidas.
-- [ ] Resultado informa excluídos, bloqueados e não encontrados.
-- [ ] Nenhum filho é apagado.
-- [ ] Seleção é limpa só após resposta operacional.
-- [ ] Busca, filtros e page size são preservados; página recalculada se necessário.
+- [x] Confirmação existe para exclusão.
+- [x] Modo `ids` e modo `allFiltered` estão implementados.
+- [x] No modo `allFiltered`, os IDs em `excludedIds` não são apagados nem processados como selecionados.
+- [x] Cada cliente respeita 404/409/200 do DELETE CC-05.
+- [x] Falha individual não cancela exclusões válidas.
+- [x] Resultado informa excluídos, bloqueados e não encontrados.
+- [x] Nenhum filho é apagado.
+- [x] Seleção é limpa só após resposta operacional.
+- [x] Busca, filtros e page size são preservados; página recalculada se necessário.
 - [ ] Pedido inválido não apaga registros e não altera a seleção.
 - [ ] Exceção inesperada de `deleteClienteById` interrompe os itens seguintes, não devolve o envelope dos três grupos e mantém a seleção. O item da exceção não entra em `deleted`, `blocked` nem `notFound`.
 
@@ -1027,7 +1027,9 @@ Listar nome de cliente no resumo exigiria campo que o payload aprovado não tem.
 
 ### Manual Validation
 
-Misturar clientes sem relação e com cada tipo de relação protegida. Conferir as três mensagens e o resumo. Cancelar não envia o POST. Testar Excluir com seleção da página e com “Selecionar tudo” (`allFiltered`) sem carregar todos os IDs no cliente. Esta descrição não marca a jornada como executada.
+Misturar clientes sem relação e com cada tipo de relação protegida. Conferir as três mensagens e o resumo. Cancelar não envia o POST. Testar Excluir com seleção da página e com “Selecionar tudo” (`allFiltered`) sem carregar todos os IDs no cliente.
+
+Jornada executada em 2026-10-23. O bloqueio visto foi `atendimentos` em CL0009 (Joana), que também tem 1 comanda; a API devolveu o primeiro `tipo`. Comandas, créditos, avaliações e mensagens não foram o `tipo` devolvido: nos clientes locais com essas relações, atendimento vem antes. Pedido inválido e exceção inesperada não foram exercidos.
 
 ### Build / Test
 
