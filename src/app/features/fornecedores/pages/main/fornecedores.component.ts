@@ -9,18 +9,32 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import type { FornecedorItem } from '../../../../core/models/api.models';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 import { AppToastService } from '../../../../shared/app-toast/app-toast.service';
 import { FornecedorCadastroDrawerService } from '../../../../shared/fornecedor-cadastro-drawer/fornecedor-cadastro-drawer.service';
 import { UI_TIP_SHOW_DELAY_MS } from '../../../../shared/ui-tip-trigger/ui-tip-delay';
 import { UiTipTriggerComponent } from '../../../../shared/ui-tip-trigger/ui-tip-trigger.component';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import {
+  MobileListActionMenuItem,
+  MobileListActionsMenuComponent,
+} from '../../../../shared/components/mobile-list-actions-menu/mobile-list-actions-menu.component';
+import {
+  areAllSelected,
+  buildSelectionBottomNavActions,
+  selectAllIds,
+  toggleId,
+} from '../../../../shared/mobile-list-selection/mobile-list-selection';
 
 /** Item da lista de fornecedores. */
 export type FornecedorListaItem = FornecedorItem;
 
 const FORNECEDOR_EXCLUIDO_TOAST_MSG = 'Fornecedor excluído com sucesso!';
+const FORNECEDORES_BOTTOM_NAV_OWNER = 'fornecedores';
 
 type OrdenacaoNome = 'asc' | 'desc';
 
@@ -61,6 +75,8 @@ const FORNECEDORES_COLUNAS_PADRAO: FornecedorColunaId[] = [
     TableEmptyComponent,
     FormsModule,
     UiTipTriggerComponent,
+    MobileFiltrosSheetComponent,
+    MobileListActionsMenuComponent,
   ],
   templateUrl: './fornecedores.component.html',
   styleUrl: './fornecedores.component.scss',
@@ -69,7 +85,23 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
   private readonly api = inject(SheetsApiService);
   private readonly toast = inject(AppToastService);
   private readonly fornecedorDrawer = inject(FornecedorCadastroDrawerService);
+  private readonly shellUi = inject(AppShellUiService);
   private readonly destroyRef = inject(DestroyRef);
+
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (!this.shellBottomNavEligible && this.modoSelecao) {
+      this.modoSelecao = false;
+      this.acoesMenuAberto = false;
+      this.selecionados.clear();
+      this.limparFeedbackSelecionarTudo();
+    }
+    if (!this.shellBottomNavEligible && this.filtrosAbertos) {
+      // Desktop usa o aside; não força fechar ao cruzar o breakpoint.
+    }
+    this.syncShellBottomNavActions();
+  };
 
   carregando = false;
   erro = '';
@@ -96,6 +128,14 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
   perPageMenuAberto = false;
   selecionados = new Set<number>();
 
+  /** ≤767px: bottom nav contextual (Filtro · Selecionar · Novo). */
+  shellBottomNavEligible = false;
+  modoSelecao = false;
+  acoesMenuAberto = false;
+  selecionarTudoBusy = false;
+  private selecionarTudoFeedbackTimer: ReturnType<typeof setTimeout> | null =
+    null;
+
   ordenacaoNome: OrdenacaoNome = 'asc';
   nomeSortTipVisivel = false;
   private nomeSortTipSuprimida = false;
@@ -115,6 +155,7 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.carregarColunasSalvas();
+    this.setupShellBottomNav();
     this.carregar();
     this.fornecedorDrawer.salvo$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -129,6 +170,228 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearNomeSortTipShowTimer();
     this.clearColunasMenuAnimTimer();
+    this.limparFeedbackSelecionarTudo();
+    window.clearTimeout(this.tPulsoBusca);
+    window.clearTimeout(this.tPulsoFiltro);
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(FORNECEDORES_BOTTOM_NAV_OWNER);
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Menu no shell. Normal: Filtro · Selecionar · Novo.
+   * Em seleção: Cancelar · Selecionar tudo · Ações (editar/excluir unitários).
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(FORNECEDORES_BOTTOM_NAV_OWNER);
+      return;
+    }
+    if (this.modoSelecao) {
+      const actions = buildSelectionBottomNavActions(
+        this.todosFiltradosSelecionados(),
+        {
+          onCancel: () => this.sairModoSelecao(),
+          onSelectAll: () => this.selecionarTodosMobile(),
+          onActions: () => this.onAcoesSelecao(),
+          selectAllAriaLabel: 'Selecionar todos os fornecedores filtrados',
+        },
+      );
+      const acoes = actions.find((action) => action.id === 'acoes');
+      if (acoes) acoes.active = this.acoesMenuAberto;
+      const selecionarTudo = actions.find(
+        (action) => action.id === 'selecionar-tudo',
+      );
+      if (selecionarTudo) selecionarTudo.busy = this.selecionarTudoBusy;
+      this.shellUi.setMobileBottomNavActions(
+        FORNECEDORES_BOTTOM_NAV_OWNER,
+        actions,
+      );
+      return;
+    }
+    this.shellUi.setMobileBottomNavActions(FORNECEDORES_BOTTOM_NAV_OWNER, [
+      {
+        id: 'filtro',
+        label: 'Filtro',
+        ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: this.filtrosAbertos,
+        warn: this.temFiltroAtivo() && !this.filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+      {
+        id: 'selecionar',
+        label: 'Selecionar',
+        ariaLabel: 'Selecionar fornecedores',
+        icon: 'check',
+        active: false,
+        onClick: () => this.entrarModoSelecao(),
+      },
+      {
+        id: 'novo',
+        label: 'Novo',
+        ariaLabel: 'Novo fornecedor',
+        icon: 'plus',
+        accent: true,
+        onClick: () => this.onNovo(),
+      },
+    ]);
+  }
+
+  private onFiltroMobile(): void {
+    this.filtrosAbertos = !this.filtrosAbertos;
+    this.syncShellBottomNavActions();
+  }
+
+  fecharFiltros(): void {
+    if (!this.filtrosAbertos) return;
+    this.filtrosAbertos = false;
+    this.syncShellBottomNavActions();
+  }
+
+  entrarModoSelecao(): void {
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
+    this.modoSelecao = true;
+    this.syncShellBottomNavActions();
+  }
+
+  sairModoSelecao(): void {
+    this.modoSelecao = false;
+    this.acoesMenuAberto = false;
+    this.limparFeedbackSelecionarTudo();
+    this.selecionados.clear();
+    this.syncShellBottomNavActions();
+  }
+
+  todosFiltradosSelecionados(): boolean {
+    return areAllSelected(
+      this.filtrados().map((f) => f.id),
+      this.selecionados,
+    );
+  }
+
+  selecionarTodosMobile(): void {
+    this.selecionados = selectAllIds(
+      this.selecionados,
+      this.filtrados().map((f) => f.id),
+    );
+    this.dispararFeedbackSelecionarTudo();
+    this.syncShellBottomNavActions();
+  }
+
+  private dispararFeedbackSelecionarTudo(): void {
+    this.limparFeedbackSelecionarTudo();
+    this.selecionarTudoBusy = true;
+    this.selecionarTudoFeedbackTimer = setTimeout(() => {
+      this.selecionarTudoFeedbackTimer = null;
+      this.selecionarTudoBusy = false;
+      if (this.modoSelecao) this.syncShellBottomNavActions();
+    }, 250);
+  }
+
+  private limparFeedbackSelecionarTudo(): void {
+    if (this.selecionarTudoFeedbackTimer != null) {
+      clearTimeout(this.selecionarTudoFeedbackTimer);
+      this.selecionarTudoFeedbackTimer = null;
+    }
+    this.selecionarTudoBusy = false;
+  }
+
+  private onAcoesSelecao(): void {
+    this.acoesMenuAberto = !this.acoesMenuAberto;
+    this.syncShellBottomNavActions();
+  }
+
+  acoesMenuItens(): MobileListActionMenuItem[] {
+    const um = this.selecionados.size === 1;
+    return [
+      {
+        id: 'editar',
+        label: 'Editar',
+        ariaLabel: 'Editar fornecedor selecionado',
+        disabled: !um,
+      },
+      {
+        id: 'excluir',
+        label: 'Excluir',
+        ariaLabel: 'Excluir fornecedor selecionado',
+        icon: 'trash',
+        danger: true,
+        disabled: !um,
+      },
+    ];
+  }
+
+  onAcoesMenuOpenChange(open: boolean): void {
+    if (open || !this.acoesMenuAberto) return;
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
+  }
+
+  onItemAcaoSelecao(item: MobileListActionMenuItem): void {
+    if (this.selecionados.size !== 1) return;
+    const id = [...this.selecionados][0];
+    const fornecedor = this.itens.find((f) => f.id === id);
+    if (!fornecedor) return;
+    if (item.id === 'editar') {
+      this.sairModoSelecao();
+      this.onEditarFornecedor(fornecedor);
+      return;
+    }
+    if (item.id === 'excluir') this.onExcluirFornecedor(fornecedor);
+  }
+
+  onMobileCardClick(f: FornecedorListaItem, ev: Event): void {
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.selecionados = toggleId(this.selecionados, f.id);
+      this.syncShellBottomNavActions();
+      return;
+    }
+    this.onAbrirFornecedor(f);
+  }
+
+  temFiltroAtivo(): boolean {
+    return this.chipsFiltrosMobile().length > 0;
+  }
+
+  /** Chips só quando Status ≠ padrão (só Ativos). */
+  chipsFiltrosMobile(): { id: string; label: string }[] {
+    const chips: { id: string; label: string }[] = [];
+    if (this.filtroStatusAtivos && this.filtroStatusInativos) {
+      chips.push({ id: 'status', label: 'Status: Ativos e Inativos' });
+    } else if (!this.filtroStatusAtivos && this.filtroStatusInativos) {
+      chips.push({ id: 'status', label: 'Status: Inativos' });
+    }
+    return chips;
+  }
+
+  removerChipFiltro(id: string, ev: Event): void {
+    ev.stopPropagation();
+    if (id !== 'status') return;
+    this.filtroStatusAtivos = true;
+    this.filtroStatusInativos = false;
+    this.pagina = 1;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
+  }
+
+  labelListaVazia(): string {
+    if (this.itens.length === 0) return 'Nenhum fornecedor cadastrado';
+    return 'Nenhum fornecedor encontrado';
+  }
+
+  contatoSecundario(f: FornecedorListaItem): string {
+    const celular = this.exibirTexto(f.celular);
+    if (celular) return celular;
+    return this.exibirTexto(f.telefone);
   }
 
   carregar(): void {
@@ -143,6 +406,7 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
         this.carregando = false;
         this.pagina = 1;
         this.selecionados.clear();
+        if (this.modoSelecao) this.syncShellBottomNavActions();
       },
       error: (e: Error) => {
         this.erro =
@@ -208,6 +472,7 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
     ev?.stopPropagation();
     this.dispararPulsoToolbar('filtro');
     this.filtrosAbertos = !this.filtrosAbertos;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   toggleFiltroStatus(which: 'ativos' | 'inativos', ev: Event): void {
@@ -219,9 +484,11 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
       else this.filtroStatusAtivos = true;
     }
     this.pagina = 1;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   onNovo(): void {
+    if (this.modoSelecao) this.sairModoSelecao();
     this.fornecedorDrawer.abrirNovo();
   }
 
@@ -253,6 +520,7 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
         this.exclusaoModalSalvando = false;
         this.exclusaoModalItem = null;
         this.selecionados.delete(item.id);
+        if (this.modoSelecao) this.sairModoSelecao();
         this.toast.show(
           res.result === 'deactivated'
             ? 'Fornecedor desativado (já vinculado a outros registros).'
@@ -377,6 +645,7 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
     const checked = (ev.target as HTMLInputElement).checked;
     if (checked) this.selecionados.add(f.id);
     else this.selecionados.delete(f.id);
+    if (this.modoSelecao) this.syncShellBottomNavActions();
   }
 
   todosDaPaginaSelecionados(): boolean {
@@ -390,6 +659,7 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
       if (checked) this.selecionados.add(f.id);
       else this.selecionados.delete(f.id);
     }
+    if (this.modoSelecao) this.syncShellBottomNavActions();
   }
 
   exibirTexto(v: string | null | undefined): string {
@@ -502,6 +772,12 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
       this.fecharModalExclusao();
       return;
     }
+    if (this.acoesMenuAberto) {
+      ev.preventDefault();
+      this.acoesMenuAberto = false;
+      this.syncShellBottomNavActions();
+      return;
+    }
     if (this.colunasMenuAberto || this.colunasMenuMontado) {
       ev.preventDefault();
       this.fecharColunasMenu();
@@ -509,7 +785,12 @@ export class FornecedoresComponent implements OnInit, OnDestroy {
     }
     if (this.filtrosAbertos) {
       ev.preventDefault();
-      this.filtrosAbertos = false;
+      this.fecharFiltros();
+      return;
+    }
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      this.sairModoSelecao();
       return;
     }
     if (this.perPageMenuAberto) {

@@ -5,7 +5,10 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Fornecedores</h1>
         </div>
-        <div class="list-head__actions list-head__actions--fornecedores">
+        <div
+          class="list-head__actions list-head__actions--fornecedores"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -41,7 +44,9 @@
               class="list-head__busca-input"
               [(ngModel)]="busca"
               name="buscaFornecedores"
-              [placeholder]="buscaPlaceholder"
+              [placeholder]="
+                shellBottomNavEligible ? 'Digite para buscar' : buscaPlaceholder
+              "
               [class.list-head__busca-input--search-open]="buscaAberta"
               [class.list-head__busca-input--pulse-once-busca]="pulsoToolbarBusca"
               autocomplete="off"
@@ -56,7 +61,7 @@
           <button
             type="button"
             class="list-head__toolbar-btn"
-            [class.list-head__toolbar-btn--filtro-on]="filtrosAbertos"
+            [class.list-head__toolbar-btn--filtro-on]="filtrosAbertos || temFiltroAtivo()"
             [class.list-head__toolbar-btn--pulse-once-filtro]="pulsoToolbarFiltro"
             (click)="toggleFiltros($event)"
             aria-label="Abrir filtros"
@@ -110,12 +115,45 @@
     </header>
   </div>
 
-  <div class="list-layout" [class.list-layout--filtros-abertos]="filtrosAbertos">
+  @if (shellBottomNavEligible && chipsFiltrosMobile().length) {
+    <div class="fornecedores-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="fornecedores-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
+  <div
+    class="list-layout"
+    [class.list-layout--filtros-abertos]="filtrosAbertos && !shellBottomNavEligible"
+  >
     <aside
       class="fornecedores-filtros-drawer"
-      [class.fornecedores-filtros-drawer--open]="filtrosAbertos"
+      [class.fornecedores-filtros-drawer--open]="filtrosAbertos && !shellBottomNavEligible"
       aria-label="Filtros de fornecedores"
-      [attr.aria-hidden]="filtrosAbertos ? null : 'true'"
+      [attr.aria-hidden]="filtrosAbertos && !shellBottomNavEligible ? null : 'true'"
     >
       <div class="fornecedores-filtros-drawer__inner">
         <section class="fornecedores-filtros-card">
@@ -151,7 +189,11 @@
 
       @if (!erro) {
         <div class="list-table-card">
-          <div class="table-wrap" role="region" aria-label="Lista de fornecedores">
+          <div
+            class="table-wrap fornecedores-desktop-table"
+            role="region"
+            aria-label="Lista de fornecedores"
+          >
             <table class="list-table fornecedores-table">
               <colgroup>
                 <col class="fornecedores-table__col-check" />
@@ -334,7 +376,7 @@
                 } @else if (totalFiltrado() === 0) {
                   <tr>
                     <td class="table-body__empty" [attr.colspan]="totalColunasTabela()">
-                      <app-table-empty label="Nenhum fornecedor encontrado" />
+                      <app-table-empty [label]="labelListaVazia()" />
                     </td>
                   </tr>
                 } @else {
@@ -453,6 +495,62 @@
                 }
               </tbody>
             </table>
+          </div>
+
+          <div class="fornecedores-mobile-list" aria-label="Lista de fornecedores">
+            @if (carregando) {
+              <p class="fornecedores-mobile-list__busy">Carregando…</p>
+            } @else if (totalFiltrado() === 0) {
+              <div class="fornecedores-mobile-list__empty">
+                <app-table-empty [label]="labelListaVazia()" />
+              </div>
+            } @else {
+              @for (f of itensPagina(); track f.id) {
+                <button
+                  type="button"
+                  class="fornecedores-mobile-card"
+                  [class.fornecedores-mobile-card--selecao]="modoSelecao"
+                  [class.fornecedores-mobile-card--selected]="
+                    modoSelecao && estaSelecionado(f.id)
+                  "
+                  (click)="onMobileCardClick(f, $event)"
+                  [attr.aria-label]="
+                    modoSelecao
+                      ? (estaSelecionado(f.id) ? 'Desmarcar ' : 'Selecionar ') +
+                        (f.nome || 'fornecedor')
+                      : 'Editar fornecedor ' + (f.nome || '')
+                  "
+                  [attr.aria-pressed]="modoSelecao ? estaSelecionado(f.id) : null"
+                >
+                  <span
+                    class="fornecedores-mobile-card__check"
+                    [class.fornecedores-mobile-card__check--on]="estaSelecionado(f.id)"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="fornecedores-mobile-card__body">
+                    <span class="fornecedores-mobile-card__top">
+                      <span class="fornecedores-mobile-card__nome">{{ f.nome }}</span>
+                      @if (!f.ativo) {
+                        <span class="fornecedores-mobile-card__badge">Inativo</span>
+                      }
+                      @if (exibirTexto(f.cnpj); as cnpj) {
+                        <span class="fornecedores-mobile-card__cnpj">{{ cnpj }}</span>
+                      }
+                    </span>
+                    <span class="fornecedores-mobile-card__meta">
+                      @if (contatoSecundario(f); as contato) {
+                        <span class="fornecedores-mobile-card__contato">{{
+                          contato
+                        }}</span>
+                      }
+                      @if (exibirTexto(f.email); as email) {
+                        <span class="fornecedores-mobile-card__email">{{ email }}</span>
+                      }
+                    </span>
+                  </span>
+                </button>
+              }
+            }
           </div>
 
           <span
@@ -608,3 +706,42 @@
     </div>
   </div>
 }
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && filtrosAbertos"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section class="fornecedores-filtros-card fornecedores-filtros-card--sheet">
+    <h3 class="fornecedores-filtros-card__title">Status</h3>
+    <div class="fornecedores-filtros-card__body">
+      <label class="fornecedores-filtros-check">
+        <input
+          type="checkbox"
+          name="forn_sheet_filtro_ativos"
+          [checked]="filtroStatusAtivos"
+          (change)="toggleFiltroStatus('ativos', $event)"
+        />
+        Ativos
+      </label>
+      <label class="fornecedores-filtros-check">
+        <input
+          type="checkbox"
+          name="forn_sheet_filtro_inativos"
+          [checked]="filtroStatusInativos"
+          (change)="toggleFiltroStatus('inativos', $event)"
+        />
+        Inativos
+      </label>
+    </div>
+  </section>
+</app-mobile-filtros-sheet>
+
+<app-mobile-list-actions-menu
+  [open]="shellBottomNavEligible && acoesMenuAberto"
+  [items]="acoesMenuItens()"
+  anchor="acoes"
+  (openChange)="onAcoesMenuOpenChange($event)"
+  (itemSelect)="onItemAcaoSelecao($event)"
+/>
