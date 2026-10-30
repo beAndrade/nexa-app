@@ -5,7 +5,10 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Produtos</h1>
         </div>
-        <div class="list-head__actions list-head__actions--produtos">
+        <div
+          class="list-head__actions list-head__actions--produtos"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -110,12 +113,42 @@
     </header>
   </div>
 
+  @if (shellBottomNavEligible && aba === 'produtos' && chipsFiltrosMobile().length) {
+    <div class="produtos-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="produtos-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
   <div class="list-layout" [class.list-layout--filtros-abertos]="filtrosAbertos">
     <aside
       class="produtos-filtros-drawer"
-      [class.produtos-filtros-drawer--open]="filtrosAbertos"
+      [class.produtos-filtros-drawer--open]="filtrosAbertos && !shellBottomNavEligible"
       aria-label="Filtros de produtos"
-      [attr.aria-hidden]="filtrosAbertos ? null : 'true'"
+      [attr.aria-hidden]="filtrosAbertos && !shellBottomNavEligible ? null : 'true'"
     >
       <div class="produtos-filtros-drawer__inner">
         <section class="produtos-filtros-card">
@@ -209,7 +242,11 @@
 
       @if (!erro) {
         <div class="list-table-card">
-          <div class="table-wrap" role="region" aria-label="Lista de produtos">
+          <div
+            class="table-wrap produtos-desktop-table"
+            role="region"
+            aria-label="Lista de produtos"
+          >
             <table class="list-table produtos-table">
               <colgroup>
                 <col class="produtos-table__col-check" />
@@ -422,11 +459,7 @@
                 } @else if (totalFiltrado() === 0) {
                   <tr>
                     <td class="table-body__empty" colspan="8">
-                      @if (aba === 'lotes') {
-                        <app-table-empty label="Lotes e validades em breve" />
-                      } @else {
-                        <app-table-empty label="Nenhum item encontrado" />
-                      }
+                      <app-table-empty [label]="rotuloListaVazia()" />
                     </td>
                   </tr>
                 } @else {
@@ -566,6 +599,108 @@
                 }
               </tbody>
             </table>
+          </div>
+
+          <div class="produtos-mobile-list" aria-label="Lista de produtos">
+            @if (carregando) {
+              <p class="produtos-mobile-list__busy">Carregando…</p>
+            } @else if (totalFiltrado() === 0) {
+              <div class="produtos-mobile-list__empty">
+                <app-table-empty [label]="rotuloListaVazia()" />
+              </div>
+            } @else {
+              @for (p of itensPagina(); track p.id) {
+                <div
+                  class="produtos-mobile-card"
+                  [class.produtos-mobile-card--selecao]="modoSelecao"
+                  [class.produtos-mobile-card--selected]="
+                    modoSelecao && estaSelecionado(p.id)
+                  "
+                >
+                  <span
+                    class="produtos-mobile-card__check"
+                    [class.produtos-mobile-card__check--on]="
+                      estaSelecionado(p.id)
+                    "
+                    aria-hidden="true"
+                  ></span>
+                  <button
+                    type="button"
+                    class="produtos-mobile-card__main"
+                    (click)="onMobileCardClick(p, $event)"
+                    [attr.aria-label]="
+                      modoSelecao
+                        ? (estaSelecionado(p.id)
+                            ? 'Desmarcar '
+                            : 'Selecionar ') + (p.produto || 'produto')
+                        : 'Editar produto ' + (p.produto || '')
+                    "
+                    [attr.aria-pressed]="
+                      modoSelecao ? estaSelecionado(p.id) : null
+                    "
+                  >
+                    <span class="produtos-mobile-card__body">
+                      <span class="produtos-mobile-card__top">
+                        <span class="produtos-mobile-card__nome">{{
+                          exibirTexto(p.produto)
+                        }}</span>
+                      </span>
+                      <span class="produtos-mobile-card__meta">
+                        @if (precoNum(p) !== null) {
+                          <span class="produtos-mobile-card__preco">
+                            {{
+                              precoNum(p)!
+                                | currency: 'BRL' : 'symbol' : '1.2-2'
+                            }}
+                          </span>
+                        }
+                        <span class="produtos-mobile-card__contexto">
+                          @if (marcaProduto(p)) {
+                            {{ marcaProduto(p) }}
+                          }
+                          @if (marcaProduto(p) && exibirTexto(p.categoria)) {
+                            ·
+                          }
+                          {{ exibirTexto(p.categoria) }}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                  @if (modoSelecao) {
+                    <span
+                      class="produtos-mobile-card__estoque"
+                      [class.produtos-mobile-card__estoque--baixo]="
+                        nivelEstoque(p) === 'baixo'
+                      "
+                      [class.produtos-mobile-card__estoque--atencao]="
+                        nivelEstoque(p) === 'atencao'
+                      "
+                    >
+                      {{ estoqueUnidades(p) | number: '1.0-3' }}
+                      {{ rotuloUnidadeEstoque(p) }}
+                    </span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="produtos-mobile-card__estoque produtos-mobile-card__estoque--acao"
+                      [class.produtos-mobile-card__estoque--baixo]="
+                        nivelEstoque(p) === 'baixo'
+                      "
+                      [class.produtos-mobile-card__estoque--atencao]="
+                        nivelEstoque(p) === 'atencao'
+                      "
+                      (click)="onMobileEstoqueClick(p, $event)"
+                      [attr.aria-label]="
+                        'Movimentações de estoque de ' + (p.produto || '')
+                      "
+                    >
+                      {{ estoqueUnidades(p) | number: '1.0-3' }}
+                      {{ rotuloUnidadeEstoque(p) }}
+                    </button>
+                  }
+                </div>
+              }
+            }
           </div>
 
           <footer class="list-footer">
@@ -971,3 +1106,70 @@
     </div>
   </div>
 }
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && aba === 'produtos' && filtrosAbertos"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section class="produtos-filtros-card produtos-filtros-card--sheet">
+    <h3 class="produtos-filtros-card__title">Marcas</h3>
+    <div class="produtos-filtros-card__body">
+      <label class="produtos-filtros-check">
+        <input
+          type="checkbox"
+          name="prod_sheet_marca_todas"
+          [checked]="todasMarcasSelecionadas()"
+          (change)="toggleTodasMarcas($event)"
+        />
+        Selecionar tudo
+      </label>
+      @for (m of marcasDisponiveis(); track m) {
+        <label class="produtos-filtros-check">
+          <input
+            type="checkbox"
+            [name]="'prod_sheet_marca_' + m"
+            [checked]="marcaFiltroMarcada(m)"
+            (change)="toggleFiltroMarca(m, $event)"
+          />
+          {{ m }}
+        </label>
+      }
+    </div>
+  </section>
+
+  <section class="produtos-filtros-card produtos-filtros-card--sheet">
+    <h3 class="produtos-filtros-card__title">Categorias</h3>
+    <div class="produtos-filtros-card__body">
+      <label class="produtos-filtros-check">
+        <input
+          type="checkbox"
+          name="prod_sheet_cat_todas"
+          [checked]="todasCategoriasSelecionadas()"
+          (change)="toggleTodasCategorias($event)"
+        />
+        Selecionar tudo
+      </label>
+      @for (c of categoriasDisponiveis(); track c) {
+        <label class="produtos-filtros-check">
+          <input
+            type="checkbox"
+            [name]="'prod_sheet_cat_' + c"
+            [checked]="categoriaFiltroMarcada(c)"
+            (change)="toggleFiltroCategoria(c, $event)"
+          />
+          {{ c }}
+        </label>
+      }
+    </div>
+  </section>
+</app-mobile-filtros-sheet>
+
+<app-mobile-list-actions-menu
+  [open]="shellBottomNavEligible && aba === 'produtos' && acoesMenuAberto"
+  [items]="acoesMenuItens()"
+  anchor="acoes"
+  (openChange)="onAcoesMenuOpenChange($event)"
+  (itemSelect)="onItemAcaoSelecao($event)"
+/>
