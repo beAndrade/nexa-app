@@ -6,8 +6,12 @@
   @if (!erro) {
     @if (subAba === 'mega') {
       <div class="list-table-card">
-        <div class="table-wrap" role="region" aria-label="Etapas Mega">
-          <table class="list-table megahair-table">
+        <div
+          class="table-wrap megahair-desktop-table"
+          role="region"
+          aria-label="Etapas Mega"
+        >
+          <table class="list-table megahair-table megahair-table--regras">
             <colgroup>
               <col class="megahair-table__col-check" />
               <col class="megahair-table__col-pacote" />
@@ -28,11 +32,11 @@
                     title="Selecionar página"
                   />
                 </th>
-                <th scope="col">Pacote</th>
-                <th scope="col">Etapa</th>
+                <th class="col-text" scope="col">Pacote</th>
+                <th class="col-text" scope="col">Etapa</th>
                 <th scope="col" class="col-num">Valor</th>
                 <th scope="col" class="col-num">Comissão</th>
-                <th scope="col">Duração</th>
+                <th class="col-text" scope="col">Duração</th>
                 <th scope="col" class="col-acoes">Ações</th>
               </tr>
             </thead>
@@ -54,11 +58,13 @@
                         [checked]="estaSelecionado(chaveRegra(r))"
                         [disabled]="chaveRegra(r) == null"
                         (change)="toggleSelecionado(chaveRegra(r), $event)"
-                        [attr.aria-label]="'Selecionar ' + r.pacote + ' — ' + r.etapa"
+                        [attr.aria-label]="
+                          'Selecionar ' + rotuloPacoteLista(r.pacote) + ' — ' + r.etapa
+                        "
                       />
                     </td>
-                    <td>{{ r.pacote }}</td>
-                    <td>{{ r.etapa }}</td>
+                    <td class="col-text">{{ rotuloPacoteLista(r.pacote) }}</td>
+                    <td class="col-text">{{ r.etapa }}</td>
                     <td class="col-num">
                       @if (valorNum(r.valor) != null) {
                         {{ valorNum(r.valor)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
@@ -69,7 +75,7 @@
                         {{ valorNum(r.comissao)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
                       }
                     </td>
-                    <td>{{ rotuloDuracao(r.duracao_minutos) }}</td>
+                    <td class="col-text">{{ rotuloDuracao(r.duracao_minutos) }}</td>
                     <td class="col-acoes">
                       <div class="list-row-acoes">
                         <button
@@ -112,6 +118,68 @@
             </tbody>
           </table>
         </div>
+
+        <div class="megahair-mobile-list" aria-label="Etapas Mega">
+          @if (carregando) {
+            <p class="megahair-mobile-list__busy">Carregando…</p>
+          } @else if (regrasFiltradasMega.length === 0) {
+            <div class="megahair-mobile-list__empty">
+              <app-table-empty label="Nenhuma etapa Mega cadastrada." />
+            </div>
+          } @else {
+            @for (r of regrasFiltradasMega; track r.id ?? r.pacote + r.etapa) {
+              <div class="megahair-mobile-card">
+                <button
+                  type="button"
+                  class="megahair-mobile-card__main"
+                  (click)="onMobileCardRegra(r, $event)"
+                  [attr.aria-label]="
+                    'Editar etapa ' + rotuloPacoteLista(r.pacote) + ' — ' + r.etapa
+                  "
+                >
+                  <span class="megahair-mobile-card__body">
+                    <span class="megahair-mobile-card__top">
+                      <span class="megahair-mobile-card__nome">
+                        {{ rotuloPacoteLista(r.pacote) }}
+                      </span>
+                      <span class="megahair-mobile-card__duracao">{{
+                        rotuloDuracao(r.duracao_minutos)
+                      }}</span>
+                    </span>
+                    <span class="megahair-mobile-card__meta">
+                      @if (valorNum(r.valor) != null) {
+                        <span class="megahair-mobile-card__preco">
+                          {{ valorNum(r.valor)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                        </span>
+                      }
+                      <span class="megahair-mobile-card__categoria">{{ r.etapa }}</span>
+                    </span>
+                    @if (valorNum(r.comissao) != null) {
+                      <span class="megahair-mobile-card__extra">
+                        Comissão
+                        {{ valorNum(r.comissao)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                      </span>
+                    }
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="megahair-mobile-card__icon-btn megahair-mobile-card__icon-btn--delete"
+                  (click)="pedirExcluirRegra(r); $event.stopPropagation()"
+                  aria-label="Excluir etapa"
+                  title="Excluir"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+              </div>
+            }
+          }
+        </div>
+
         <footer class="list-footer">
           <span class="list-footer__total">
             {{ carregando ? '…' : regrasFiltradasMega.length }} no total
@@ -122,8 +190,12 @@
 
     @if (subAba === 'pacote' || subAba === 'pacote_queratina') {
       <div class="list-table-card">
-        <div class="table-wrap" role="region" aria-label="Pacotes">
-          <table class="list-table megahair-table">
+        <div
+          class="table-wrap megahair-desktop-table"
+          role="region"
+          aria-label="Pacotes"
+        >
+          <table class="list-table megahair-table megahair-table--pacotes">
             <colgroup>
               <col class="megahair-table__col-check" />
               <col class="megahair-table__col-pacote" />
@@ -141,7 +213,7 @@
                     title="Selecionar página"
                   />
                 </th>
-                <th scope="col">Pacote</th>
+                <th class="col-text" scope="col">Pacote</th>
                 <th scope="col" class="col-num">Preço</th>
                 <th scope="col" class="col-acoes">Ações</th>
               </tr>
@@ -164,10 +236,10 @@
                         [checked]="estaSelecionado(chavePacote(p))"
                         [disabled]="chavePacote(p) == null"
                         (change)="toggleSelecionado(chavePacote(p), $event)"
-                        [attr.aria-label]="'Selecionar ' + p.pacote"
+                        [attr.aria-label]="'Selecionar ' + rotuloPacoteLista(p.pacote)"
                       />
                     </td>
-                    <td>{{ p.pacote }}</td>
+                    <td class="col-text">{{ rotuloPacoteLista(p.pacote) }}</td>
                     <td class="col-num">
                       @if (valorNum(p.preco) != null) {
                         {{ valorNum(p.preco)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
@@ -228,6 +300,68 @@
             </tbody>
           </table>
         </div>
+
+        <div class="megahair-mobile-list" aria-label="Pacotes">
+          @if (carregando) {
+            <p class="megahair-mobile-list__busy">Carregando…</p>
+          } @else if (pacotesFiltrados().length === 0) {
+            <div class="megahair-mobile-list__empty">
+              <app-table-empty label="Nenhum pacote cadastrado." />
+            </div>
+          } @else {
+            @for (p of pacotesFiltrados(); track p.id ?? p.pacote) {
+              <div class="megahair-mobile-card">
+                <button
+                  type="button"
+                  class="megahair-mobile-card__main"
+                  (click)="onMobileCardPacote(p, $event)"
+                  [attr.aria-label]="'Editar pacote ' + rotuloPacoteLista(p.pacote)"
+                >
+                  <span class="megahair-mobile-card__body">
+                    <span class="megahair-mobile-card__top">
+                      <span class="megahair-mobile-card__nome">{{
+                        rotuloPacoteLista(p.pacote)
+                      }}</span>
+                    </span>
+                    <span class="megahair-mobile-card__meta">
+                      @if (valorNum(p.preco) != null) {
+                        <span class="megahair-mobile-card__preco">
+                          {{ valorNum(p.preco)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                        </span>
+                      }
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="megahair-mobile-card__icon-btn"
+                  (click)="abrirNovaEtapaParaPacote(p.pacote); $event.stopPropagation()"
+                  aria-label="Nova etapa"
+                  title="Nova etapa"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14" />
+                    <path d="M12 5v14" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="megahair-mobile-card__icon-btn megahair-mobile-card__icon-btn--delete"
+                  (click)="pedirExcluirPacote(p); $event.stopPropagation()"
+                  aria-label="Excluir pacote"
+                  title="Excluir"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+              </div>
+            }
+          }
+        </div>
+
         <footer class="list-footer">
           <span class="list-footer__total">
             {{ carregando ? '…' : pacotesFiltrados().length }} pacotes
@@ -236,8 +370,12 @@
       </div>
 
       <div class="list-table-card">
-        <div class="table-wrap" role="region" aria-label="Etapas do pacote">
-          <table class="list-table megahair-table">
+        <div
+          class="table-wrap megahair-desktop-table"
+          role="region"
+          aria-label="Etapas do pacote"
+        >
+          <table class="list-table megahair-table megahair-table--regras">
             <colgroup>
               <col class="megahair-table__col-check" />
               <col class="megahair-table__col-pacote" />
@@ -258,11 +396,11 @@
                     title="Selecionar página"
                   />
                 </th>
-                <th scope="col">Pacote</th>
-                <th scope="col">Etapa</th>
+                <th class="col-text" scope="col">Pacote</th>
+                <th class="col-text" scope="col">Etapa</th>
                 <th scope="col" class="col-num">Valor</th>
                 <th scope="col" class="col-num">Comissão</th>
-                <th scope="col">Duração</th>
+                <th class="col-text" scope="col">Duração</th>
                 <th scope="col" class="col-acoes">Ações</th>
               </tr>
             </thead>
@@ -284,11 +422,13 @@
                         [checked]="estaSelecionado(chaveRegra(r))"
                         [disabled]="chaveRegra(r) == null"
                         (change)="toggleSelecionado(chaveRegra(r), $event)"
-                        [attr.aria-label]="'Selecionar ' + r.pacote + ' — ' + r.etapa"
+                        [attr.aria-label]="
+                          'Selecionar ' + rotuloPacoteLista(r.pacote) + ' — ' + r.etapa
+                        "
                       />
                     </td>
-                    <td>{{ r.pacote }}</td>
-                    <td>{{ r.etapa }}</td>
+                    <td class="col-text">{{ rotuloPacoteLista(r.pacote) }}</td>
+                    <td class="col-text">{{ r.etapa }}</td>
                     <td class="col-num">
                       @if (valorNum(r.valor) != null) {
                         {{ valorNum(r.valor)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
@@ -299,7 +439,7 @@
                         {{ valorNum(r.comissao)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
                       }
                     </td>
-                    <td>{{ rotuloDuracao(r.duracao_minutos) }}</td>
+                    <td class="col-text">{{ rotuloDuracao(r.duracao_minutos) }}</td>
                     <td class="col-acoes">
                       <div class="list-row-acoes">
                         <button
@@ -342,6 +482,68 @@
             </tbody>
           </table>
         </div>
+
+        <div class="megahair-mobile-list" aria-label="Etapas do pacote">
+          @if (carregando) {
+            <p class="megahair-mobile-list__busy">Carregando…</p>
+          } @else if (regrasParaAbaPacote().length === 0) {
+            <div class="megahair-mobile-list__empty">
+              <app-table-empty label="Nenhuma etapa cadastrada." />
+            </div>
+          } @else {
+            @for (r of regrasParaAbaPacote(); track r.id ?? r.pacote + r.etapa) {
+              <div class="megahair-mobile-card">
+                <button
+                  type="button"
+                  class="megahair-mobile-card__main"
+                  (click)="onMobileCardRegra(r, $event)"
+                  [attr.aria-label]="
+                    'Editar etapa ' + rotuloPacoteLista(r.pacote) + ' — ' + r.etapa
+                  "
+                >
+                  <span class="megahair-mobile-card__body">
+                    <span class="megahair-mobile-card__top">
+                      <span class="megahair-mobile-card__nome">{{
+                        rotuloPacoteLista(r.pacote)
+                      }}</span>
+                      <span class="megahair-mobile-card__duracao">{{
+                        rotuloDuracao(r.duracao_minutos)
+                      }}</span>
+                    </span>
+                    <span class="megahair-mobile-card__meta">
+                      @if (valorNum(r.valor) != null) {
+                        <span class="megahair-mobile-card__preco">
+                          {{ valorNum(r.valor)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                        </span>
+                      }
+                      <span class="megahair-mobile-card__categoria">{{ r.etapa }}</span>
+                    </span>
+                    @if (valorNum(r.comissao) != null) {
+                      <span class="megahair-mobile-card__extra">
+                        Comissão
+                        {{ valorNum(r.comissao)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                      </span>
+                    }
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="megahair-mobile-card__icon-btn megahair-mobile-card__icon-btn--delete"
+                  (click)="pedirExcluirRegra(r); $event.stopPropagation()"
+                  aria-label="Excluir etapa"
+                  title="Excluir"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+              </div>
+            }
+          }
+        </div>
+
         <footer class="list-footer">
           <span class="list-footer__total">
             {{ carregando ? '…' : regrasParaAbaPacote().length }} etapas
@@ -352,8 +554,12 @@
 
     @if (subAba === 'cabelo') {
       <div class="list-table-card">
-        <div class="table-wrap" role="region" aria-label="Catálogo Cabelo">
-          <table class="list-table megahair-table">
+        <div
+          class="table-wrap megahair-desktop-table"
+          role="region"
+          aria-label="Catálogo Cabelo"
+        >
+          <table class="list-table megahair-table megahair-table--cabelo">
             <colgroup>
               <col class="megahair-table__col-check" />
               <col class="megahair-table__col-cor" />
@@ -373,9 +579,9 @@
                     title="Selecionar página"
                   />
                 </th>
-                <th scope="col">Cor</th>
-                <th scope="col">Tamanho (cm)</th>
-                <th scope="col">Método</th>
+                <th class="col-text" scope="col">Cor</th>
+                <th class="col-text" scope="col">Tamanho (cm)</th>
+                <th class="col-text" scope="col">Método</th>
                 <th scope="col" class="col-num">Valor base</th>
                 <th scope="col" class="col-acoes">Ações</th>
               </tr>
@@ -401,9 +607,9 @@
                         [attr.aria-label]="'Selecionar ' + c.cor"
                       />
                     </td>
-                    <td>{{ c.cor }}</td>
-                    <td>{{ c.tamanho_cm }}</td>
-                    <td>{{ c.metodo }}</td>
+                    <td class="col-text">{{ c.cor }}</td>
+                    <td class="col-text">{{ c.tamanho_cm }}</td>
+                    <td class="col-text">{{ c.metodo }}</td>
                     <td class="col-num">
                       @if (valorNum(c.valor_base) != null) {
                         {{ valorNum(c.valor_base)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
@@ -451,6 +657,56 @@
             </tbody>
           </table>
         </div>
+
+        <div class="megahair-mobile-list" aria-label="Catálogo Cabelo">
+          @if (carregando) {
+            <p class="megahair-mobile-list__busy">Carregando…</p>
+          } @else if (cabelosFiltrados().length === 0) {
+            <div class="megahair-mobile-list__empty">
+              <app-table-empty label="Nenhuma linha de cabelo cadastrada." />
+            </div>
+          } @else {
+            @for (c of cabelosFiltrados(); track c.id ?? c.cor + c.metodo + c.tamanho_cm) {
+              <div class="megahair-mobile-card">
+                <button
+                  type="button"
+                  class="megahair-mobile-card__main"
+                  (click)="onMobileCardCabelo(c, $event)"
+                  [attr.aria-label]="'Editar cabelo ' + c.cor"
+                >
+                  <span class="megahair-mobile-card__body">
+                    <span class="megahair-mobile-card__top">
+                      <span class="megahair-mobile-card__nome">{{ c.cor }}</span>
+                      <span class="megahair-mobile-card__duracao">{{ c.tamanho_cm }} cm</span>
+                    </span>
+                    <span class="megahair-mobile-card__meta">
+                      @if (valorNum(c.valor_base) != null) {
+                        <span class="megahair-mobile-card__preco">
+                          {{ valorNum(c.valor_base)! | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                        </span>
+                      }
+                      <span class="megahair-mobile-card__categoria">{{ c.metodo }}</span>
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="megahair-mobile-card__icon-btn megahair-mobile-card__icon-btn--delete"
+                  (click)="pedirExcluirCabelo(c); $event.stopPropagation()"
+                  aria-label="Excluir cabelo"
+                  title="Excluir"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </button>
+              </div>
+            }
+          }
+        </div>
+
         <footer class="list-footer">
           <span class="list-footer__total">
             {{ carregando ? '…' : cabelosFiltrados().length }} no total
@@ -502,7 +758,14 @@
           @if (modalModo === 'regra') {
             <div class="megahair-cadastro-form__field">
               <label class="megahair-cadastro-form__label" for="mh-form-pacote">Pacote</label>
-              <input id="mh-form-pacote" type="text" class="megahair-cadastro-form__input" [(ngModel)]="formPacote" name="formPacote" [disabled]="salvando" />
+              <input
+                id="mh-form-pacote"
+                type="text"
+                class="megahair-cadastro-form__input"
+                [(ngModel)]="formPacoteDisplay"
+                name="formPacote"
+                [disabled]="salvando"
+              />
             </div>
             <div class="megahair-cadastro-form__field">
               <label class="megahair-cadastro-form__label" for="mh-form-etapa">Etapa</label>

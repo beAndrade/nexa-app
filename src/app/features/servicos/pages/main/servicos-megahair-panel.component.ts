@@ -18,6 +18,7 @@ import type {
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import { formataMoedaBrl } from '../../../../core/utils/brl-digit-input';
 import { valorMonetarioParaNumero } from '../../../../core/utils/atendimento-display';
+import { rotuloPacoteMega } from '../../../../core/utils/pacote-descricao';
 
 export type MegahairSubAba =
   | 'mega'
@@ -305,6 +306,41 @@ export class ServicosMegahairPanelComponent implements OnChanges {
     return `${n} min`;
   }
 
+  /**
+   * Display de pacote Mega (1 faixa…); Mecha Avulsa e demais passam intactos.
+   * Só UI — não altera valor persistido.
+   */
+  rotuloPacoteLista(pacote: string): string {
+    return rotuloPacoteMega(pacote);
+  }
+
+  /**
+   * Campo Pacote do form de regra Mega: mostra rótulo comercial;
+   * `formPacote` continua com o valor técnico (mecha) para save/API.
+   */
+  get formPacoteDisplay(): string {
+    return this.subAba === 'mega'
+      ? rotuloPacoteMega(this.formPacote)
+      : this.formPacote;
+  }
+
+  set formPacoteDisplay(valorUi: string) {
+    this.formPacote =
+      this.subAba === 'mega' ? this.pacoteTecnicoDeRotuloMega(valorUi) : valorUi;
+  }
+
+  /** Reverso de `rotuloPacoteMega` — só as 4 quantidades mapeadas. */
+  private pacoteTecnicoDeRotuloMega(valorUi: string): string {
+    const t = String(valorUi || '').trim();
+    const reverso: Record<string, string> = {
+      '1 faixa': '1 mecha',
+      '2 faixas': '2 mechas',
+      '5 faixas': '5 mechas',
+      '7 faixas': '7 mechas',
+    };
+    return reverso[t] ?? valorUi;
+  }
+
   valorNum(v: unknown): number | null {
     return valorMonetarioParaNumero(v);
   }
@@ -313,6 +349,21 @@ export class ServicosMegahairPanelComponent implements OnChanges {
     const n = valorMonetarioParaNumero(v);
     if (n == null) return '—';
     return formataMoedaBrl(n);
+  }
+
+  onMobileCardRegra(r: RegraMegaItem, ev: Event): void {
+    ev.preventDefault();
+    this.abrirEditarRegra(r);
+  }
+
+  onMobileCardPacote(p: PacoteCatalogoItem, ev: Event): void {
+    ev.preventDefault();
+    this.abrirEditarPacote(p);
+  }
+
+  onMobileCardCabelo(c: CabeloCatalogoItem, ev: Event): void {
+    ev.preventDefault();
+    this.abrirEditarCabelo(c);
   }
 
   private abrirDrawer(): void {
@@ -526,7 +577,7 @@ export class ServicosMegahairPanelComponent implements OnChanges {
     this.excluirAlvo = {
       tipo: 'regra',
       id: r.id,
-      label: `${r.pacote} · ${r.etapa}`,
+      label: `${this.rotuloPacoteLista(r.pacote)} · ${r.etapa}`,
     };
     this.excluirErro = '';
     this.excluirModalAberto = true;
@@ -534,7 +585,11 @@ export class ServicosMegahairPanelComponent implements OnChanges {
 
   pedirExcluirPacote(p: PacoteCatalogoItem): void {
     if (p.id == null) return;
-    this.excluirAlvo = { tipo: 'pacote', id: p.id, label: p.pacote };
+    this.excluirAlvo = {
+      tipo: 'pacote',
+      id: p.id,
+      label: this.rotuloPacoteLista(p.pacote),
+    };
     this.excluirErro = '';
     this.excluirModalAberto = true;
   }
