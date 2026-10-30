@@ -59,8 +59,23 @@ import {
   ymdToDdMmYyyyFiltro,
 } from '../../../financeiro/pages/transacoes/fin-transacoes-filtro.util';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
+import {
+  areAllSelected,
+  buildSelectionBottomNavActions,
+  selectAllIds,
+  toggleId,
+} from '../../../../shared/mobile-list-selection/mobile-list-selection';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import {
+  MobileListActionMenuItem,
+  MobileListActionsMenuComponent,
+} from '../../../../shared/components/mobile-list-actions-menu/mobile-list-actions-menu.component';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 
 registerLocaleData(localePt);
+
+const COMANDAS_BOTTOM_NAV_OWNER = 'comandas';
 
 /** Um grupo por ID de atendimento (mesma lógica que `atendimentos`). */
 interface ComandaGrupo {
@@ -138,6 +153,8 @@ function formataMoeda(n: number): string {
   imports: [
     FlipDropdownPanelDirective,
     TableEmptyComponent,
+    MobileFiltrosSheetComponent,
+    MobileListActionsMenuComponent,
     FormsModule,
     CurrencyPipe,
     NovaComandaDrawerComponent,
@@ -157,6 +174,23 @@ export class ComandasComponent implements OnInit, OnDestroy {
   private readonly cadastroDrawer = inject(ClienteCadastroDrawerService);
   private readonly agendaNovoGlobal = inject(AgendaNovoGlobalService);
   private readonly appRef = inject(ApplicationRef);
+  private readonly shellUi = inject(AppShellUiService);
+
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (!this.shellBottomNavEligible && this.modoSelecao) {
+      this.modoSelecao = false;
+      this.acoesMenuAberto = false;
+      this.selecionados.clear();
+      this.limparFeedbackSelecionarTudo();
+    }
+    if (!this.shellBottomNavEligible) {
+      this.acoesMenuAberto = false;
+      if (this.filtrosAbertos) this.filtrosAbertos = false;
+    }
+    this.syncShellBottomNavActions();
+  };
 
   /** Menu Novo → Comanda: mesmo drawer do botão Novo da lista. */
   private readonly onAgendaNovoAtalho = (
@@ -238,6 +272,13 @@ export class ComandasComponent implements OnInit, OnDestroy {
   private filtroFormas = new Set<string>();
   private opcoesFormaCarregadas = false;
   selecionados = new Set<string>();
+  /** Seleção mobile (MLP). Checkbox da tabela desktop continua por página. */
+  modoSelecao = false;
+  acoesMenuAberto = false;
+  shellBottomNavEligible = false;
+  private selecionarTudoBusy = false;
+  private selecionarTudoFeedbackTimer: ReturnType<typeof setTimeout> | null =
+    null;
 
   /** Coluna activa e direcção (padrão Ticket descendente — mais recente primeiro). */
   ordenacaoColuna: 'ticket' | 'data' | 'cliente' = 'ticket';
@@ -325,6 +366,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.carregarColunasSalvas();
+    this.setupShellBottomNav();
     this.agendaNovoGlobal.registerPageHandler(this.onAgendaNovoAtalho);
     this.carregando = true;
     this.carregarOpcoesFormasPagamento();
@@ -360,6 +402,10 @@ export class ComandasComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.agendaNovoGlobal.unregisterPageHandler(this.onAgendaNovoAtalho);
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(COMANDAS_BOTTOM_NAV_OWNER);
+    this.limparFeedbackSelecionarTudo();
     window.clearTimeout(this.tPulsoBusca);
     window.clearTimeout(this.tPulsoFiltro);
     if (this.comandaDrawerCloseTimer != null) {
@@ -376,6 +422,281 @@ export class ComandasComponent implements OnInit, OnDestroy {
     }
     this.clearColunasMenuAnimTimer();
     this.desbloquearScrollPagina();
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Menu no shell. Normal: Filtro · Selecionar · Novo.
+   * Em seleção: Cancelar · Selecionar tudo · Ações (exclusão já existente).
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(COMANDAS_BOTTOM_NAV_OWNER);
+      return;
+    }
+    if (this.modoSelecao) {
+      const actions = buildSelectionBottomNavActions(
+        this.todosFiltradosSelecionados(),
+        {
+          onCancel: () => this.sairModoSelecao(),
+          onSelectAll: () => this.selecionarTodosMobile(),
+          onActions: () => this.onAcoesSelecao(),
+          selectAllAriaLabel: 'Selecionar todas as comandas filtradas',
+        },
+      );
+      const acoes = actions.find((action) => action.id === 'acoes');
+      if (acoes) acoes.active = this.acoesMenuAberto;
+      const selecionarTudo = actions.find(
+        (action) => action.id === 'selecionar-tudo',
+      );
+      if (selecionarTudo) {
+        selecionarTudo.busy = this.selecionarTudoBusy;
+        selecionarTudo.activeAria = 'pressed';
+      }
+      this.shellUi.setMobileBottomNavActions(COMANDAS_BOTTOM_NAV_OWNER, actions);
+      return;
+    }
+    this.shellUi.setMobileBottomNavActions(COMANDAS_BOTTOM_NAV_OWNER, [
+      {
+        id: 'filtro',
+        label: 'Filtro',
+        ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: this.filtrosAbertos,
+        warn: this.temFiltroAtivo() && !this.filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+      {
+        id: 'selecionar',
+        label: 'Selecionar',
+        ariaLabel: 'Selecionar comandas',
+        icon: 'check',
+        active: false,
+        onClick: () => this.entrarModoSelecao(),
+      },
+      {
+        id: 'novo',
+        label: 'Novo',
+        ariaLabel: 'Nova comanda',
+        icon: 'plus',
+        accent: true,
+        onClick: () => this.abrirNovoAgendamentoDrawer(),
+      },
+    ]);
+  }
+
+  private onFiltroMobile(): void {
+    this.filtrosAbertos = !this.filtrosAbertos;
+    if (this.filtrosAbertos) this.carregarOpcoesFormasPagamento();
+    this.syncShellBottomNavActions();
+  }
+
+  fecharFiltros(): void {
+    if (!this.filtrosAbertos) return;
+    this.filtrosAbertos = false;
+    this.syncShellBottomNavActions();
+  }
+
+  entrarModoSelecao(): void {
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
+    this.modoSelecao = true;
+    this.syncShellBottomNavActions();
+  }
+
+  sairModoSelecao(): void {
+    this.modoSelecao = false;
+    this.acoesMenuAberto = false;
+    this.limparFeedbackSelecionarTudo();
+    this.selecionados.clear();
+    this.syncShellBottomNavActions();
+  }
+
+  todosFiltradosSelecionados(): boolean {
+    return areAllSelected(
+      this.gruposFiltrados().map((g) => g.id),
+      this.selecionados,
+    );
+  }
+
+  selecionarTodosMobile(): void {
+    this.selecionados = selectAllIds(
+      this.selecionados,
+      this.gruposFiltrados().map((g) => g.id),
+    );
+    this.dispararFeedbackSelecionarTudo();
+    this.syncShellBottomNavActions();
+  }
+
+  private dispararFeedbackSelecionarTudo(): void {
+    this.limparFeedbackSelecionarTudo();
+    this.selecionarTudoBusy = true;
+    this.selecionarTudoFeedbackTimer = setTimeout(() => {
+      this.selecionarTudoFeedbackTimer = null;
+      this.selecionarTudoBusy = false;
+      if (this.modoSelecao) this.syncShellBottomNavActions();
+    }, 250);
+  }
+
+  private limparFeedbackSelecionarTudo(): void {
+    if (this.selecionarTudoFeedbackTimer != null) {
+      clearTimeout(this.selecionarTudoFeedbackTimer);
+      this.selecionarTudoFeedbackTimer = null;
+    }
+    this.selecionarTudoBusy = false;
+  }
+
+  private onAcoesSelecao(): void {
+    this.acoesMenuAberto = !this.acoesMenuAberto;
+    this.syncShellBottomNavActions();
+  }
+
+  acoesMenuItens(): MobileListActionMenuItem[] {
+    const ids = this.idsAtSelecionadosParaExclusao();
+    const n = ids.length;
+    let disabled = n === 0;
+    if (n === 1) {
+      const g = this.grupos.find((x) => this.idAtendimento(x) === ids[0]);
+      if (g && this.comandaBloqueadaParaExclusao(g)) disabled = true;
+    }
+    return [
+      {
+        id: 'excluir',
+        label: 'Excluir',
+        ariaLabel:
+          n === 1
+            ? 'Excluir comanda selecionada'
+            : 'Excluir comandas selecionadas',
+        icon: 'trash',
+        danger: true,
+        disabled,
+      },
+    ];
+  }
+
+  onAcoesMenuOpenChange(open: boolean): void {
+    if (open || !this.acoesMenuAberto) return;
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
+  }
+
+  onItemAcaoSelecao(item: MobileListActionMenuItem): void {
+    if (item.id !== 'excluir' || item.disabled) return;
+    if (this.excluindoItemModal || this.excluindoEmMassa) return;
+    const ids = this.idsAtSelecionadosParaExclusao();
+    if (ids.length === 1) {
+      const g = this.grupos.find((x) => this.idAtendimento(x) === ids[0]);
+      if (!g) return;
+      this.excluir(g, new Event('click'));
+      return;
+    }
+    this.onAcoesEmMassaClick();
+  }
+
+  onMobileCardClick(g: ComandaGrupo, ev: Event): void {
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.selecionados = toggleId(this.selecionados, g.id);
+      this.syncShellBottomNavActions();
+      return;
+    }
+    this.abrirDrawerComandaPorGrupo(g);
+  }
+
+  /** Filtros além do padrão (não excluídas + mês corrente, sem status/pagamento). */
+  temFiltroAtivo(): boolean {
+    return this.chipsFiltrosMobile().length > 0;
+  }
+
+  chipsFiltrosMobile(): { id: string; label: string }[] {
+    const chips: { id: string; label: string }[] = [];
+    if (this.filtroExcluidas && this.filtroNaoExcluidas) {
+      chips.push({ id: 'status-ambos', label: 'Excluídas e não excluídas' });
+    } else if (this.filtroExcluidas && !this.filtroNaoExcluidas) {
+      chips.push({ id: 'status-excluidas', label: 'Excluídas' });
+    } else if (!this.filtroExcluidas && !this.filtroNaoExcluidas) {
+      chips.push({ id: 'status-nenhum', label: 'Status: nenhum' });
+    }
+    const padraoIni = primeiroDiaMesYmdFiltro();
+    const padraoFim = ultimoDiaMesYmdFiltro();
+    if (
+      this.periodoInicioYmd !== padraoIni ||
+      this.periodoFimYmd !== padraoFim
+    ) {
+      chips.push({ id: 'periodo', label: 'Período' });
+    }
+    for (const st of this.filtrosStatusComanda) {
+      if (this.filtroStatusComandaSelecionados.has(st.id)) {
+        chips.push({ id: `st:${st.id}`, label: st.label });
+      }
+    }
+    for (const fp of this.filtrosPagamentoColuna) {
+      if (this.filtroPagamentoColunaSelecionados.has(fp.id)) {
+        chips.push({ id: `pg:${fp.id}`, label: fp.label });
+      }
+    }
+    for (const f of this.formasOpcoes) {
+      if (this.filtroFormas.has(f.value)) {
+        chips.push({ id: `fp:${f.value}`, label: f.rotulo });
+      }
+    }
+    return chips;
+  }
+
+  removerChipFiltro(id: string, ev?: Event): void {
+    ev?.stopPropagation();
+    if (id === 'status-ambos' || id === 'status-excluidas' || id === 'status-nenhum') {
+      this.filtroExcluidas = false;
+      this.filtroNaoExcluidas = true;
+    } else if (id === 'periodo') {
+      this.periodoInicioYmd = primeiroDiaMesYmdFiltro();
+      this.periodoFimYmd = ultimoDiaMesYmdFiltro();
+      this.syncDdMmFromPeriodoYmd();
+      this.pagina = 1;
+      this.carregar();
+      this.syncShellBottomNavActions();
+      return;
+    } else if (id.startsWith('st:')) {
+      const stId = id.slice(3) as FiltroStatusComandaId;
+      this.filtroStatusComandaSelecionados.delete(stId);
+      this.filtroStatusComandaSelecionados = new Set(
+        this.filtroStatusComandaSelecionados,
+      );
+    } else if (id.startsWith('pg:')) {
+      const pgId = id.slice(3) as FiltroPagamentoColunaId;
+      this.filtroPagamentoColunaSelecionados.delete(pgId);
+      this.filtroPagamentoColunaSelecionados = new Set(
+        this.filtroPagamentoColunaSelecionados,
+      );
+    } else if (id.startsWith('fp:')) {
+      this.filtroFormas.delete(id.slice(3));
+      this.filtroFormas = new Set(this.filtroFormas);
+    }
+    this.pagina = 1;
+    this.syncShellBottomNavActions();
+  }
+
+  /** Empty global ≠ empty filtrado (MLP). */
+  rotuloListaVazia(): string {
+    if (
+      this.grupos.length === 0 &&
+      !this.busca.trim() &&
+      !this.temFiltroAtivo()
+    ) {
+      return 'Nenhuma comanda encontrada';
+    }
+    return 'Nenhum item encontrado';
+  }
+
+  private afterFiltroLocalChange(): void {
+    this.pagina = 1;
+    this.syncShellBottomNavActions();
   }
 
   private dispararPulsoToolbar(which: 'busca' | 'filtro'): void {
@@ -482,6 +803,29 @@ export class ComandasComponent implements OnInit, OnDestroy {
       this.fecharNovoAgendamento();
       return;
     }
+    if (this.acoesMenuAberto) {
+      ev.preventDefault();
+      this.acoesMenuAberto = false;
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (this.filtrosAbertos) {
+      if (
+        document.querySelector(
+          '.periodo-filtro__panel--sheet.periodo-filtro__panel--open',
+        )
+      ) {
+        return;
+      }
+      ev.preventDefault();
+      this.fecharFiltros();
+      return;
+    }
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      this.sairModoSelecao();
+      return;
+    }
     if (this.perPageMenuAberto) {
       ev.preventDefault();
       this.perPageMenuAberto = false;
@@ -498,6 +842,9 @@ export class ComandasComponent implements OnInit, OnDestroy {
   }
 
   get buscaPlaceholder(): string {
+    if (this.shellBottomNavEligible) {
+      return this.buscaAberta ? 'Digite para buscar' : '';
+    }
     return this.buscaAberta
       ? 'Procure por ticket, cliente, número ou valor...'
       : '';
@@ -574,11 +921,13 @@ export class ComandasComponent implements OnInit, OnDestroy {
     this.dispararPulsoToolbar('filtro');
     this.filtrosAbertos = !this.filtrosAbertos;
     if (this.filtrosAbertos) this.carregarOpcoesFormasPagamento();
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   onPeriodoFiltroAlterado(): void {
     this.syncDdMmFromPeriodoYmd();
     this.carregar();
+    this.syncShellBottomNavActions();
   }
 
   private syncDdMmFromPeriodoYmd(): void {
@@ -646,14 +995,14 @@ export class ComandasComponent implements OnInit, OnDestroy {
     this.filtroFormas = checked
       ? new Set(this.formasOpcoes.map((o) => o.value))
       : new Set();
-    this.pagina = 1;
+    this.afterFiltroLocalChange();
   }
 
   toggleFiltroFormaPagamento(codigo: string, ev: Event): void {
     const checked = (ev.target as HTMLInputElement).checked;
     if (checked) this.filtroFormas.add(codigo);
     else this.filtroFormas.delete(codigo);
-    this.pagina = 1;
+    this.afterFiltroLocalChange();
   }
 
   todasPagamentoSelecionadas(): boolean {
@@ -668,7 +1017,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
     this.filtroPagamentoColunaSelecionados = checked
       ? new Set(this.filtrosPagamentoColuna.map((f) => f.id))
       : new Set();
-    this.pagina = 1;
+    this.afterFiltroLocalChange();
   }
 
   private formaPagamentoRawGrupo(g: ComandaGrupo): string {
@@ -815,7 +1164,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
       return;
     }
     this.filtroExcluidas = checked;
-    this.pagina = 1;
+    this.afterFiltroLocalChange();
   }
 
   toggleFiltroNaoExcluidas(ev: Event): void {
@@ -825,7 +1174,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
       return;
     }
     this.filtroNaoExcluidas = checked;
-    this.pagina = 1;
+    this.afterFiltroLocalChange();
   }
 
   onAcoesEmMassaClick(): void {
@@ -862,7 +1211,8 @@ export class ComandasComponent implements OnInit, OnDestroy {
       next: () => {
         this.excluindoEmMassa = false;
         this.excluirMassaModalAberto = false;
-        this.selecionados.clear();
+        if (this.modoSelecao) this.sairModoSelecao();
+        else this.selecionados.clear();
         this.carregar();
       },
       error: (e: Error) => {
@@ -886,6 +1236,10 @@ export class ComandasComponent implements OnInit, OnDestroy {
   /** Toolbar «Novo»: abre o drawer de novo agendamento (mesmo fluxo da agenda). */
   abrirNovoAgendamentoDrawer(): void {
     this.fecharPainelBusca();
+    if (this.shellBottomNavEligible && this.filtrosAbertos) {
+      this.fecharFiltros();
+    }
+    if (this.modoSelecao) this.sairModoSelecao();
     if (this.cadastroDrawer.isAberto) {
       this.cadastroDrawer.fechar();
     }
@@ -1439,7 +1793,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
     } else {
       this.filtroStatusComandaSelecionados.add(id);
     }
-    this.pagina = 1;
+    this.afterFiltroLocalChange();
   }
 
   toggleFiltroPagamentoColuna(id: FiltroPagamentoColunaId): void {
@@ -1448,7 +1802,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
     } else {
       this.filtroPagamentoColunaSelecionados.add(id);
     }
-    this.pagina = 1;
+    this.afterFiltroLocalChange();
   }
 
   filtroStatusComandaAtivo(id: FiltroStatusComandaId): boolean {
@@ -2048,6 +2402,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
         this.excluindoItemModal = false;
         this.excluirItemModalAberto = false;
         this.grupoPendenteExclusao = null;
+        if (this.modoSelecao) this.sairModoSelecao();
         this.carregar();
       },
       error: (e: Error) => {

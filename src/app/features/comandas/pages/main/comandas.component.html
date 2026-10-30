@@ -5,7 +5,10 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Comandas</h1>
         </div>
-        <div class="list-head__actions">
+        <div
+          class="list-head__actions"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -140,15 +143,51 @@
     </header>
   </div>
 
+  @if (shellBottomNavEligible && chipsFiltrosMobile().length) {
+    <div class="comandas-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="comandas-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
   <div
     class="comandas-layout"
-    [class.comandas-layout--filtros-abertos]="filtrosAbertos"
+    [class.comandas-layout--filtros-abertos]="
+      filtrosAbertos && !shellBottomNavEligible
+    "
   >
     <aside
       class="comandas-filtros-drawer"
-      [class.comandas-filtros-drawer--open]="filtrosAbertos"
+      [class.comandas-filtros-drawer--open]="
+        filtrosAbertos && !shellBottomNavEligible
+      "
       aria-label="Painel de filtros"
-      [attr.aria-hidden]="filtrosAbertos ? null : 'true'"
+      [attr.aria-hidden]="
+        filtrosAbertos && !shellBottomNavEligible ? null : 'true'
+      "
     >
       <div class="comandas-filtros-drawer__inner">
         <section class="comandas-filtros-card">
@@ -266,7 +305,11 @@
 
       @if (!erro) {
         <div class="comandas-table-card">
-          <div class="table-wrap" role="region" aria-label="Lista de comandas">
+          <div
+            class="table-wrap comandas-desktop-table"
+            role="region"
+            aria-label="Lista de comandas"
+          >
             <table class="comandas-table">
               <colgroup>
                 <col class="comandas-table__col-check" />
@@ -539,7 +582,7 @@
                 } @else if (totalFiltrado() === 0) {
                   <tr>
                     <td class="table-body__empty" [attr.colspan]="totalColunasTabela()">
-                      <app-table-empty label="Nenhum item encontrado" />
+                      <app-table-empty [label]="rotuloListaVazia()" />
                     </td>
                   </tr>
                 } @else {
@@ -759,6 +802,109 @@
                 }
               </tbody>
             </table>
+          </div>
+
+          <div class="comandas-mobile-list" aria-label="Lista de comandas">
+            @if (carregando) {
+              <p class="comandas-mobile-list__busy">Carregando…</p>
+            } @else if (totalFiltrado() === 0) {
+              <div class="comandas-mobile-list__empty">
+                <app-table-empty [label]="rotuloListaVazia()" />
+              </div>
+            } @else {
+              @for (g of gruposPagina(); track g.id) {
+                <div
+                  class="comandas-mobile-card"
+                  [class.comandas-mobile-card--selecao]="modoSelecao"
+                  [class.comandas-mobile-card--selected]="
+                    modoSelecao && estaSelecionado(g)
+                  "
+                >
+                  <span
+                    class="comandas-mobile-card__check"
+                    [class.comandas-mobile-card__check--on]="estaSelecionado(g)"
+                    aria-hidden="true"
+                  ></span>
+                  <button
+                    type="button"
+                    class="comandas-mobile-card__main"
+                    (click)="onMobileCardClick(g, $event)"
+                    [attr.aria-label]="
+                      modoSelecao
+                        ? (estaSelecionado(g)
+                            ? 'Desmarcar '
+                            : 'Selecionar ') + rotuloTicket(g)
+                        : rotuloMenuAbrirComanda(g) + ' ' + rotuloTicket(g)
+                    "
+                    [attr.aria-pressed]="
+                      modoSelecao ? estaSelecionado(g) : null
+                    "
+                  >
+                    <span class="comandas-mobile-card__body">
+                      <span class="comandas-mobile-card__top">
+                        <span class="comandas-mobile-card__ticket">{{
+                          rotuloTicket(g)
+                        }}</span>
+                        <span class="comandas-mobile-card__cliente">{{
+                          g.nomeCliente || '—'
+                        }}</span>
+                      </span>
+                      <span class="comandas-mobile-card__meta">
+                        <span
+                          class="badge"
+                          [class.badge--warn]="
+                            classeBadgeStatus(g) === 'badge--warn'
+                          "
+                          [class.badge--finalizado]="
+                            classeBadgeStatus(g) === 'badge--finalizado'
+                          "
+                          >{{ rotuloStatus(g) }}</span
+                        >
+                        <span
+                          class="badge"
+                          [class.badge--warn]="
+                            classeBadgePagamento(g) === 'badge--warn'
+                          "
+                          [class.badge--ok]="
+                            classeBadgePagamento(g) === 'badge--ok'
+                          "
+                          [class.badge--atraso]="
+                            classeBadgePagamento(g) === 'badge--atraso'
+                          "
+                          [class.badge--receber]="
+                            classeBadgePagamento(g) === 'badge--receber'
+                          "
+                          >{{ rotuloPagamento(g) }}</span
+                        >
+                      </span>
+                      <span class="comandas-mobile-card__foot">
+                        <span class="comandas-mobile-card__valor">
+                          @if (mostrarIconeDescontoComanda(g)) {
+                            <span
+                              class="comandas-mobile-card__disc"
+                              [attr.aria-label]="textoTooltipDescontoComanda(g)"
+                              [attr.title]="textoTooltipDescontoComanda(g)"
+                              >%</span
+                            >
+                          }
+                          @if (valorExibicao(g) !== null) {
+                            {{
+                              valorExibicao(g)!
+                                | currency: 'BRL' : 'symbol' : '1.2-2'
+                            }}
+                          } @else {
+                            —
+                          }
+                        </span>
+                        <span class="comandas-mobile-card__data">{{
+                          dataDdMmBarraAaaa(g.data)
+                        }}</span>
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              }
+            }
           </div>
 
           <footer class="list-footer comandas-footer">
@@ -1063,3 +1209,126 @@
   }
 
 </div>
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && filtrosAbertos"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section class="comandas-filtros-card comandas-filtros-card--sheet">
+    <h3 class="comandas-filtros-card__title">Status</h3>
+    <div class="comandas-filtros-card__body">
+      <label class="comandas-filtros-check">
+        <input
+          type="checkbox"
+          name="st_excluidas_sheet"
+          [checked]="filtroExcluidas"
+          (change)="toggleFiltroExcluidas($event)"
+        />
+        <span class="comandas-filtros-check__label">Excluídas</span>
+      </label>
+      <label class="comandas-filtros-check">
+        <input
+          type="checkbox"
+          name="st_nao_excluidas_sheet"
+          [checked]="filtroNaoExcluidas"
+          (change)="toggleFiltroNaoExcluidas($event)"
+        />
+        <span class="comandas-filtros-check__label">Não excluídas</span>
+      </label>
+    </div>
+  </section>
+
+  <section
+    class="comandas-filtros-card comandas-filtros-card--periodo comandas-filtros-card--sheet"
+  >
+    <h3 class="comandas-filtros-card__title">Período</h3>
+    <app-cliente-drawer-periodo-filtro
+      [(inicioYmd)]="periodoInicioYmd"
+      [(fimYmd)]="periodoFimYmd"
+      exibicaoFormato="belasis"
+      [painelFlutuante]="true"
+      (periodoAlterado)="onPeriodoFiltroAlterado()"
+    />
+  </section>
+
+  <section class="comandas-filtros-card comandas-filtros-card--sheet">
+    <h3 class="comandas-filtros-card__title">Status da comanda</h3>
+    <div class="comandas-filtros-card__body">
+      @for (st of filtrosStatusComanda; track st.id) {
+        <label class="comandas-filtros-check">
+          <input
+            type="checkbox"
+            [name]="'st_comanda_sheet_' + st.id"
+            [checked]="filtroStatusComandaAtivo(st.id)"
+            (change)="toggleFiltroStatusComanda(st.id)"
+          />
+          <span [class]="'badge ' + st.badge">{{ st.label }}</span>
+        </label>
+      }
+    </div>
+  </section>
+
+  <section class="comandas-filtros-card comandas-filtros-card--sheet">
+    <h3 class="comandas-filtros-card__title">Pagamento</h3>
+    <div class="comandas-filtros-card__body">
+      <label class="comandas-filtros-check comandas-filtros-check--select-all">
+        <input
+          type="checkbox"
+          name="pg_col_todas_sheet"
+          [checked]="todasPagamentoSelecionadas()"
+          (change)="toggleTodasPagamento($event)"
+        />
+        <span class="comandas-filtros-check__label">Selecionar tudo</span>
+      </label>
+      @for (fp of filtrosPagamentoColuna; track fp.id) {
+        <label class="comandas-filtros-check">
+          <input
+            type="checkbox"
+            [name]="'pg_col_sheet_' + fp.id"
+            [checked]="filtroPagamentoColunaAtivo(fp.id)"
+            (change)="toggleFiltroPagamentoColuna(fp.id)"
+          />
+          <span [class]="'badge ' + fp.badge">{{ fp.label }}</span>
+        </label>
+      }
+    </div>
+  </section>
+
+  @if (formasPagamentoFiltro().length > 0) {
+    <section class="comandas-filtros-card comandas-filtros-card--sheet">
+      <h3 class="comandas-filtros-card__title">Forma de pagamento</h3>
+      <div class="comandas-filtros-card__body">
+        <label class="comandas-filtros-check comandas-filtros-check--select-all">
+          <input
+            type="checkbox"
+            name="fp_todas_sheet"
+            [checked]="todasFormasSelecionadas()"
+            (change)="toggleTodasFormas($event)"
+          />
+          <span class="comandas-filtros-check__label">Selecionar tudo</span>
+        </label>
+        @for (f of formasPagamentoFiltro(); track f.value) {
+          <label class="comandas-filtros-check">
+            <input
+              type="checkbox"
+              [name]="'fp-sheet-' + f.value"
+              [checked]="formaPagamentoMarcada(f.value)"
+              (change)="toggleFiltroFormaPagamento(f.value, $event)"
+            />
+            <span class="comandas-filtros-check__label">{{ f.rotulo }}</span>
+          </label>
+        }
+      </div>
+    </section>
+  }
+</app-mobile-filtros-sheet>
+
+<app-mobile-list-actions-menu
+  [open]="shellBottomNavEligible && acoesMenuAberto"
+  [items]="acoesMenuItens()"
+  anchor="acoes"
+  (openChange)="onAcoesMenuOpenChange($event)"
+  (itemSelect)="onItemAcaoSelecao($event)"
+/>
