@@ -1,3 +1,19 @@
+/**
+ * Rótulo de apresentação da quantidade Mega no select (value interno = pacote técnico).
+ * Não altera Mecha Avulsa nem outros pacotes.
+ */
+const ROTULO_PACOTE_MEGA_UI: Readonly<Record<string, string>> = {
+  '1 mecha': '1 faixa',
+  '2 mechas': '2 faixas',
+  '5 mechas': '5 faixas',
+  '7 mechas': '7 faixas',
+};
+
+export function rotuloPacoteMega(pacote: string): string {
+  const n = String(pacote || '').trim();
+  return ROTULO_PACOTE_MEGA_UI[n] ?? n;
+}
+
 /** Reforço no cliente: mesmo algoritmo que a API (`descricaoParaListaLinha`) para o rótulo Pacote. */
 export function enriquecerRotuloPacote(params: {
   texto: string;

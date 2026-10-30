@@ -129,6 +129,7 @@ import {
   ordenarNomesEtapasMegaPacote,
   valorMonetarioParaNumero,
 } from '../../../../core/utils/atendimento-display';
+import { rotuloPacoteMega } from '../../../../core/utils/pacote-descricao';
 import {
   corHexAgendaPorStatus,
   inferirAgendaStatusPorCorHex,
@@ -4667,9 +4668,9 @@ export class AgendaNovoComponent implements OnInit, OnChanges, OnDestroy {
     return this.rotuloPacoteSemPreco(String(p.pacote || ''));
   }
 
-  /** Mega / Pacote: só o nome (ex.: «2 mechas»), sem sufixo de moeda. */
+  /** Mega: label de UI («1 faixa»…); value do select continua o pacote técnico. */
   rotuloPacoteMegaOpcao(nomePacote: string): string {
-    return this.rotuloPacoteSemPreco(nomePacote);
+    return rotuloPacoteMega(this.rotuloPacoteSemPreco(nomePacote));
   }
 
   /** Remove « — R$ …» se o preço veio colado no nome do pacote. */
