@@ -1,7 +1,14 @@
-import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
 import { AppToastService } from '../../../../shared/app-toast/app-toast.service';
 import { lerServicoTexto } from '../../../../core/utils/servico-campos';
 import type {
@@ -12,6 +19,18 @@ import { UiTipTriggerComponent } from '../../../../shared/ui-tip-trigger/ui-tip-
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import { tooltipOrdenacaoProximoClique } from '../../../../shared/table-sort-tip.util';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import {
+  MobileListActionMenuItem,
+  MobileListActionsMenuComponent,
+} from '../../../../shared/components/mobile-list-actions-menu/mobile-list-actions-menu.component';
+import {
+  areAllSelected,
+  buildSelectionBottomNavActions,
+  selectAllIds,
+  toggleId,
+} from '../../../../shared/mobile-list-selection/mobile-list-selection';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 
 export interface CategoriaListaItem {
   id: number;
@@ -29,18 +48,38 @@ export interface CategoriaAssociacaoItem {
 const DRAWER_ANIM_MS = 430;
 const CATEGORIA_SALVA_TOAST_MSG = 'Categoria salva com sucesso!';
 const CATEGORIA_EXCLUIDA_TOAST_MSG = 'Categoria excluída com sucesso!';
+const CATEGORIAS_BOTTOM_NAV_OWNER = 'categorias';
 
 @Component({
   selector: 'app-categorias',
   standalone: true,
   imports: [
-    FlipDropdownPanelDirective,TableEmptyComponent, FormsModule, UiTipTriggerComponent],
+    FlipDropdownPanelDirective,
+    TableEmptyComponent,
+    FormsModule,
+    UiTipTriggerComponent,
+    MobileFiltrosSheetComponent,
+    MobileListActionsMenuComponent,
+  ],
   templateUrl: './categorias.component.html',
   styleUrl: './categorias.component.scss',
 })
 export class CategoriasComponent implements OnInit, OnDestroy {
   private readonly api = inject(SheetsApiService);
   private readonly toast = inject(AppToastService);
+  private readonly shellUi = inject(AppShellUiService);
+
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (!this.shellBottomNavEligible && this.modoSelecao) {
+      this.modoSelecao = false;
+      this.acoesMenuAberto = false;
+      this.selecionados.clear();
+      this.limparFeedbackSelecionarTudo();
+    }
+    this.syncShellBottomNavActions();
+  };
 
   carregando = false;
   erro = '';
@@ -62,6 +101,14 @@ export class CategoriasComponent implements OnInit, OnDestroy {
   readonly opcoesPorPagina = [10, 20, 50];
   perPageMenuAberto = false;
   selecionados = new Set<number>();
+
+  /** ≤767px: bottom nav contextual (Filtro · Selecionar · Novo). */
+  shellBottomNavEligible = false;
+  modoSelecao = false;
+  acoesMenuAberto = false;
+  selecionarTudoBusy = false;
+  private selecionarTudoFeedbackTimer: ReturnType<typeof setTimeout> | null =
+    null;
 
   ordenacaoColuna: 'nome' = 'nome';
   ordenacaoDir: 'asc' | 'desc' = 'asc';
@@ -94,6 +141,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.setupShellBottomNav();
     this.carregar();
   }
 
@@ -104,6 +152,221 @@ export class CategoriasComponent implements OnInit, OnDestroy {
     if (this.cadastroCloseTimer != null) {
       clearTimeout(this.cadastroCloseTimer);
     }
+    this.limparFeedbackSelecionarTudo();
+    window.clearTimeout(this.tPulsoFiltro);
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(CATEGORIAS_BOTTOM_NAV_OWNER);
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Menu no shell. Normal: Filtro · Selecionar · Novo.
+   * Em seleção: Cancelar · Selecionar tudo · Ações (editar/excluir unitários).
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(CATEGORIAS_BOTTOM_NAV_OWNER);
+      return;
+    }
+    if (this.modoSelecao) {
+      const actions = buildSelectionBottomNavActions(
+        this.todosFiltradosSelecionados(),
+        {
+          onCancel: () => this.sairModoSelecao(),
+          onSelectAll: () => this.selecionarTodosMobile(),
+          onActions: () => this.onAcoesSelecao(),
+          selectAllAriaLabel: 'Selecionar todas as categorias filtradas',
+        },
+      );
+      const acoes = actions.find((action) => action.id === 'acoes');
+      if (acoes) acoes.active = this.acoesMenuAberto;
+      const selecionarTudo = actions.find(
+        (action) => action.id === 'selecionar-tudo',
+      );
+      if (selecionarTudo) selecionarTudo.busy = this.selecionarTudoBusy;
+      this.shellUi.setMobileBottomNavActions(
+        CATEGORIAS_BOTTOM_NAV_OWNER,
+        actions,
+      );
+      return;
+    }
+    this.shellUi.setMobileBottomNavActions(CATEGORIAS_BOTTOM_NAV_OWNER, [
+      {
+        id: 'filtro',
+        label: 'Filtro',
+        ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: this.filtrosAbertos,
+        warn: this.temFiltroAtivo() && !this.filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+      {
+        id: 'selecionar',
+        label: 'Selecionar',
+        ariaLabel: 'Selecionar categorias',
+        icon: 'check',
+        active: false,
+        onClick: () => this.entrarModoSelecao(),
+      },
+      {
+        id: 'novo',
+        label: 'Novo',
+        ariaLabel: 'Nova categoria',
+        icon: 'plus',
+        accent: true,
+        onClick: () => this.onNovo(),
+      },
+    ]);
+  }
+
+  private onFiltroMobile(): void {
+    this.filtrosAbertos = !this.filtrosAbertos;
+    this.syncShellBottomNavActions();
+  }
+
+  fecharFiltros(): void {
+    if (!this.filtrosAbertos) return;
+    this.filtrosAbertos = false;
+    this.syncShellBottomNavActions();
+  }
+
+  entrarModoSelecao(): void {
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
+    this.modoSelecao = true;
+    this.syncShellBottomNavActions();
+  }
+
+  sairModoSelecao(): void {
+    this.modoSelecao = false;
+    this.acoesMenuAberto = false;
+    this.limparFeedbackSelecionarTudo();
+    this.selecionados.clear();
+    this.syncShellBottomNavActions();
+  }
+
+  todosFiltradosSelecionados(): boolean {
+    return areAllSelected(
+      this.filtrados().map((c) => c.id),
+      this.selecionados,
+    );
+  }
+
+  selecionarTodosMobile(): void {
+    this.selecionados = selectAllIds(
+      this.selecionados,
+      this.filtrados().map((c) => c.id),
+    );
+    this.dispararFeedbackSelecionarTudo();
+    this.syncShellBottomNavActions();
+  }
+
+  private dispararFeedbackSelecionarTudo(): void {
+    this.limparFeedbackSelecionarTudo();
+    this.selecionarTudoBusy = true;
+    this.selecionarTudoFeedbackTimer = setTimeout(() => {
+      this.selecionarTudoFeedbackTimer = null;
+      this.selecionarTudoBusy = false;
+      if (this.modoSelecao) this.syncShellBottomNavActions();
+    }, 250);
+  }
+
+  private limparFeedbackSelecionarTudo(): void {
+    if (this.selecionarTudoFeedbackTimer != null) {
+      clearTimeout(this.selecionarTudoFeedbackTimer);
+      this.selecionarTudoFeedbackTimer = null;
+    }
+    this.selecionarTudoBusy = false;
+  }
+
+  private onAcoesSelecao(): void {
+    this.acoesMenuAberto = !this.acoesMenuAberto;
+    this.syncShellBottomNavActions();
+  }
+
+  acoesMenuItens(): MobileListActionMenuItem[] {
+    const um = this.selecionados.size === 1;
+    return [
+      {
+        id: 'editar',
+        label: 'Editar',
+        ariaLabel: 'Editar categoria selecionada',
+        disabled: !um,
+      },
+      {
+        id: 'excluir',
+        label: 'Excluir',
+        ariaLabel: 'Excluir categoria selecionada',
+        icon: 'trash',
+        danger: true,
+        disabled: !um,
+      },
+    ];
+  }
+
+  onAcoesMenuOpenChange(open: boolean): void {
+    if (open || !this.acoesMenuAberto) return;
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
+  }
+
+  onItemAcaoSelecao(item: MobileListActionMenuItem): void {
+    if (this.selecionados.size !== 1) return;
+    const id = [...this.selecionados][0];
+    const categoria = this.itens.find((c) => c.id === id);
+    if (!categoria) return;
+    if (item.id === 'editar') {
+      this.sairModoSelecao();
+      this.onEditar(categoria);
+      return;
+    }
+    if (item.id === 'excluir') this.onExcluir(categoria);
+  }
+
+  onMobileCardClick(c: CategoriaListaItem, ev: Event): void {
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.selecionados = toggleId(this.selecionados, c.id);
+      this.syncShellBottomNavActions();
+      return;
+    }
+    this.onEditar(c);
+  }
+
+  temFiltroAtivo(): boolean {
+    return this.chipsFiltrosMobile().length > 0;
+  }
+
+  /** Chips só quando Status ≠ padrão (só Ativos). */
+  chipsFiltrosMobile(): { id: string; label: string }[] {
+    const chips: { id: string; label: string }[] = [];
+    if (this.filtroAtivas && this.filtroInativas) {
+      chips.push({ id: 'status', label: 'Status: Ativos e Inativos' });
+    } else if (!this.filtroAtivas && this.filtroInativas) {
+      chips.push({ id: 'status', label: 'Status: Inativos' });
+    }
+    return chips;
+  }
+
+  removerChipFiltro(id: string, ev: Event): void {
+    ev.stopPropagation();
+    if (id !== 'status') return;
+    this.filtroAtivas = true;
+    this.filtroInativas = false;
+    this.pagina = 1;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
+  }
+
+  labelListaVazia(): string {
+    if (this.itens.length === 0) return 'Nenhuma categoria cadastrada';
+    return 'Nenhuma categoria encontrada';
   }
 
   get buscaPlaceholder(): string {
@@ -130,6 +393,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
         this.carregando = false;
         this.pagina = 1;
         this.selecionados.clear();
+        if (this.modoSelecao) this.syncShellBottomNavActions();
       },
       error: (e: Error) => {
         this.erro =
@@ -157,6 +421,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
     ev?.stopPropagation();
     this.dispararPulsoToolbar('filtro');
     this.filtrosAbertos = !this.filtrosAbertos;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   private dispararPulsoToolbar(which: 'busca' | 'filtro'): void {
@@ -190,6 +455,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
       else this.filtroAtivas = true;
     }
     this.pagina = 1;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   get filtroStatusAtivo(): boolean {
@@ -197,6 +463,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
   }
 
   onNovo(): void {
+    if (this.modoSelecao) this.sairModoSelecao();
     this.abrirCadastro(null, true);
   }
 
@@ -325,6 +592,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
         this.exclusaoModalSalvando = false;
         this.exclusaoModalItem = null;
         this.selecionados.delete(item.id);
+        if (this.modoSelecao) this.sairModoSelecao();
         this.toast.show(
           res.result === 'deactivated'
             ? 'Categoria desativada (já usada em serviços ou produtos).'
@@ -484,6 +752,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
     const checked = (ev.target as HTMLInputElement).checked;
     if (checked) this.selecionados.add(item.id);
     else this.selecionados.delete(item.id);
+    if (this.modoSelecao) this.syncShellBottomNavActions();
   }
 
   todosDaPaginaSelecionados(): boolean {
@@ -497,6 +766,7 @@ export class CategoriasComponent implements OnInit, OnDestroy {
       if (checked) this.selecionados.add(i.id);
       else this.selecionados.delete(i.id);
     }
+    if (this.modoSelecao) this.syncShellBottomNavActions();
   }
 
   @HostListener('document:keydown.escape', ['$event'])
@@ -504,6 +774,12 @@ export class CategoriasComponent implements OnInit, OnDestroy {
     if (this.exclusaoModalItem) {
       ev.preventDefault();
       this.fecharModalExclusao();
+      return;
+    }
+    if (this.acoesMenuAberto) {
+      ev.preventDefault();
+      this.acoesMenuAberto = false;
+      this.syncShellBottomNavActions();
       return;
     }
     if (this.cadastroAberto) {
@@ -516,8 +792,17 @@ export class CategoriasComponent implements OnInit, OnDestroy {
       this.fecharAssociacoes();
       return;
     }
+    if (this.filtrosAbertos) {
+      ev.preventDefault();
+      this.fecharFiltros();
+      return;
+    }
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      this.sairModoSelecao();
+      return;
+    }
     if (this.perPageMenuAberto) this.perPageMenuAberto = false;
-    else if (this.filtrosAbertos) this.filtrosAbertos = false;
     else if (this.buscaAberta) this.buscaAberta = false;
   }
 

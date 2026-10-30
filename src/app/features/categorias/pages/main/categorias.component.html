@@ -5,7 +5,10 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Categorias</h1>
         </div>
-        <div class="list-head__actions list-head__actions--categorias">
+        <div
+          class="list-head__actions list-head__actions--categorias"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -41,7 +44,9 @@
               class="list-head__busca-input"
               [(ngModel)]="busca"
               name="buscaCategorias"
-              [placeholder]="buscaPlaceholder"
+              [placeholder]="
+                shellBottomNavEligible ? 'Digite para buscar' : buscaPlaceholder
+              "
               [class.list-head__busca-input--search-open]="buscaAberta"
               [class.list-head__busca-input--pulse-once-busca]="pulsoToolbarBusca"
               autocomplete="off"
@@ -108,15 +113,45 @@
     </header>
   </div>
 
+  @if (shellBottomNavEligible && chipsFiltrosMobile().length) {
+    <div class="categorias-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="categorias-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
   <div
     class="list-layout"
-    [class.list-layout--filtros-abertos]="filtrosAbertos"
+    [class.list-layout--filtros-abertos]="filtrosAbertos && !shellBottomNavEligible"
   >
     <aside
       class="categorias-filtros-drawer"
-      [class.categorias-filtros-drawer--open]="filtrosAbertos"
+      [class.categorias-filtros-drawer--open]="filtrosAbertos && !shellBottomNavEligible"
       aria-label="Filtros de categorias"
-      [attr.aria-hidden]="filtrosAbertos ? null : 'true'"
+      [attr.aria-hidden]="filtrosAbertos && !shellBottomNavEligible ? null : 'true'"
     >
       <div class="categorias-filtros-drawer__inner">
         <section class="categorias-filtros-card">
@@ -152,7 +187,11 @@
 
       @if (!erro) {
         <div class="list-table-card">
-          <div class="table-wrap" role="region" aria-label="Lista de categorias">
+          <div
+            class="table-wrap categorias-desktop-table"
+            role="region"
+            aria-label="Lista de categorias"
+          >
             <table class="list-table categorias-table">
               <colgroup>
                 <col class="categorias-table__col-check" />
@@ -229,7 +268,7 @@
                 } @else if (paginaItens().length === 0) {
                   <tr>
                     <td colspan="4" class="table-body__empty">
-                      <app-table-empty label="Nenhuma categoria encontrada" />
+                      <app-table-empty [label]="labelListaVazia()" />
                     </td>
                   </tr>
                 } @else {
@@ -331,6 +370,73 @@
                 }
               </tbody>
             </table>
+          </div>
+
+          <div class="categorias-mobile-list" aria-label="Lista de categorias">
+            @if (carregando) {
+              <p class="categorias-mobile-list__busy">Carregando…</p>
+            } @else if (totalFiltrado() === 0) {
+              <div class="categorias-mobile-list__empty">
+                <app-table-empty [label]="labelListaVazia()" />
+              </div>
+            } @else {
+              @for (c of paginaItens(); track c.id) {
+                <div
+                  class="categorias-mobile-card"
+                  [class.categorias-mobile-card--selecao]="modoSelecao"
+                  [class.categorias-mobile-card--selected]="
+                    modoSelecao && estaSelecionado(c.id)
+                  "
+                  [class.categorias-mobile-card--inativa]="!c.ativo"
+                >
+                  <button
+                    type="button"
+                    class="categorias-mobile-card__hit"
+                    (click)="onMobileCardClick(c, $event)"
+                    [attr.aria-label]="
+                      modoSelecao
+                        ? (estaSelecionado(c.id) ? 'Desmarcar ' : 'Selecionar ') +
+                          c.nome
+                        : 'Editar categoria ' + c.nome
+                    "
+                    [attr.aria-pressed]="modoSelecao ? estaSelecionado(c.id) : null"
+                  >
+                    <span
+                      class="categorias-mobile-card__check"
+                      [class.categorias-mobile-card__check--on]="estaSelecionado(c.id)"
+                      aria-hidden="true"
+                    ></span>
+                    <span class="categorias-mobile-card__body">
+                      <span class="categorias-mobile-card__top">
+                        <span class="categorias-mobile-card__nome">{{ c.nome }}</span>
+                        @if (!c.ativo) {
+                          <span class="categorias-mobile-card__badge">Inativo</span>
+                        }
+                      </span>
+                      @if (modoSelecao || c.qtdItens <= 0) {
+                        <span
+                          class="categorias-mobile-card__itens"
+                          [class.categorias-mobile-card__itens--vazio]="c.qtdItens <= 0"
+                          >{{ rotuloItens(c.qtdItens) }}</span
+                        >
+                      }
+                    </span>
+                  </button>
+                  @if (!modoSelecao && c.qtdItens > 0) {
+                    <button
+                      type="button"
+                      class="categorias-mobile-card__itens categorias-mobile-card__itens--link"
+                      (click)="abrirAssociacoes(c, $event)"
+                      [attr.aria-label]="
+                        rotuloItens(c.qtdItens) + ' — abrir associações'
+                      "
+                    >
+                      {{ rotuloItens(c.qtdItens) }}
+                    </button>
+                  }
+                </div>
+              }
+            }
           </div>
 
           <footer class="list-footer">
@@ -655,3 +761,42 @@
     </div>
   </div>
 }
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && filtrosAbertos"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section class="categorias-filtros-card categorias-filtros-card--sheet">
+    <h3 class="categorias-filtros-card__title">Status</h3>
+    <div class="categorias-filtros-card__body">
+      <label class="categorias-filtros-check">
+        <input
+          type="checkbox"
+          name="cat_sheet_filtro_ativos"
+          [checked]="filtroAtivas"
+          (change)="toggleFiltroStatus('ativos', $event)"
+        />
+        Ativos
+      </label>
+      <label class="categorias-filtros-check">
+        <input
+          type="checkbox"
+          name="cat_sheet_filtro_inativos"
+          [checked]="filtroInativas"
+          (change)="toggleFiltroStatus('inativos', $event)"
+        />
+        Inativos
+      </label>
+    </div>
+  </section>
+</app-mobile-filtros-sheet>
+
+<app-mobile-list-actions-menu
+  [open]="shellBottomNavEligible && acoesMenuAberto"
+  [items]="acoesMenuItens()"
+  anchor="acoes"
+  (openChange)="onAcoesMenuOpenChange($event)"
+  (itemSelect)="onItemAcaoSelecao($event)"
+/>
