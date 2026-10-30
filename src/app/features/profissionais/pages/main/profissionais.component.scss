@@ -31,7 +31,9 @@
 
     > .table-wrap {
       border-radius: 12px 12px 0 0;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
     }
   }
 
@@ -553,5 +555,187 @@
   &:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+  }
+}
+
+.profissionais-mobile-list {
+  display: none;
+}
+
+.profissionais-mobile-list__busy,
+.profissionais-mobile-list__empty {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  color: #a8a29e;
+}
+
+.profissionais-mobile-card {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 8px 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  box-sizing: border-box;
+}
+
+.profissionais-mobile-card__main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #3788d8);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+
+.profissionais-mobile-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profissionais-mobile-card__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.profissionais-mobile-card__nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #1c1917;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profissionais-mobile-card__status {
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.profissionais-mobile-card__sub {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: rgb(130, 130, 130);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profissionais-mobile-card__acoes {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+
+  .list-row-acoes__sep {
+    flex-shrink: 0;
+    align-self: center;
+    width: 1px;
+    height: 14px;
+    margin: 0;
+    background: #ebebeb;
+  }
+
+  .list-row-acoes__btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .list-row-acoes__btn svg {
+    width: 13.3333px;
+    height: 13.3333px;
+    display: block;
+  }
+
+  .list-row-acoes__btn--delete.list-row-acoes__btn--locked,
+  .list-row-acoes__btn--delete:disabled {
+    color: color-mix(in srgb, var(--color-error) 28%, #d4d4d8);
+    cursor: not-allowed;
+    opacity: 1;
+
+    svg {
+      color: inherit;
+    }
+
+    &:hover {
+      background: transparent;
+      color: color-mix(in srgb, var(--color-error) 28%, #d4d4d8);
+
+      svg {
+        color: inherit;
+      }
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .profissionais-page {
+    overflow-x: hidden;
+    padding-bottom: 88px;
+  }
+
+  .profissionais-page .profissionais-desktop-table {
+    display: none;
+  }
+
+  .profissionais-page .list-table-card {
+    overflow: visible;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .profissionais-page .list-head__actions--bottom-nav .list-head__toolbar-btn {
+    display: none;
+  }
+
+  .profissionais-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0 8px;
+  }
+
+  .profissionais-page .prof-row-ghost {
+    display: none;
   }
 }

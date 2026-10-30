@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
 import { ProfissionalListaItem } from '../../../../core/models/api.models';
 import { extractApiErrorMessage } from '../../../../core/utils/api-error-message';
@@ -19,8 +20,10 @@ import { ProfissionalCadastroDrawerService } from '../../../../shared/profission
 import { ProfissionalAvatarComponent } from '../../../../shared/profissional-avatar/profissional-avatar.component';
 import { profissionalFotoUrl } from '../../../../core/utils/profissional-foto.util';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 
 const PROFISSIONAL_INATIVADO_TOAST_MSG = 'Profissional inativado com sucesso!';
+const PROFISSIONAIS_BOTTOM_NAV_OWNER = 'profissionais';
 
 @Component({
   selector: 'app-profissionais',
@@ -38,9 +41,19 @@ export class ProfissionaisComponent implements OnInit, AfterViewInit, OnDestroy 
   private readonly api = inject(SheetsApiService);
   private readonly toast = inject(AppToastService);
   private readonly profissionalDrawer = inject(ProfissionalCadastroDrawerService);
+  private readonly shellUi = inject(AppShellUiService);
 
   @ViewChild('tabsNav', { read: ElementRef })
   private tabsNav?: ElementRef<HTMLElement>;
+
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (this.shellBottomNavEligible && this.dragProfId != null) {
+      this.cancelarArraste();
+    }
+    this.syncShellBottomNavActions();
+  };
 
   busca = '';
   buscaAberta = false;
@@ -59,6 +72,9 @@ export class ProfissionaisComponent implements OnInit, AfterViewInit, OnDestroy 
   carregando = false;
   erro = '';
   itens: ProfissionalListaItem[] = [];
+
+  /** ≤767px: bottom nav contextual (Menu | Novo). Sem seleção em lote nesta feature. */
+  shellBottomNavEligible = false;
 
   infoTooltipAberto = false;
   reordenando = false;
@@ -84,6 +100,7 @@ export class ProfissionaisComponent implements OnInit, AfterViewInit, OnDestroy 
   readonly profissionalFotoUrl = profissionalFotoUrl;
 
   ngOnInit(): void {
+    this.setupShellBottomNav();
     this.carregar();
   }
 
@@ -93,7 +110,38 @@ export class ProfissionaisComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ngOnDestroy(): void {
     window.clearTimeout(this.tPulsoBusca);
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(PROFISSIONAIS_BOTTOM_NAV_OWNER);
     this.cancelarArraste();
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Menu fica no shell. Slots: só Novo (busca no header; status via abas;
+   * sem Selecionar — feature não tem bulk).
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(PROFISSIONAIS_BOTTOM_NAV_OWNER);
+      return;
+    }
+    this.shellUi.setMobileBottomNavActions(PROFISSIONAIS_BOTTOM_NAV_OWNER, [
+      {
+        id: 'novo',
+        label: 'Novo',
+        ariaLabel: 'Novo profissional',
+        icon: 'plus',
+        accent: true,
+        onClick: () => this.abrirNovo(),
+      },
+    ]);
   }
 
   carregar(): void {
@@ -253,6 +301,17 @@ export class ProfissionaisComponent implements OnInit, AfterViewInit, OnDestroy 
 
   ehProfissionalAdmin(p: ProfissionalListaItem): boolean {
     return p.usuario_role === 'admin';
+  }
+
+  textoStatusLista(p: ProfissionalListaItem): string {
+    return p.ativo === false ? 'Inativo' : 'Ativo';
+  }
+
+  onMobileCardClick(p: ProfissionalListaItem, ev: Event): void {
+    if (ev instanceof KeyboardEvent) {
+      ev.preventDefault();
+    }
+    this.abrirEditar(p);
   }
 
   onInativarProfissional(p: ProfissionalListaItem, ev?: Event): void {

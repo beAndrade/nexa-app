@@ -222,7 +222,10 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Profissionais</h1>
         </div>
-        <div class="list-head__actions list-head__actions--profissionais">
+        <div
+          class="list-head__actions list-head__actions--profissionais"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -258,7 +261,9 @@
               class="list-head__busca-input"
               [(ngModel)]="busca"
               name="buscaProfissionais"
-              [placeholder]="buscaPlaceholder"
+              [placeholder]="
+                shellBottomNavEligible ? 'Digite para buscar' : buscaPlaceholder
+              "
               [class.list-head__busca-input--search-open]="buscaAberta"
               [class.list-head__busca-input--pulse-once-busca]="pulsoToolbarBusca"
               autocomplete="off"
@@ -336,7 +341,11 @@
 
       @if (!erro) {
         <div class="list-table-card">
-          <div class="table-wrap" role="region" aria-label="Lista de profissionais">
+          <div
+            class="table-wrap profissionais-desktop-table"
+            role="region"
+            aria-label="Lista de profissionais"
+          >
             <table class="list-table profissionais-table">
               <colgroup>
                 <col class="profissionais-table__col-info" />
@@ -447,6 +456,119 @@
                 }
               </tbody>
             </table>
+          </div>
+
+          <div class="profissionais-mobile-list" aria-label="Lista de profissionais">
+            @if (carregando) {
+              <p class="profissionais-mobile-list__busy">Carregando…</p>
+            } @else if (totalFiltrado() === 0) {
+              <div class="profissionais-mobile-list__empty">
+                <app-table-empty label="Nenhum item encontrado" />
+              </div>
+            } @else {
+              @for (p of filtrados(); track p.id) {
+                <div class="profissionais-mobile-card">
+                  <button
+                    type="button"
+                    class="profissionais-mobile-card__main"
+                    (click)="onMobileCardClick(p, $event)"
+                    [attr.aria-label]="'Abrir profissional ' + p.nome"
+                  >
+                    <app-profissional-avatar
+                      [fotoUrl]="profissionalFotoUrl(p)"
+                      variant="grid-head"
+                    />
+                    <span class="profissionais-mobile-card__body">
+                      <span class="profissionais-mobile-card__top">
+                        <span class="profissionais-mobile-card__nome">{{
+                          p.nome
+                        }}</span>
+                        @if (ehProfissionalAdmin(p)) {
+                          <span class="prof-badge-admin">Admin</span>
+                        }
+                      </span>
+                      <span class="profissionais-mobile-card__status">{{
+                        textoStatusLista(p)
+                      }}</span>
+                      @if (exibirCelular(p); as celular) {
+                        <span class="profissionais-mobile-card__sub">{{
+                          celular
+                        }}</span>
+                      }
+                      @if (exibirEmail(p); as email) {
+                        <span class="profissionais-mobile-card__sub">{{
+                          email
+                        }}</span>
+                      }
+                    </span>
+                  </button>
+                  <div class="profissionais-mobile-card__acoes list-row-acoes">
+                    <button
+                      type="button"
+                      class="list-row-acoes__btn list-row-acoes__btn--edit"
+                      (click)="abrirEditar(p); $event.stopPropagation()"
+                      aria-label="Editar profissional"
+                      title="Editar"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                        />
+                        <path
+                          d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"
+                        />
+                      </svg>
+                    </button>
+                    <span class="list-row-acoes__sep" aria-hidden="true"></span>
+                    <button
+                      type="button"
+                      class="list-row-acoes__btn list-row-acoes__btn--delete"
+                      [class.list-row-acoes__btn--locked]="ehProfissionalAdmin(p)"
+                      [disabled]="ehProfissionalAdmin(p) || inativacaoModalSalvando"
+                      [attr.aria-label]="
+                        ehProfissionalAdmin(p)
+                          ? 'Exclusão bloqueada — admin da página'
+                          : 'Inativar profissional'
+                      "
+                      [attr.title]="
+                        ehProfissionalAdmin(p)
+                          ? 'Admin da página — exclusão bloqueada'
+                          : 'Inativar'
+                      "
+                      (click)="onInativarProfissional(p, $event)"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            }
           </div>
         </div>
       }
