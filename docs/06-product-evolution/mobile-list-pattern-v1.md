@@ -1,10 +1,10 @@
 # Nexa Mobile List Pattern v1
 
-**Status:** FASE 1 CONCLUÍDA COM LIMITAÇÕES · FASE 2 (SERVIÇOS) APROVADA
+**Status:** FASE 1 CONCLUÍDA COM LIMITAÇÕES · FASE 2 (SERVIÇOS) APROVADA · FASE 3 (MIGRAÇÃO DAS LISTAS ATIVAS) CONCLUÍDA NESTA RODADA
 
 **Tipo:** especificação de produto / contrato de UX. O contrato abaixo permanece; o que muda nesta revisão é o estado real da implementação.
 
-**Implementação:** Fase 1 entregue em Clientes e Avaliações (MLP1-01 a MLP1-07). Fundações shared: touch ≥44 no `list-page-shell`, filter sheet, selection helpers, action popover e keyboard awareness no AppShell. Fase 2 — **Services Mobile Catalog** implementada, validada e **APROVADA** (ver [fase-2-servicos.md](./mobile-list-pattern-v1/fase-2-servicos.md)). A limitação da Fase 1 (teclado virtual real) permanece: o browser de validação não abre teclado; offset 0 medido; offset positivo na fórmula CSS e no spec. Não é defeito de implementação.
+**Implementação:** Fase 1 entregue em Clientes e Avaliações (MLP1-01 a MLP1-07). Fundações shared: touch ≥44 no `list-page-shell`, filter sheet, selection helpers, action popover e keyboard awareness no AppShell. Fase 2 — **Services Mobile Catalog** implementada, validada e **APROVADA** (ver [fase-2-servicos.md](./mobile-list-pattern-v1/fase-2-servicos.md)). Fase 3 — migração progressiva das **listagens ativas** elegíveis (catálogos, comandas, orçamentos, financeiro, avaliações, agenda lista, etc.) concluída na rodada de cobertura responsiva; inventário em `.cursor/plans/cobertura_responsiva_nexa_0d7e6fc6.plan.md`. A limitação da Fase 1 (teclado virtual real) permanece: o browser de validação não abre teclado; offset 0 medido; offset positivo na fórmula CSS e no spec. Não é defeito de implementação.
 
 **Escopo:** experiência MOBILE (≤767px / `shellMobile`) das **telas de lista** do Nexa. Desktop permanece com `list-table` + toolbar/aside, salvo menção explícita.
 
@@ -22,9 +22,9 @@ O contrato das seções seguintes não foi reescrito. Este bloco registra o que 
 
 - Clientes e Avaliações consomem o filter sheet compartilhado. Desktop das duas telas permanece tabela, toolbar e drawer/aside.
 - Clientes tem seleção (helpers puros, estado na feature) e o popover Ações com um único item, Excluir, no fluxo unitário já existente.
-- Avaliações filtra período e status no sheet; KPIs continuam globais; Limpar fecha o sheet.
+- Avaliações: bar **Buscar · Filtros** (Gate 6 Approved with Minor Issues); filtra período e status no sheet; KPIs continuam globais; Limpar fecha o sheet.
 - Chrome shared: `app-mobile-filtros-sheet`, `app-mobile-list-actions-menu`, `mobile-list-selection`, `--shell-vv-offset` no AppShell. A barra sobe com `max(safe-area, offset)`; o offset 0 reproduz o `bottom` anterior. O popover fica na mesma fórmula, 8px acima da altura token da barra.
-- Agenda Hub não foi migrada.
+- Agenda Hub permanece **fora** do card-stack de lista; Gate 6 desta rodada validou o hub (grelha + bottom nav contextual) sem convertê-lo em lista MLP.
 
 **Limitação**
 
@@ -56,9 +56,9 @@ O contrato das seções seguintes não foi reescrito. Este bloco registra o que 
 
 - ISS-01 (Low): slot Filtro sem `warn` quando há filtro ativo (`active` só com sheet aberto). Chips cobrem a indicação. Não é requisito de fechamento do Pattern nem da entrega.
 
-**Próximas ondas (Fase 3+; Pattern ainda aberto)**
+**Fase 3 — listagens ativas (estado)**
 
-Profissionais, Fornecedores, Categorias, Marcas, Comandas, Orçamentos, Transações, Comissões e as demais listas. O EPIC Mobile Foundation **não** está concluído só por causa de Serviços.
+Migração das listas elegíveis desta onda **concluída** (Gate 6 por módulo). Inclui, entre outras: Produtos, Profissionais, Fornecedores, Categorias, Marcas, Comandas, Orçamentos, Transações, Cadastros financeiros, Comissões, Avaliações (chrome completo) e Agenda Lista. Inventário e follow-ups: plano `cobertura_responsiva_nexa_0d7e6fc6`. O EPIC Mobile Foundation como um todo pode ter outras frentes além desta rodada de listas; **não** reabrir módulos Gate 6.
 
 ---
 
@@ -311,10 +311,10 @@ Forçar o layout de `list-table` desktop no viewport estreito.
 | `AppShellUi` / `mobile-bottom-nav` | Baixo–médio — contrato de slots/estados já cobre a maior parte; keyboard-awareness a definir |
 | `list-page-shell` | Médio — touch chrome ≤767; ações na bar vs header |
 | `table-card-shell` | Baixo — permanece desktop; features escondem tabela no mobile |
-| Clientes | Médio — fechar gap do popover Ações (hoje stub) |
-| Agenda Hub | Referência de menu contextual; não forçar card-stack de lista |
-| Avaliações | Médio — bar Buscar+Filtros; Filtrar sai do header |
-| Sheets de filtros (Clientes/Avaliações) | Alto valor — unificar contrato visual |
+| Clientes | Referência Fase 1 — Gate 6 Approved nesta rodada |
+| Agenda Hub | Referência de menu contextual; **não** forçar card-stack de lista (Gate 6 como hub) |
+| Avaliações | Bar Buscar+Filtros — Gate 6 Approved with Minor Issues |
+| Sheets de filtros (Clientes/Avaliações + demais listas) | Contrato visual shared em uso |
 | Serviços | Primeira implementação real do padrão — **APROVADA** (Fase 2) |
 
 ---
@@ -332,15 +332,20 @@ Forçar o layout de `list-table` desktop no viewport estreito.
 
 1. **Serviços** — IMPLEMENTADO → VALIDADO → APROVADO. Detalhe: [fase-2-servicos.md](./mobile-list-pattern-v1/fase-2-servicos.md). ISS-01 Low/backlog não bloqueia.
 
-### FASE 3 — Migração progressiva — **PENDENTE**
+### FASE 3 — Migração progressiva das listas ativas — **CONCLUÍDA NESTA RODADA**
 
-1. Clientes — fechar gap do popover Ações (se ainda houver dívida residual além do já entregue na Fase 1).
+Ordem histórica de implementação (referência; módulos **não** reabrir):
+
+1. Clientes — Gate 6 Approved (referência Fase 1).
 2. Profissionais.
 3. Comandas.
 4. Orçamentos.
-5. Demais catálogos.
-6. Avaliações (além do chrome de filtros já na Fase 1).
-7. Financeiro.
+5. Demais catálogos (Produtos, Fornecedores, Categorias, Marcas).
+6. Avaliações (chrome Buscar · Filtros além do sheet da Fase 1).
+7. Financeiro (Transações, Cadastros, Comissões).
+8. Agenda Lista (`/agenda/lista`) — última listagem ativa desta onda.
+
+**Follow-ups fora da Fase 3 de listas:** quirk global 768px; `FinanceiroCaixaDiaComponent` sem rota; rotas Em breve quando implementadas; teclado virtual real (limitação Fase 1).
 
 ---
 
@@ -348,13 +353,11 @@ Forçar o layout de `list-table` desktop no viewport estreito.
 
 ### Mantido
 
-- Maior gap do produto: listas table-first no mobile.
 - Soft Steel / Shell First / sem sitemap na bar.
 - Sheet filtros mobile vs aside desktop.
-- Drawers relativamente maduros vs listas atrasadas.
-- Painel / Config / Em breve podem ficar Menu-only.
-- Dívida de touch 32px no shell de lista.
-- Shared foundations antes de migrar muitas telas isoladas.
+- Painel / Config / Em breve podem ficar Menu-only (ou Menu + ações só quando houver contexto).
+- Shared foundations antes de migrar telas isoladas.
+- Listagens ativas elegíveis desta onda **já migradas** (ver Fase 3 / inventário); Em breve e órfãos sem rota permanecem follow-up.
 
 ### Ajustado nesta aprovação
 
@@ -379,20 +382,22 @@ Forçar o layout de `list-table` desktop no viewport estreito.
 - Menu contextual ancorado (Agenda Hub) como análogo do popover Ações
 - Set de ícones da bar (`filter`, `plus`, `check`, `x`, `search`, `bolt`, `more`, …)
 
-### Precisa ser criado/ajustado na implementação (snapshot da aprovação, anterior à Fase 1)
+### Snapshot histórico (aprovação original, anterior à Fase 1)
 
-- Popover Ações compartilhado (Clientes ainda usa toast)
+Os itens abaixo foram **entregues** nas Fases 1–3 desta rodada; a lista permanece como registro histórico do gap analysis original:
+
+- Popover Ações compartilhado
 - Contrato visual único do sheet de filtros de lista
 - Touch chrome do `list-page-shell` ≤767
 - Helpers compartilhados de seleção + sync da bar
-- Keyboard-awareness da bar
+- Keyboard-awareness da bar (fórmula no spec; teclado virtual real ainda limitação de evidência)
 
 ---
 
 ## Validação documental
 
-- Este arquivo continua sendo o **contrato** do padrão. O estado da Fase 1 e da Fase 2 (Serviços) está nas seções Estado real.
+- Este arquivo continua sendo o **contrato** do padrão. O estado das Fases 1–3 está nas seções Estado real / §17.
 - Terminologia oficial: **Nexa Mobile List Pattern v1**.
-- Status: **FASE 1 CONCLUÍDA COM LIMITAÇÕES** (teclado virtual real) · **FASE 2 (SERVIÇOS) APROVADA**. O contrato de produto segue aprovado. O Pattern como um todo permanece aberto até a Fase 3 / demais listas.
+- Status: **FASE 1 CONCLUÍDA COM LIMITAÇÕES** (teclado virtual real) · **FASE 2 (SERVIÇOS) APROVADA** · **FASE 3 (LISTAS ATIVAS DESTA RODADA) CONCLUÍDA**. O contrato de produto segue aprovado. Follow-ups: quirk 768, Em breve, caixa-dia órfão, teclado virtual real — **sem** reabrir módulos Gate 6.
 - ISS-01 e limitações visuais de Serviços **não** são bloqueios do Pattern.
-- DESIGN.md, PRODUCT.md e `design.json` **não** foram modificados.
+- DESIGN.md, PRODUCT.md e `design.json` **não** foram modificados nesta consolidação.
