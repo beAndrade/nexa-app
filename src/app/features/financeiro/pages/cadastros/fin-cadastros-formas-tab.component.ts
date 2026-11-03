@@ -125,6 +125,12 @@ export class FinCadastrosFormasTabComponent implements OnInit, OnChanges {
     return this.linhasFiltradas().length;
   }
 
+  /** Empty global (sem cadastros) ≠ empty filtrado (busca/status sem match). */
+  labelListaVazia(): string {
+    if (this.linhas.length === 0) return 'Nenhuma forma de pagamento cadastrada';
+    return 'Nenhuma forma de pagamento encontrada';
+  }
+
   get podePaginaAnterior(): boolean {
     return this.pagina > 1;
   }

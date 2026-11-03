@@ -102,6 +102,12 @@ export class FinCadastrosCategoriasTabComponent implements OnInit, OnChanges {
     return this.linhasFiltradas().length;
   }
 
+  /** Empty global (sem cadastros) ≠ empty filtrado (busca sem match). */
+  labelListaVazia(): string {
+    if (this.linhas.length === 0) return 'Nenhuma categoria cadastrada';
+    return 'Nenhuma categoria encontrada';
+  }
+
   get podePaginaAnterior(): boolean {
     return this.pagina > 1;
   }

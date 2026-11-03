@@ -1,6 +1,6 @@
 <div
   class="list-page fin-cadastros-page"
-  [class.fin-cadastros-page--filtros-abertos]="filtrosAbertos && tabAtiva() === 'formas'"
+  [class.fin-cadastros-page--filtros-abertos]="filtrosAsideAbertos"
 >
   <div class="list-page__lead fin-cadastros-page__lead">
     <header class="list-head fin-cadastros__head">
@@ -9,7 +9,10 @@
           <h1 class="list-head__title">Cadastros</h1>
           <app-financeiro-bloquear-btn />
         </div>
-        <div class="list-head__actions">
+        <div
+          class="list-head__actions"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -115,7 +118,7 @@
       <nav
         #tabsNav
         class="fin-cadastros__tabs"
-        aria-label="Secções de cadastros"
+        aria-label="Seções de cadastros"
         [style.--tabs-indicator-left.px]="tabsIndicatorLeft"
         [style.--tabs-indicator-width.px]="tabsIndicatorWidth"
       >
@@ -135,15 +138,45 @@
     </header>
   </div>
 
+  @if (shellBottomNavEligible && tabAtiva() === 'formas' && chipsFiltrosMobile().length) {
+    <div class="fin-cadastros-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="fin-cadastros-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
   <div
     class="fin-cadastros-layout"
-    [class.fin-cadastros-layout--filtros-abertos]="filtrosAbertos && tabAtiva() === 'formas'"
+    [class.fin-cadastros-layout--filtros-abertos]="filtrosAsideAbertos"
   >
     <aside
       class="fin-transacoes-filtros"
-      [class.fin-transacoes-filtros--open]="filtrosAbertos && tabAtiva() === 'formas'"
+      [class.fin-transacoes-filtros--open]="filtrosAsideAbertos"
       aria-label="Filtros de formas de pagamento"
-      [attr.aria-hidden]="filtrosAbertos && tabAtiva() === 'formas' ? null : 'true'"
+      [attr.aria-hidden]="filtrosAsideAbertos ? null : 'true'"
     >
       <div class="fin-transacoes-filtros__scroll">
         <section class="fin-filtros-card">
@@ -189,3 +222,36 @@
     </div>
   </div>
 </div>
+
+<app-mobile-filtros-sheet
+  [open]="filtrosSheetAberto"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section class="fin-filtros-card fin-filtros-card--sheet">
+    <h3 class="fin-filtros-card__title">Status</h3>
+    <ul class="fin-filtros-check-list">
+      <li>
+        <label class="fin-filtros-check fin-filtros-check--sheet">
+          <input
+            type="checkbox"
+            [checked]="filtroAtivada"
+            (change)="toggleFiltroAtivada($event)"
+          />
+          <span class="fin-filtros-check__label">Ativada</span>
+        </label>
+      </li>
+      <li>
+        <label class="fin-filtros-check fin-filtros-check--sheet">
+          <input
+            type="checkbox"
+            [checked]="filtroDesativada"
+            (change)="toggleFiltroDesativada($event)"
+          />
+          <span class="fin-filtros-check__label">Desativada</span>
+        </label>
+      </li>
+    </ul>
+  </section>
+</app-mobile-filtros-sheet>

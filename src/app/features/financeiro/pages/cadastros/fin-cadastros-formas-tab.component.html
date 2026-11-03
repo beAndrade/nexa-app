@@ -4,7 +4,7 @@
   }
 
   <div class="list-table-card fin-cad-tab__card">
-    <div class="table-wrap">
+    <div class="table-wrap fin-cad-desktop-table">
       <table class="list-table fin-cad-tab__table">
         <colgroup>
           <col class="list-table__col-check" />
@@ -37,7 +37,7 @@
           } @else if (linhasPagina().length === 0) {
             <tr>
               <td colspan="5" class="table-body__empty">
-                <app-table-empty label="Nenhuma forma de pagamento encontrada" />
+                <app-table-empty [label]="labelListaVazia()" />
               </td>
             </tr>
           } @else {
@@ -126,6 +126,103 @@
           }
         </tbody>
       </table>
+    </div>
+
+    <div
+      class="fin-cad-mobile-list"
+      aria-label="Lista de formas de pagamento"
+    >
+      @if (carregando()) {
+        <p class="fin-cad-mobile-list__busy">Carregando…</p>
+      } @else if (totalExibido() === 0) {
+        <div class="fin-cad-mobile-list__empty">
+          <app-table-empty [label]="labelListaVazia()" />
+        </div>
+      } @else {
+        @for (row of linhasPagina(); track row.id) {
+          <div
+            class="fin-cad-mobile-card"
+            [class.fin-cad-mobile-card--inativa]="!row.ativo"
+          >
+            <button
+              type="button"
+              class="fin-cad-mobile-card__main"
+              (click)="abrirEditar(row)"
+              [attr.aria-label]="'Editar forma de pagamento ' + row.nome"
+            >
+              <span class="fin-cad-mobile-card__body">
+                <span class="fin-cad-mobile-card__top">
+                  <span class="fin-cad-mobile-card__nome">{{ row.nome }}</span>
+                  @if (!row.ativo) {
+                    <span class="fin-cad-mobile-card__badge">Desativada</span>
+                  }
+                </span>
+                @if (rotuloTaxa(row); as taxa) {
+                  <span class="fin-cad-mobile-card__meta">Taxa: {{ taxa }}</span>
+                }
+                <span class="fin-cad-mobile-card__meta"
+                  >Prazo: {{ rotuloPrazo(row) }}</span
+                >
+              </span>
+            </button>
+            <div class="fin-cad-mobile-card__acoes list-row-acoes">
+              <button
+                type="button"
+                class="list-row-acoes__btn list-row-acoes__btn--edit"
+                (click)="abrirEditar(row); $event.stopPropagation()"
+                aria-label="Editar"
+                title="Editar"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                  />
+                  <path
+                    d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"
+                  />
+                </svg>
+              </button>
+              <span class="list-row-acoes__sep" aria-hidden="true"></span>
+              <button
+                type="button"
+                class="list-row-acoes__btn list-row-acoes__btn--delete"
+                [disabled]="exclusaoModalSalvando && exclusaoModalRow?.id === row.id"
+                (click)="abrirModalExclusao(row); $event.stopPropagation()"
+                aria-label="Excluir"
+                title="Excluir"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        }
+      }
     </div>
 
     <footer class="list-footer fin-cad-tab__footer">
