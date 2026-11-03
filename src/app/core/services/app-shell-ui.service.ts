@@ -13,7 +13,9 @@ export type MobileBottomNavIconId =
   | 'search'
   | 'check'
   | 'x'
-  | 'more';
+  | 'more'
+  | 'print'
+  | 'refresh';
 
 /** Ação contextual registada pela página ativa. */
 export interface MobileBottomNavAction {

@@ -27,6 +27,8 @@ import type { ComandaDrawerContextoAgenda } from '../../../../shared/comanda-dra
 import { NovaComandaDrawerComponent } from '../../../agenda/pages/hub/nova-comanda-drawer.component';
 import type { SaasSelectOption } from '../../../../shared/components/saas-select/saas-select.component';
 import { SheetsApiService } from '../../../../core/services/sheets-api.service';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
+import type { MobileBottomNavAction } from '../../../../core/services/app-shell-ui.service';
 import { FinanceiroComissoesPrintComponent } from './financeiro-comissoes-print.component';
 import {
   FinComissoesPagarDrawerComponent,
@@ -44,8 +46,15 @@ import { ProfissionalCadastroDrawerService } from '../../../../shared/profission
 import { FinFiltrosFloatingTipComponent } from '../transacoes/fin-filtros-floating-tip.component';
 import { FinanceiroBloquearBtnComponent } from '../../../../shared/financeiro-bloquear-btn/financeiro-bloquear-btn.component';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import {
+  areAllSelected,
+  selectAllIds,
+} from '../../../../shared/mobile-list-selection/mobile-list-selection';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 
 const DRAWER_ANIM_MS = 430;
+const COMISSOES_BOTTOM_NAV_OWNER = 'financeiro-comissoes';
 
 registerLocaleData(localePt);
 
@@ -102,6 +111,7 @@ export interface FinComissaoLinhaUi {
     SaasSelectComponent,
     FinFiltrosFloatingTipComponent,
     FinanceiroBloquearBtnComponent,
+    MobileFiltrosSheetComponent,
   ],
   providers: [{ provide: LOCALE_ID, useValue: 'pt-BR' }],
   templateUrl: './financeiro-comissoes.component.html',
@@ -112,6 +122,17 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
   private readonly api = inject(SheetsApiService);
   private readonly cadastroDrawer = inject(ClienteCadastroDrawerService);
   private readonly profissionalDrawer = inject(ProfissionalCadastroDrawerService);
+  private readonly shellUi = inject(AppShellUiService);
+
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (!this.shellBottomNavEligible) {
+      if (this.filtrosAbertos) this.filtrosAbertos = false;
+      if (this.modoSelecao) this.sairModoSelecao();
+    }
+    this.syncShellBottomNavActions();
+  };
 
   @ViewChild(NovaComandaDrawerComponent)
   private comandaDrawerRef?: NovaComandaDrawerComponent;
@@ -180,7 +201,17 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
   mostrarAnteriores = false;
   profissionalIdSidebar: number | null = null;
 
+  /** ≤767 — bottom nav contextual MLP. */
+  shellBottomNavEligible = false;
+  filtrosAbertos = false;
+  modoSelecao = false;
+  selecionarTudoBusy = false;
+  private selecionarTudoFeedbackTimer: ReturnType<typeof setTimeout> | null =
+    null;
+
   private readonly selecionados = signal<ReadonlySet<number>>(new Set());
+
+  readonly qtdSelecionados = computed(() => this.selecionados().size);
 
   readonly totalComissoes = computed(() => {
     const sel = this.selecionados();
@@ -218,11 +249,245 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
     const { inicio, fim } = this.periodoPadraoMesAtualAteHoje();
     this.periodoInicio = inicio;
     this.periodoFim = fim;
+    this.setupShellBottomNav();
     this.recarregarProfissionais();
   }
 
   ngAfterViewInit(): void {
     this.sincronizarIndicadorTabs();
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Hub filtros: bar limpa (só Menu).
+   * Detalhe Detalhadas: Filtro · Selecionar · Imprimir.
+   * Seleção: Cancelar · Selecionar tudo · Pagar (accent, sem popover Ações).
+   * Pagas: Filtro · Imprimir · Atualizar.
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(COMISSOES_BOTTOM_NAV_OWNER);
+      return;
+    }
+
+    if (this.tabAtiva() === 'detalhadas' && this.vista() === 'filtros') {
+      this.shellUi.setMobileBottomNavActions(COMISSOES_BOTTOM_NAV_OWNER, []);
+      return;
+    }
+
+    if (this.modoSelecao && this.tabAtiva() === 'detalhadas') {
+      const allSelected = this.todosFiltradosSelecionados();
+      const pode = this.podePagar();
+      const actions: MobileBottomNavAction[] = [
+        {
+          id: 'cancelar-selecao',
+          label: 'Cancelar',
+          ariaLabel: 'Cancelar seleção',
+          icon: 'x',
+          onClick: () => this.sairModoSelecao(),
+        },
+        {
+          id: 'selecionar-tudo',
+          label: 'Selecionar tudo',
+          ariaLabel: 'Selecionar todas as comissões carregadas',
+          icon: 'check',
+          active: allSelected,
+          activeAria: 'pressed',
+          busy: this.selecionarTudoBusy,
+          onClick: () => this.selecionarTodosMobile(),
+        },
+        {
+          id: 'pagar',
+          label: 'Pagar',
+          ariaLabel: pode
+            ? `Pagar comissões selecionadas (${this.qtdSelecionados()})`
+            : 'Pagar comissões — selecione ao menos uma',
+          icon: 'bolt',
+          accent: true,
+          onClick: () => this.onPagarMobile(),
+        },
+      ];
+      this.shellUi.setMobileBottomNavActions(COMISSOES_BOTTOM_NAV_OWNER, actions);
+      return;
+    }
+
+    if (this.tabAtiva() === 'pagas') {
+      this.shellUi.setMobileBottomNavActions(COMISSOES_BOTTOM_NAV_OWNER, [
+        {
+          id: 'filtro',
+          label: 'Filtro',
+          ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+          icon: 'filter',
+          active: this.filtrosAbertos,
+          warn: this.temFiltroAtivo() && !this.filtrosAbertos,
+          onClick: () => this.onFiltroMobile(),
+        },
+        {
+          id: 'imprimir',
+          label: 'Imprimir',
+          ariaLabel: 'Imprimir',
+          icon: 'print',
+          onClick: () => this.imprimir(),
+        },
+        {
+          id: 'atualizar',
+          label: 'Atualizar',
+          ariaLabel: 'Atualizar lista',
+          icon: 'refresh',
+          onClick: () => this.atualizarLista(),
+        },
+      ]);
+      return;
+    }
+
+    // Detalhe Detalhadas (normal)
+    this.shellUi.setMobileBottomNavActions(COMISSOES_BOTTOM_NAV_OWNER, [
+      {
+        id: 'filtro',
+        label: 'Filtro',
+        ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: this.filtrosAbertos,
+        warn: this.temFiltroAtivo() && !this.filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+      {
+        id: 'selecionar',
+        label: 'Selecionar',
+        ariaLabel: 'Selecionar comissões',
+        icon: 'check',
+        onClick: () => this.entrarModoSelecao(),
+      },
+      {
+        id: 'imprimir',
+        label: 'Imprimir',
+        ariaLabel: 'Imprimir',
+        icon: 'print',
+        onClick: () => this.imprimir(),
+      },
+    ]);
+  }
+
+  private onFiltroMobile(): void {
+    this.filtrosAbertos = !this.filtrosAbertos;
+    this.syncShellBottomNavActions();
+  }
+
+  fecharFiltros(): void {
+    if (!this.filtrosAbertos) return;
+    this.filtrosAbertos = false;
+    this.syncShellBottomNavActions();
+  }
+
+  entrarModoSelecao(): void {
+    if (this.tabAtiva() !== 'detalhadas' || this.vista() !== 'detalhe') return;
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
+    this.modoSelecao = true;
+    this.syncShellBottomNavActions();
+  }
+
+  sairModoSelecao(): void {
+    this.modoSelecao = false;
+    this.limparFeedbackSelecionarTudo();
+    this.selecionados.set(new Set());
+    this.syncShellBottomNavActions();
+  }
+
+  todosFiltradosSelecionados(): boolean {
+    return areAllSelected(
+      this.linhasDetalhe().map((r) => r.id),
+      this.selecionados(),
+    );
+  }
+
+  selecionarTodosMobile(): void {
+    this.selecionados.set(
+      selectAllIds(
+        this.selecionados(),
+        this.linhasDetalhe().map((r) => r.id),
+      ),
+    );
+    this.dispararFeedbackSelecionarTudo();
+    this.syncShellBottomNavActions();
+  }
+
+  private dispararFeedbackSelecionarTudo(): void {
+    this.limparFeedbackSelecionarTudo();
+    this.selecionarTudoBusy = true;
+    this.selecionarTudoFeedbackTimer = setTimeout(() => {
+      this.selecionarTudoFeedbackTimer = null;
+      this.selecionarTudoBusy = false;
+      if (this.modoSelecao) this.syncShellBottomNavActions();
+    }, 250);
+  }
+
+  private limparFeedbackSelecionarTudo(): void {
+    if (this.selecionarTudoFeedbackTimer != null) {
+      clearTimeout(this.selecionarTudoFeedbackTimer);
+      this.selecionarTudoFeedbackTimer = null;
+    }
+    this.selecionarTudoBusy = false;
+  }
+
+  private onPagarMobile(): void {
+    if (!this.podePagar()) {
+      this.toast.show('Selecione ao menos uma comissão para pagar.');
+      return;
+    }
+    this.abrirPagarDrawer();
+  }
+
+  /** Filtros além do padrão (1º dia do mês → hoje; sem anteriores; sem prof. em pagas). */
+  temFiltroAtivo(): boolean {
+    return this.chipsFiltrosMobile().length > 0;
+  }
+
+  chipsFiltrosMobile(): { id: string; label: string }[] {
+    const chips: { id: string; label: string }[] = [];
+    const padrao = this.periodoPadraoMesAtualAteHoje();
+    if (
+      this.periodoInicio !== padrao.inicio ||
+      this.periodoFim !== padrao.fim
+    ) {
+      chips.push({ id: 'periodo', label: 'Período' });
+    }
+    if (this.tabAtiva() === 'detalhadas' && this.mostrarAnteriores) {
+      chips.push({ id: 'anteriores', label: 'Anteriores' });
+    }
+    if (this.tabAtiva() === 'pagas' && this.profissionalIdSidebar != null) {
+      const nome = this.nomeProfissionalAtual() || 'Profissional';
+      chips.push({ id: 'profissional', label: nome });
+    }
+    return chips;
+  }
+
+  removerChipFiltro(id: string, ev?: Event): void {
+    ev?.stopPropagation();
+    if (id === 'periodo') {
+      const padrao = this.periodoPadraoMesAtualAteHoje();
+      this.periodoInicio = padrao.inicio;
+      this.periodoFim = padrao.fim;
+      this.onPeriodoAlterado();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'anteriores') {
+      this.mostrarAnteriores = false;
+      this.onMostrarAnterioresChange();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'profissional') {
+      this.profissionalIdSidebar = null;
+      this.onProfissionalSidebarChange();
+      this.syncShellBottomNavActions();
+    }
   }
 
   recarregarProfissionais(selecionarId?: number): void {
@@ -254,6 +519,10 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
   }
 
   ngOnDestroy(): void {
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(COMISSOES_BOTTOM_NAV_OWNER);
+    this.limparFeedbackSelecionarTudo();
     if (this.pagarDrawerCloseTimer != null) {
       clearTimeout(this.pagarDrawerCloseTimer);
     }
@@ -283,6 +552,16 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
     if (this.pagarDrawerAberto) {
       ev.preventDefault();
       this.fecharPagarDrawer();
+      return;
+    }
+    if (this.modoSelecao && this.shellBottomNavEligible) {
+      ev.preventDefault();
+      this.sairModoSelecao();
+      return;
+    }
+    if (this.filtrosAbertos) {
+      ev.preventDefault();
+      this.fecharFiltros();
     }
   }
 
@@ -476,11 +755,14 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
     const anterior = this.tabAtiva();
     this.tabAtiva.set(id);
     this.menuAcoesPagasAberto.set(null);
+    if (this.modoSelecao) this.sairModoSelecao();
+    if (this.filtrosAbertos) this.fecharFiltros();
     this.sincronizarIndicadorTabs();
     if (id === 'pagas') {
       this.profissionalIdSidebar = null;
       this.sidebarAberto.set(true);
       this.carregarLinhasPagas();
+      this.syncShellBottomNavActions();
       return;
     }
     if (anterior === 'pagas') {
@@ -494,6 +776,7 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
         this.carregarLinhasDetalhe();
       }
     }
+    this.syncShellBottomNavActions();
   }
 
   private sincronizarIndicadorTabs(): void {
@@ -514,14 +797,17 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
     this.profissionalSelecionado.set(prof);
     this.profissionalIdSidebar = prof.id;
     this.selecionados.set(new Set());
+    if (this.modoSelecao) this.sairModoSelecao();
     this.sidebarAberto.set(true);
     this.vista.set('detalhe');
     this.carregarLinhasDetalhe();
     this.carregarResumoFolha();
+    this.syncShellBottomNavActions();
   }
 
   onMostrarAnterioresChange(): void {
     if (this.vista() === 'detalhe') this.carregarLinhasDetalhe();
+    this.syncShellBottomNavActions();
   }
 
   onPeriodoAlterado(): void {
@@ -530,6 +816,7 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
       this.carregarLinhasDetalhe();
       this.carregarResumoFolha();
     }
+    this.syncShellBottomNavActions();
   }
 
   onCriarProfissional(): void {
@@ -547,10 +834,19 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
       this.carregarLinhasDetalhe();
       this.carregarResumoFolha();
     }
+    this.syncShellBottomNavActions();
   }
 
   toggleSidebarFiltros(): void {
+    if (this.shellBottomNavEligible) {
+      this.onFiltroMobile();
+      return;
+    }
     this.sidebarAberto.update((aberto) => !aberto);
+  }
+
+  filtrosPainelDesktopAberto(): boolean {
+    return this.sidebarAberto() && !this.shellBottomNavEligible;
   }
 
   imprimir(): void {
@@ -619,6 +915,8 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
           linhas.filter((row) => !idsPagos.includes(row.id)),
         );
         this.selecionados.set(new Set());
+        if (this.modoSelecao) this.sairModoSelecao();
+        else this.syncShellBottomNavActions();
         this.carregarLinhasPagas();
         this.carregarResumoFolha();
       });
@@ -784,6 +1082,7 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
         this.linhasDetalhe.set(items.map((r) => this.mapLinhaApi(r)));
         this.selecionados.set(new Set());
         this.carregando.set(false);
+        if (this.modoSelecao) this.syncShellBottomNavActions();
       });
   }
 
@@ -860,9 +1159,12 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
   }
 
   voltarFiltros(): void {
+    if (this.modoSelecao) this.sairModoSelecao();
+    if (this.filtrosAbertos) this.fecharFiltros();
     this.vista.set('filtros');
     this.profissionalSelecionado.set(null);
     this.selecionados.set(new Set());
+    this.syncShellBottomNavActions();
   }
 
   linhaSelecionada(id: number): boolean {
@@ -870,10 +1172,12 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
   }
 
   todosSelecionados(): boolean {
-    const linhas = this.linhasDetalhe();
-    return (
-      linhas.length > 0 && linhas.every((r) => this.selecionados().has(r.id))
-    );
+    return this.todosFiltradosSelecionados();
+  }
+
+  /** No mobile MLP, checks só no modo seleção; desktop sempre. */
+  mostraSelecaoLinha(): boolean {
+    return !this.shellBottomNavEligible || this.modoSelecao;
   }
 
   toggleLinha(id: number, ev: Event): void {
@@ -884,6 +1188,7 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
       else next.delete(id);
       return next;
     });
+    if (this.modoSelecao) this.syncShellBottomNavActions();
   }
 
   toggleTodos(ev: Event): void {
@@ -893,6 +1198,21 @@ export class FinanceiroComissoesComponent implements OnInit, AfterViewInit, OnDe
     } else {
       this.selecionados.set(new Set());
     }
+    if (this.modoSelecao) this.syncShellBottomNavActions();
+  }
+
+  onMobileCardToggleSelecao(row: FinComissaoLinhaUi, ev: Event): void {
+    if (!this.shellBottomNavEligible || !this.modoSelecao) return;
+    const target = ev.target as HTMLElement | null;
+    if (target?.closest('button, a, input, label')) return;
+    const on = !this.linhaSelecionada(row.id);
+    this.selecionados.update((atual) => {
+      const next = new Set(atual);
+      if (on) next.add(row.id);
+      else next.delete(row.id);
+      return next;
+    });
+    this.syncShellBottomNavActions();
   }
 
   private ymdParaDdMm(ymd: string): string {

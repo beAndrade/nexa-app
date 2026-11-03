@@ -5,15 +5,22 @@
         <h1 class="list-head__title">Comissões</h1>
         <app-financeiro-bloquear-btn />
       </div>
-      <div class="list-head__actions">
+      <div
+        class="list-head__actions"
+        [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+      >
         @if (emLayoutLista()) {
           <button
             type="button"
             class="list-head__toolbar-btn"
-            [class.list-head__toolbar-btn--filtro-on]="sidebarAberto()"
+            [class.list-head__toolbar-btn--filtro-on]="
+              shellBottomNavEligible ? filtrosAbertos : sidebarAberto()
+            "
             (click)="toggleSidebarFiltros()"
             aria-label="Filtrar"
-            [attr.aria-expanded]="sidebarAberto()"
+            [attr.aria-expanded]="
+              shellBottomNavEligible ? filtrosAbertos : sidebarAberto()
+            "
             title="Filtrar"
           >
             <svg
@@ -114,6 +121,36 @@
     </nav>
   </header>
 
+  @if (shellBottomNavEligible && emLayoutLista() && chipsFiltrosMobile().length) {
+    <div class="fin-comissoes-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="fin-comissoes-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
   @if (tabAtiva() === 'detalhadas' && vista() === 'filtros') {
     <section class="fin-comissoes__filtros-centro" aria-label="Filtros">
       <h2 class="fin-comissoes__filtros-titulo">Filtros</h2>
@@ -167,7 +204,8 @@
     <div class="fin-comissoes__detalhe-layout">
       <div
         class="fin-comissoes__sidebar-shell"
-        [class.fin-comissoes__sidebar-shell--aberto]="sidebarAberto()"
+        [class.fin-comissoes__sidebar-shell--aberto]="filtrosPainelDesktopAberto()"
+        [attr.aria-hidden]="filtrosPainelDesktopAberto() ? null : 'true'"
       >
         <aside class="fin-comissoes__sidebar" aria-label="Filtros">
         <div class="fin-comissoes__sidebar-card fin-comissoes__sidebar-card--periodo">
@@ -501,19 +539,29 @@
                 @for (row of linhasDetalhe(); track row.id) {
                   <article
                     class="fin-comissoes-mobile-card"
-                    [class.fin-comissoes-mobile-card--selected]="linhaSelecionada(row.id)"
+                    [class.fin-comissoes-mobile-card--selecao]="modoSelecao"
+                    [class.fin-comissoes-mobile-card--selected]="
+                      mostraSelecaoLinha() && linhaSelecionada(row.id)
+                    "
+                    (click)="onMobileCardToggleSelecao(row, $event)"
                   >
-                    <label class="fin-comissoes-mobile-card__check">
-                      <input
-                        type="checkbox"
-                        [checked]="linhaSelecionada(row.id)"
-                        (change)="toggleLinha(row.id, $event)"
-                        [attr.aria-label]="'Selecionar ' + row.servico"
-                      />
-                      <span class="fin-comissoes-mobile-card__data">{{
+                    @if (mostraSelecaoLinha()) {
+                      <label class="fin-comissoes-mobile-card__check">
+                        <input
+                          type="checkbox"
+                          [checked]="linhaSelecionada(row.id)"
+                          (change)="toggleLinha(row.id, $event)"
+                          [attr.aria-label]="'Selecionar ' + row.servico"
+                        />
+                        <span class="fin-comissoes-mobile-card__data">{{
+                          formatarData(row.dataYmd)
+                        }}</span>
+                      </label>
+                    } @else {
+                      <span class="fin-comissoes-mobile-card__data fin-comissoes-mobile-card__data--solo">{{
                         formatarData(row.dataYmd)
                       }}</span>
-                    </label>
+                    }
                     <p class="fin-comissoes-mobile-card__cliente">
                       {{ row.clienteNome }}
                       <span class="fin-comissoes-mobile-card__comanda"
@@ -535,7 +583,7 @@
                         }}</strong></span
                       >
                     </div>
-                    @if (podeAbrirComanda(row)) {
+                    @if (!modoSelecao && podeAbrirComanda(row)) {
                       <button
                         type="button"
                         class="fin-comissoes-mobile-card__link"
@@ -584,7 +632,7 @@
           </div>
         </div>
 
-        @if (tabAtiva() === 'detalhadas') {
+        @if (tabAtiva() === 'detalhadas' && !shellBottomNavEligible) {
         <footer class="fin-comissoes__bar" aria-label="Resumo e pagamento">
           <div class="fin-comissoes__bar-totais">
             <span class="fin-comissoes__bar-total-item">
@@ -682,4 +730,107 @@
       [totalLiquido]="totalLiquidoImpressao()"
     />
   }
+
+  @if (shellBottomNavEligible && modoSelecao && tabAtiva() === 'detalhadas') {
+    <div
+      class="fin-comissoes__selecao-resumo"
+      aria-live="polite"
+      aria-label="Totais da seleção"
+    >
+      <span class="fin-comissoes__selecao-resumo-count"
+        >{{ qtdSelecionados() }} selecionada(s)</span
+      >
+      <strong class="fin-comissoes__selecao-resumo-valor">{{
+        totalComissoes() | currency: 'BRL' : 'symbol' : '1.2-2'
+      }}</strong>
+    </div>
+  }
+
+  <app-mobile-filtros-sheet
+    [open]="shellBottomNavEligible && filtrosAbertos && emLayoutLista()"
+    [closeOnEscape]="false"
+    title="Filtros"
+    (closed)="fecharFiltros()"
+  >
+    <section class="fin-comissoes__sheet-card fin-comissoes__sheet-card--periodo">
+      <span class="fin-comissoes__sidebar-label">Período</span>
+      <div class="fin-comissoes__periodo-filtro">
+        <app-cliente-drawer-periodo-filtro
+          [painelFlutuante]="true"
+          [semBackdropEscuro]="true"
+          [layoutComissoesSidebar]="true"
+          [sublinhadoDeslizante]="true"
+          [(inicioYmd)]="periodoInicio"
+          [(fimYmd)]="periodoFim"
+          (periodoAlterado)="onPeriodoAlterado()"
+        />
+      </div>
+    </section>
+
+    <section class="fin-comissoes__sheet-card">
+      <span class="fin-comissoes__sidebar-label">Profissional</span>
+      <div class="fin-comissoes__sidebar-prof">
+        <app-saas-select
+          layout="sidebar"
+          triggerCursor="text"
+          [options]="profissionaisSelectOptions()"
+          [useNumericOutput]="true"
+          [showFilter]="false"
+          [showCriarCliente]="true"
+          criarButtonLabel="Criar profissional"
+          placeholder="Selecionar profissional"
+          ariaFieldLabel="Profissional"
+          [(ngModel)]="profissionalIdSidebar"
+          (ngModelChange)="onProfissionalSidebarChange()"
+          (criarCliente)="onCriarProfissional()"
+          name="profSheet"
+        />
+      </div>
+    </section>
+
+    @if (tabAtiva() === 'detalhadas') {
+      @if (resumoFolha(); as resumo) {
+        <section class="fin-comissoes__sheet-card">
+          <span class="fin-comissoes__sidebar-label">Resumo</span>
+          <dl class="fin-comissoes__resumo-list">
+            <div>
+              <dt>Comissões</dt>
+              <dd>{{
+                resumo.totalComissao | currency: 'BRL' : 'symbol' : '1.2-2'
+              }}</dd>
+            </div>
+            <div>
+              <dt>Pago</dt>
+              <dd>{{
+                resumo.totalPago | currency: 'BRL' : 'symbol' : '1.2-2'
+              }}</dd>
+            </div>
+            <div>
+              <dt>Saldo</dt>
+              <dd class="fin-comissoes__resumo-saldo">{{
+                resumo.saldo | currency: 'BRL' : 'symbol' : '1.2-2'
+              }}</dd>
+            </div>
+          </dl>
+        </section>
+      }
+      <section class="fin-comissoes__sheet-card fin-comissoes__sheet-card--check">
+        <label class="fin-comissoes__sidebar-check">
+          <span class="fin-comissoes__sidebar-check-trigger">
+            <span class="fin-comissoes__sidebar-check-control">
+              <input
+                type="checkbox"
+                [(ngModel)]="mostrarAnteriores"
+                (ngModelChange)="onMostrarAnterioresChange()"
+                name="mostrarAnterioresSheet"
+              />
+            </span>
+            <span class="fin-comissoes__sidebar-check-label"
+              >Mostrar comissões anteriores</span
+            >
+          </span>
+        </label>
+      </section>
+    }
+  </app-mobile-filtros-sheet>
 </div>
