@@ -292,10 +292,19 @@
 
 @media (max-width: 767px) {
   /**
-   * Filtrar à esquerda, Buscar à direita (cresce para a direita ao abrir).
-   * Hit ≥44px vem do list-page-shell (Mobile List Pattern v1 / MLP1-01).
+   * MLP Avaliações: Buscar · Filtros na bottom nav — sem Filtrar/Busca no header.
+   * Campo de busca só quando o slot Buscar abre (`--busca-bar-open`).
+   * Hit ≥44px: list-page-shell + shell-bottom-nav.
    */
-  .avaliacoes-page .list-head__actions {
+  .avaliacoes-page {
+    padding-bottom: 88px;
+  }
+
+  .avaliacoes-page .list-head__actions--bottom-nav:not(.list-head__actions--busca-bar-open) {
+    display: none;
+  }
+
+  .avaliacoes-page .list-head__actions--bottom-nav.list-head__actions--busca-bar-open {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -307,21 +316,20 @@
     box-sizing: border-box;
   }
 
-  .avaliacoes-page .list-head__busca-wrap {
+  .avaliacoes-page
+    .list-head__actions--bottom-nav
+    .list-head__busca-wrap--open {
     box-sizing: border-box;
-    flex: 0 0 auto;
-    margin-left: 0;
-  }
-
-  .avaliacoes-page .list-head__busca-wrap--open {
-    flex: 1 1 auto;
-    width: auto !important;
+    flex: 1 1 100%;
+    width: 100%;
     min-width: 0;
-    max-width: none;
+    max-width: 100%;
+    min-height: var(--touch-min, 44px);
     margin-left: 0;
   }
 
   .avaliacoes-page
+    .list-head__actions--bottom-nav
     .list-head__busca-input.list-head__busca-input--search-open {
     left: 0;
     right: auto;
@@ -329,16 +337,11 @@
     height: 100%;
     min-height: 0;
     line-height: 1.25;
-  }
-
-  .avaliacoes-page .list-head__actions > .list-head__toolbar-btn {
-    flex-shrink: 0;
-    box-sizing: border-box;
-    order: 0;
-  }
-
-  .avaliacoes-page .list-head__actions > .list-head__busca-wrap {
-    order: 1;
+    /* Anula o chip fechado (!important) quando a bar abre o campo. */
+    opacity: 1 !important;
+    visibility: visible;
+    pointer-events: auto;
+    clip-path: none;
   }
 
   .avaliacoes-page .list-table-card > .avaliacoes-desktop-table {

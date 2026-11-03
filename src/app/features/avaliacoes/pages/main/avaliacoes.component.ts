@@ -6,6 +6,7 @@ import {
   DestroyRef,
   HostListener,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -24,6 +25,10 @@ import {
   AvaliacaoSolicitacoesService,
   type ListarAvaliacaoSolicitacoesParams,
 } from '../../../../core/services/avaliacoes/avaliacao-solicitacoes.service';
+import {
+  AppShellUiService,
+  type MobileBottomNavAction,
+} from '../../../../core/services/app-shell-ui.service';
 import { extractApiErrorMessage } from '../../../../core/utils/api-error-message';
 import { formatarTelefoneBrDeValor } from '../../../../core/utils/telefone-br';
 import { mediaQueryMin } from '../../../../styles/breakpoints';
@@ -40,6 +45,7 @@ import {
 
 const PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 450;
+const AVALIACOES_BOTTOM_NAV_OWNER = 'avaliacoes';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos' },
@@ -64,6 +70,7 @@ export class AvaliacoesComponent {
   private readonly api = inject(AvaliacaoSolicitacoesService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly shellUi = inject(AppShellUiService);
   private readonly searchInput$ = new Subject<string>();
 
   readonly periodoPresetOptions = AVALIACOES_PERIODO_PRESET_OPTIONS;
@@ -121,6 +128,8 @@ export class AvaliacoesComponent {
     this.setupShellMobile();
     this.setupSearchDebounce();
     this.setupSelectHandlers();
+    // MLP: bar Buscar · Filtros; reage a shellMobile / busca / sheet / warn.
+    effect(() => this.syncShellBottomNavActions());
     this.carregar(true);
   }
 
@@ -219,13 +228,8 @@ export class AvaliacoesComponent {
     this.carregar();
   }
 
-  toggleFiltros(ev?: Event): void {
-    ev?.stopPropagation();
-    this.dispararPulsoToolbar('filtro');
-    this.filtrosAbertos.update((v) => !v);
-  }
-
   fecharFiltros(): void {
+    if (!this.filtrosAbertos()) return;
     this.filtrosAbertos.set(false);
   }
 
@@ -244,6 +248,26 @@ export class AvaliacoesComponent {
   }
 
   onBuscaWrapClick(): void {
+    this.abrirBuscaComFoco();
+  }
+
+  /** Bottom nav · Buscar: abre/fecha o mesmo campo (sem duplicar no header fechado). */
+  private onBuscaMobile(): void {
+    if (this.filtrosAbertos()) this.fecharFiltros();
+    if (this.buscaAberta()) {
+      this.fecharPainelBusca();
+      return;
+    }
+    this.abrirBuscaComFoco();
+  }
+
+  private onFiltroMobile(): void {
+    if (this.buscaAberta()) this.fecharPainelBusca();
+    this.dispararPulsoToolbar('filtro');
+    this.filtrosAbertos.update((v) => !v);
+  }
+
+  private abrirBuscaComFoco(): void {
     if (!this.buscaAberta()) {
       this.dispararPulsoToolbar('busca');
       this.buscaAberta.set(true);
@@ -271,6 +295,7 @@ export class AvaliacoesComponent {
   }
 
   fecharPainelBusca(): void {
+    if (!this.buscaAberta()) return;
     this.buscaAberta.set(false);
   }
 
@@ -365,12 +390,52 @@ export class AvaliacoesComponent {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia(mediaQueryMin('shellMobile'));
     const apply = (): void => {
-      this.shellMobile.set(!mq.matches);
-      if (mq.matches) this.filtrosAbertos.set(false);
+      const mobile = !mq.matches;
+      this.shellMobile.set(mobile);
+      if (!mobile) {
+        this.filtrosAbertos.set(false);
+        this.buscaAberta.set(false);
+      }
     };
     apply();
     mq.addEventListener('change', apply);
-    this.destroyRef.onDestroy(() => mq.removeEventListener('change', apply));
+    this.destroyRef.onDestroy(() => {
+      mq.removeEventListener('change', apply);
+      this.shellUi.clearMobileBottomNavActions(AVALIACOES_BOTTOM_NAV_OWNER);
+    });
+  }
+
+  /**
+   * ≤767: Menu + Buscar · Filtros (exceção MLP sem Criar/Selecionar).
+   * `active` no sheet/busca abertos; `warn` com filtro ≠ default e sheet fechado.
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellMobile()) {
+      this.shellUi.clearMobileBottomNavActions(AVALIACOES_BOTTOM_NAV_OWNER);
+      return;
+    }
+    const buscaAberta = this.buscaAberta();
+    const filtrosAbertos = this.filtrosAbertos();
+    const actions: MobileBottomNavAction[] = [
+      {
+        id: 'buscar',
+        label: 'Buscar',
+        ariaLabel: buscaAberta ? 'Fechar busca' : 'Buscar solicitações',
+        icon: 'search',
+        active: buscaAberta,
+        onClick: () => this.onBuscaMobile(),
+      },
+      {
+        id: 'filtro',
+        label: 'Filtros',
+        ariaLabel: filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: filtrosAbertos,
+        warn: this.temFiltroAtivo() && !filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+    ];
+    this.shellUi.setMobileBottomNavActions(AVALIACOES_BOTTOM_NAV_OWNER, actions);
   }
 
   private dispararPulsoToolbar(which: 'busca' | 'filtro'): void {
