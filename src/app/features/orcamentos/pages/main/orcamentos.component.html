@@ -5,7 +5,10 @@
         <div class="list-head__left">
           <h1 class="list-head__title">Orçamentos</h1>
         </div>
-        <div class="list-head__actions">
+        <div
+          class="list-head__actions"
+          [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+        >
           <div
             class="list-head__busca-wrap"
             [class.list-head__busca-wrap--open]="buscaAberta"
@@ -113,15 +116,51 @@
     }
   </div>
 
+  @if (shellBottomNavEligible && chipsFiltrosMobile().length) {
+    <div class="orcamentos-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="orcamentos-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
   <div
     class="orcamentos-layout"
-    [class.orcamentos-layout--filtros-abertos]="filtrosAbertos"
+    [class.orcamentos-layout--filtros-abertos]="
+      filtrosAbertos && !shellBottomNavEligible
+    "
   >
     <aside
       class="orcamentos-filtros-drawer"
-      [class.orcamentos-filtros-drawer--open]="filtrosAbertos"
+      [class.orcamentos-filtros-drawer--open]="
+        filtrosAbertos && !shellBottomNavEligible
+      "
       aria-label="Painel de filtros"
-      [attr.aria-hidden]="filtrosAbertos ? null : 'true'"
+      [attr.aria-hidden]="
+        filtrosAbertos && !shellBottomNavEligible ? null : 'true'
+      "
     >
       <div class="orcamentos-filtros-drawer__inner">
         <section class="orcamentos-filtros-card orcamentos-filtros-card--periodo">
@@ -159,7 +198,7 @@
 
     <div class="orcamentos-layout__main">
   <div class="list-table-card orcamentos-table-card">
-      <div class="table-wrap">
+      <div class="table-wrap orcamentos-desktop-table">
         <table class="orcamentos-table">
           <thead>
             <tr>
@@ -294,7 +333,7 @@
             } @else if (totalFiltrado() === 0) {
               <tr>
                 <td colspan="7" class="table-body__empty">
-                  <app-table-empty label="Nenhum orçamento neste período" />
+                  <app-table-empty [label]="rotuloListaVazia()" />
                 </td>
               </tr>
             } @else {
@@ -466,6 +505,140 @@
         </table>
       </div>
 
+      <div class="orcamentos-mobile-list" aria-label="Lista de orçamentos">
+        @if (carregando) {
+          <p class="orcamentos-mobile-list__busy">Carregando…</p>
+        } @else if (totalFiltrado() === 0) {
+          <div class="orcamentos-mobile-list__empty">
+            <app-table-empty [label]="rotuloListaVazia()" />
+          </div>
+        } @else {
+          @for (g of paginaItens(); track g.id) {
+            <div class="orcamentos-mobile-card">
+              <button
+                type="button"
+                class="orcamentos-mobile-card__main"
+                (click)="onMobileCardClick(g, $event)"
+                [attr.aria-label]="'Abrir orçamento ' + rotuloTicket(g)"
+              >
+                <span class="orcamentos-mobile-card__body">
+                  <span class="orcamentos-mobile-card__top">
+                    <span class="orcamentos-mobile-card__ticket">{{
+                      rotuloTicket(g)
+                    }}</span>
+                    <span class="orcamentos-mobile-card__cliente">{{
+                      g.nomeCliente || '—'
+                    }}</span>
+                  </span>
+                  <span class="orcamentos-mobile-card__meta">
+                    <span
+                      class="orcamentos-badge"
+                      [attr.data-status]="g.orcamentoStatus"
+                    >
+                      {{ rotuloStatus(g.orcamentoStatus) }}
+                    </span>
+                    @if (exibirTelefone(g)) {
+                      <span class="orcamentos-mobile-card__tel">{{
+                        exibirTelefone(g)
+                      }}</span>
+                    }
+                  </span>
+                  <span class="orcamentos-mobile-card__foot">
+                    <span class="orcamentos-mobile-card__valor">
+                      @if (g.valorTotal != null) {
+                        {{
+                          g.valorTotal
+                            | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR'
+                        }}
+                      } @else {
+                        —
+                      }
+                    </span>
+                    <span class="orcamentos-mobile-card__data">{{
+                      dataDdMmBarraAaaa(g.data)
+                    }}</span>
+                  </span>
+                </span>
+              </button>
+              <div
+                class="orcamentos-mobile-card__acoes"
+                (click)="$event.stopPropagation()"
+              >
+                <button
+                  type="button"
+                  class="orcamentos-mobile-card__acao orcamentos-mobile-card__acao--wa"
+                  (click)="enviarWhatsapp(g)"
+                  aria-label="Enviar WhatsApp"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+                    />
+                  </svg>
+                </button>
+                @if (podeConverterOuArquivar(g)) {
+                  <button
+                    type="button"
+                    class="orcamentos-mobile-card__acao orcamentos-mobile-card__acao--convert"
+                    (click)="abrirConverter(g)"
+                    aria-label="Converter para agenda"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M8 2v4" />
+                      <path d="M16 2v4" />
+                      <rect width="18" height="18" x="3" y="4" rx="2" />
+                      <path d="M3 10h18" />
+                      <path d="m9 16 2 2 4-4" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="orcamentos-mobile-card__acao orcamentos-mobile-card__acao--archive"
+                    (click)="arquivar(g)"
+                    aria-label="Arquivar orçamento"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect width="20" height="5" x="2" y="3" rx="1" />
+                      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+                      <path d="M10 12h4" />
+                    </svg>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+
       <footer class="list-footer orcamentos-footer">
         <span class="list-footer__total orcamentos-footer__total">
           {{ carregando ? '…' : totalFiltrado() }} no total
@@ -623,3 +796,42 @@
   (fechar)="fecharWhatsapp()"
   (enviado)="onWhatsappEnviado()"
 />
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && filtrosAbertos"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section
+    class="orcamentos-filtros-card orcamentos-filtros-card--periodo orcamentos-filtros-card--sheet"
+  >
+    <h3 class="orcamentos-filtros-card__title">Período</h3>
+    <app-cliente-drawer-periodo-filtro
+      [(inicioYmd)]="periodoInicioYmd"
+      [(fimYmd)]="periodoFimYmd"
+      exibicaoFormato="belasis"
+      [painelFlutuante]="true"
+      (periodoAlterado)="onPeriodoFiltroAlterado()"
+    />
+  </section>
+
+  <section class="orcamentos-filtros-card orcamentos-filtros-card--sheet">
+    <h3 class="orcamentos-filtros-card__title">Status</h3>
+    <div class="orcamentos-filtros-card__body">
+      @for (st of filtrosStatus; track st.id) {
+        <label class="orcamentos-filtros-check">
+          <input
+            type="checkbox"
+            [name]="'st_orc_sheet_' + st.id"
+            [checked]="filtroStatusAtivo(st.id)"
+            (change)="toggleFiltroStatus(st.id)"
+          />
+          <span class="orcamentos-badge" [attr.data-status]="st.id">{{
+            st.label
+          }}</span>
+        </label>
+      }
+    </div>
+  </section>
+</app-mobile-filtros-sheet>

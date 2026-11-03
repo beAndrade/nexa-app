@@ -168,6 +168,55 @@
   overflow: hidden;
 }
 
+/** Viewport estreito: chrome sem título absoluto sobre as ações. */
+@media (max-width: 767px) {
+  .orcamento-preview__chrome-inner {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px 12px;
+  }
+
+  .orcamento-preview__heading {
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    flex: 1 1 100%;
+    width: 100%;
+    white-space: normal;
+    font-size: 15px;
+    pointer-events: auto;
+  }
+
+  .orcamento-preview__actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .orcamento-preview__btn {
+    min-height: 44px;
+    height: 44px;
+  }
+
+  .orcamento-preview__btn--wa {
+    min-width: 44px;
+    width: 44px;
+  }
+
+  .orcamento-preview__body {
+    padding: 12px 10px 28px;
+    overflow-x: hidden;
+  }
+
+  .orcamento-preview__sheet {
+    max-width: 100%;
+    border-radius: 8px;
+  }
+}
+
 @media print {
   :host {
     position: static;

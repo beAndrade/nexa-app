@@ -56,6 +56,9 @@ import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.
 import { tooltipOrdenacaoProximoClique } from '../../../../shared/table-sort-tip.util';
 import { ymdToDdMmYyyyFiltro } from '../../../financeiro/pages/transacoes/fin-transacoes-filtro.util';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 
 import {
   DRAWER_ANIM_MS,
@@ -65,7 +68,20 @@ import {
 
 registerLocaleData(localePt);
 
+const ORCAMENTOS_BOTTOM_NAV_OWNER = 'orcamentos';
+
 type OrcamentoStatus = 'rascunho' | 'enviado' | 'arquivado';
+
+function periodoPadraoUltimos30Dias(): { ini: string; fim: string } {
+  const hoje = new Date();
+  const ini = new Date(hoje);
+  ini.setDate(ini.getDate() - 30);
+  return { ini: toYmd(ini), fim: toYmd(hoje) };
+}
+
+function filtroStatusPadrao(): Set<OrcamentoStatus> {
+  return new Set<OrcamentoStatus>(['rascunho', 'enviado']);
+}
 
 interface OrcamentoGrupo {
   id: string;
@@ -96,6 +112,7 @@ function formataMoeda(n: number): string {
   imports: [
     FlipDropdownPanelDirective,
     TableEmptyComponent,
+    MobileFiltrosSheetComponent,
     FormsModule,
     CurrencyPipe,
     AgendaNovoComponent,
@@ -118,6 +135,16 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
   private readonly agendaNovoGlobal = inject(AgendaNovoGlobalService);
   private readonly cadastroDrawer = inject(ClienteCadastroDrawerService);
   private readonly appRef = inject(ApplicationRef);
+  private readonly shellUi = inject(AppShellUiService);
+
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (!this.shellBottomNavEligible) {
+      if (this.filtrosAbertos) this.filtrosAbertos = false;
+    }
+    this.syncShellBottomNavActions();
+  };
 
   @ViewChild(AgendaNovoComponent) private agendaNovoRef?: AgendaNovoComponent;
 
@@ -145,8 +172,10 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
   busca = '';
   buscaAberta = false;
   filtrosAbertos = false;
+  /** ≤767 — bottom nav contextual (Filtro · Novo); busca permanece no header. */
+  shellBottomNavEligible = false;
   /** Padrão: todos os status ativos; arquivados só aparecem se o filtro for marcado. */
-  filtroStatus = new Set<OrcamentoStatus>(['rascunho', 'enviado']);
+  filtroStatus = filtroStatusPadrao();
 
   pagina = 1;
   itensPorPagina = 20;
@@ -182,12 +211,11 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.agendaNovoGlobal.registerPageHandler(this.onAgendaNovoAtalho);
-    const hoje = new Date();
-    const ini = new Date(hoje);
-    ini.setDate(ini.getDate() - 30);
-    this.periodoInicioYmd = toYmd(ini);
-    this.periodoFimYmd = toYmd(hoje);
+    const padrao = periodoPadraoUltimos30Dias();
+    this.periodoInicioYmd = padrao.ini;
+    this.periodoFimYmd = padrao.fim;
     this.syncDdMmFromPeriodoYmd();
+    this.setupShellBottomNav();
     this.carregar();
     this.route.queryParamMap.subscribe((params) => {
       if (params.get('abrirNovoOrcamento') === '1') {
@@ -198,8 +226,128 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.agendaNovoGlobal.unregisterPageHandler(this.onAgendaNovoAtalho);
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(ORCAMENTOS_BOTTOM_NAV_OWNER);
     if (this.novoCloseTimer != null) clearTimeout(this.novoCloseTimer);
     document.body.classList.remove('drawer-open');
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Menu no shell. Sem seleção/lote (não existe na feature).
+   * Normal: Filtro · Novo. Busca no header (§9 MLP).
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(ORCAMENTOS_BOTTOM_NAV_OWNER);
+      return;
+    }
+    this.shellUi.setMobileBottomNavActions(ORCAMENTOS_BOTTOM_NAV_OWNER, [
+      {
+        id: 'filtro',
+        label: 'Filtro',
+        ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: this.filtrosAbertos,
+        warn: this.temFiltroAtivo() && !this.filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+      {
+        id: 'novo',
+        label: 'Novo',
+        ariaLabel: 'Novo orçamento',
+        icon: 'plus',
+        accent: true,
+        onClick: () => this.abrirNovo(),
+      },
+    ]);
+  }
+
+  private onFiltroMobile(): void {
+    this.filtrosAbertos = !this.filtrosAbertos;
+    this.syncShellBottomNavActions();
+  }
+
+  fecharFiltros(): void {
+    if (!this.filtrosAbertos) return;
+    this.filtrosAbertos = false;
+    this.syncShellBottomNavActions();
+  }
+
+  /** Filtros além do padrão (últimos 30 dias + rascunho/enviado). */
+  temFiltroAtivo(): boolean {
+    return this.chipsFiltrosMobile().length > 0;
+  }
+
+  chipsFiltrosMobile(): { id: string; label: string }[] {
+    const chips: { id: string; label: string }[] = [];
+    const padrao = periodoPadraoUltimos30Dias();
+    if (
+      this.periodoInicioYmd !== padrao.ini ||
+      this.periodoFimYmd !== padrao.fim
+    ) {
+      chips.push({ id: 'periodo', label: 'Período' });
+    }
+    if (!this.filtroStatusEhPadrao()) {
+      const labels = this.filtrosStatus
+        .filter((st) => this.filtroStatus.has(st.id))
+        .map((st) => st.label);
+      chips.push({
+        id: 'status',
+        label: labels.length ? labels.join(', ') : 'Status: nenhum',
+      });
+    }
+    return chips;
+  }
+
+  removerChipFiltro(id: string, ev?: Event): void {
+    ev?.stopPropagation();
+    if (id === 'periodo') {
+      const padrao = periodoPadraoUltimos30Dias();
+      this.periodoInicioYmd = padrao.ini;
+      this.periodoFimYmd = padrao.fim;
+      this.syncDdMmFromPeriodoYmd();
+      this.pagina = 1;
+      this.carregar();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'status') {
+      this.filtroStatus = filtroStatusPadrao();
+      this.pagina = 1;
+      this.syncShellBottomNavActions();
+    }
+  }
+
+  private filtroStatusEhPadrao(): boolean {
+    return (
+      this.filtroStatus.size === 2 &&
+      this.filtroStatus.has('rascunho') &&
+      this.filtroStatus.has('enviado')
+    );
+  }
+
+  /** Empty global ≠ empty filtrado (MLP). */
+  rotuloListaVazia(): string {
+    if (
+      this.grupos.length === 0 &&
+      !this.busca.trim() &&
+      !this.temFiltroAtivo()
+    ) {
+      return 'Nenhum orçamento neste período';
+    }
+    return 'Nenhum item encontrado';
+  }
+
+  onMobileCardClick(g: OrcamentoGrupo, ev: Event): void {
+    this.abrirOrcamento(g, ev);
   }
 
   @HostListener('document:keydown.escape', ['$event'])
@@ -222,6 +370,11 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
     if (this.novoAberto) {
       ev.preventDefault();
       this.fecharNovo();
+      return;
+    }
+    if (this.filtrosAbertos) {
+      ev.preventDefault();
+      this.fecharFiltros();
       return;
     }
     if (this.buscaAberta) {
@@ -260,11 +413,13 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
 
   toggleFiltros(): void {
     this.filtrosAbertos = !this.filtrosAbertos;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   onPeriodoFiltroAlterado(): void {
     this.syncDdMmFromPeriodoYmd();
     this.carregar();
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   private syncDdMmFromPeriodoYmd(): void {
@@ -483,11 +638,17 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
   toggleFiltroStatus(id: OrcamentoStatus): void {
     if (this.filtroStatus.has(id)) this.filtroStatus.delete(id);
     else this.filtroStatus.add(id);
+    this.filtroStatus = new Set(this.filtroStatus);
     this.pagina = 1;
+    if (this.shellBottomNavEligible) this.syncShellBottomNavActions();
   }
 
   filtroStatusAtivo(id: OrcamentoStatus): boolean {
     return this.filtroStatus.has(id);
+  }
+
+  podeConverterOuArquivar(g: OrcamentoGrupo): boolean {
+    return g.orcamentoStatus !== 'arquivado';
   }
 
   abrirOrcamento(g: OrcamentoGrupo, ev: Event): void {
@@ -559,6 +720,7 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
 
   private abrirEdicao(g: OrcamentoGrupo): void {
     this.fecharPainelBusca();
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
     const dataYmd = (g.data || '').trim().slice(0, 10) || toYmd(new Date());
     this.novoConverterAgenda = false;
     this.novoCtx = {
@@ -579,6 +741,7 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
 
   abrirNovo(): void {
     this.fecharPainelBusca();
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
     this.novoConverterAgenda = false;
     this.novoCtx = {
       data: toYmd(new Date()),
@@ -825,6 +988,7 @@ export class OrcamentosComponent implements OnInit, OnDestroy {
 
   abrirConverter(g: OrcamentoGrupo): void {
     this.fecharPainelBusca();
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
     const dataYmd = (g.data || '').trim().slice(0, 10) || toYmd(new Date());
     this.novoConverterAgenda = true;
     this.novoCtx = {
