@@ -79,8 +79,23 @@ import {
   type FinTransacoesVisaoPreset,
 } from './fin-transacoes-filtro.util';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
+import { AppShellUiService } from '../../../../core/services/app-shell-ui.service';
+import { MobileFiltrosSheetComponent } from '../../../../shared/components/mobile-filtros-sheet/mobile-filtros-sheet.component';
+import {
+  MobileListActionsMenuComponent,
+  type MobileListActionMenuItem,
+} from '../../../../shared/components/mobile-list-actions-menu/mobile-list-actions-menu.component';
+import {
+  areAllSelected,
+  buildSelectionBottomNavActions,
+  selectAllIds,
+  toggleId,
+} from '../../../../shared/mobile-list-selection/mobile-list-selection';
+import { mediaQueryMin } from '../../../../styles/breakpoints';
 
 export type { FinTransacaoLinhaUi };
+
+const TRANSACOES_BOTTOM_NAV_OWNER = 'financeiro-transacoes';
 
 registerLocaleData(localePt);
 
@@ -126,6 +141,8 @@ type FaturarDrawerCtx = {
     UiTipTriggerComponent,
     AgendaModalCalendarComponent,
     FinanceiroBloquearBtnComponent,
+    MobileFiltrosSheetComponent,
+    MobileListActionsMenuComponent,
   ],
   providers: [{ provide: LOCALE_ID, useValue: 'pt-BR' }],
   templateUrl: './financeiro-transacoes.component.html',
@@ -140,6 +157,19 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly shellUi = inject(AppShellUiService);
+
+  private shellDesktopMq: MediaQueryList | null = null;
+  private readonly onShellViewportChange = (): void => {
+    this.shellBottomNavEligible = !(this.shellDesktopMq?.matches ?? true);
+    if (!this.shellBottomNavEligible) {
+      if (this.filtrosAbertos) this.filtrosAbertos = false;
+      if (this.modoSelecao) this.sairModoSelecao();
+      this.novoTipoMenuAberto = false;
+      this.acoesMenuAberto = false;
+    }
+    this.syncShellBottomNavActions();
+  };
 
   @ViewChild(NovaComandaDrawerComponent)
   comandaDrawerRef?: NovaComandaDrawerComponent;
@@ -221,6 +251,15 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
   novoMenuAberto = false;
   novoMenuFechando = false;
   filtrosAbertos = false;
+  /** ≤767 — bottom nav contextual (Filtro · Selecionar · Totais · Novo). */
+  shellBottomNavEligible = false;
+  modoSelecao = false;
+  acoesMenuAberto = false;
+  /** Menu de tipo de lançamento ancorado à bar (mobile). */
+  novoTipoMenuAberto = false;
+  selecionarTudoBusy = false;
+  private selecionarTudoFeedbackTimer: ReturnType<typeof setTimeout> | null =
+    null;
   pulsoToolbarBusca = false;
   pulsoToolbarFiltro = false;
   pulsoToolbarNovo = false;
@@ -260,6 +299,7 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
   pagamentoModalSalvando = false;
 
   ngOnInit(): void {
+    this.setupShellBottomNav();
     this.carregarOpcoesFiltrosSidebar();
 
     this.finNovoGlobal.salvo$
@@ -299,6 +339,7 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
       }
       this.queryParamsInicializado = true;
       this.pagina = 1;
+      this.syncShellBottomNavActions();
 
       const novo = String(params.get('novo') ?? '').trim().toLowerCase();
       if (novo === 'receita' || novo === 'despesa' || novo === 'vale') {
@@ -318,6 +359,10 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.shellDesktopMq?.removeEventListener('change', this.onShellViewportChange);
+    this.shellDesktopMq = null;
+    this.shellUi.clearMobileBottomNavActions(TRANSACOES_BOTTOM_NAV_OWNER);
+    this.limparFeedbackSelecionarTudo();
     this.clearDataSortTipShowTimer();
     if (this.comandaDrawerCloseTimer != null) {
       clearTimeout(this.comandaDrawerCloseTimer);
@@ -336,6 +381,411 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
     }
     this.cancelarFechamentoNovoMenu();
     if (this.tPulsoNovo != null) window.clearTimeout(this.tPulsoNovo);
+  }
+
+  private setupShellBottomNav(): void {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    this.shellDesktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    this.onShellViewportChange();
+    this.shellDesktopMq.addEventListener('change', this.onShellViewportChange);
+  }
+
+  /**
+   * Menu no shell. Normal: Filtro · Selecionar · Totais · Novo.
+   * Em seleção: Cancelar · Selecionar tudo · Ações (editar/excluir unitário já existente).
+   * Busca permanece no header (§9 MLP).
+   */
+  private syncShellBottomNavActions(): void {
+    if (!this.shellBottomNavEligible) {
+      this.shellUi.clearMobileBottomNavActions(TRANSACOES_BOTTOM_NAV_OWNER);
+      return;
+    }
+    if (this.modoSelecao) {
+      const actions = buildSelectionBottomNavActions(
+        this.todosFiltradosSelecionados(),
+        {
+          onCancel: () => this.sairModoSelecao(),
+          onSelectAll: () => this.selecionarTodosMobile(),
+          onActions: () => this.onAcoesSelecao(),
+          selectAllAriaLabel: 'Selecionar todas as transações filtradas',
+        },
+      );
+      const acoes = actions.find((action) => action.id === 'acoes');
+      if (acoes) acoes.active = this.acoesMenuAberto;
+      const selecionarTudo = actions.find(
+        (action) => action.id === 'selecionar-tudo',
+      );
+      if (selecionarTudo) {
+        selecionarTudo.busy = this.selecionarTudoBusy;
+        selecionarTudo.activeAria = 'pressed';
+      }
+      this.shellUi.setMobileBottomNavActions(TRANSACOES_BOTTOM_NAV_OWNER, actions);
+      return;
+    }
+    this.shellUi.setMobileBottomNavActions(TRANSACOES_BOTTOM_NAV_OWNER, [
+      {
+        id: 'filtro',
+        label: 'Filtro',
+        ariaLabel: this.filtrosAbertos ? 'Fechar filtros' : 'Abrir filtros',
+        icon: 'filter',
+        active: this.filtrosAbertos,
+        warn: this.temFiltroAtivo() && !this.filtrosAbertos,
+        onClick: () => this.onFiltroMobile(),
+      },
+      {
+        id: 'selecionar',
+        label: 'Selecionar',
+        ariaLabel: 'Selecionar transações',
+        icon: 'check',
+        active: false,
+        onClick: () => this.entrarModoSelecao(),
+      },
+      {
+        id: 'totais',
+        label: 'Totais',
+        ariaLabel: 'Calcular totais',
+        icon: 'bolt',
+        active: this.modalTotaisAberto(),
+        onClick: () => this.calcularTotais(),
+      },
+      {
+        id: 'novo',
+        label: 'Novo',
+        ariaLabel: 'Novo lançamento',
+        icon: 'plus',
+        accent: true,
+        active: this.novoTipoMenuAberto,
+        onClick: () => this.onNovoMobile(),
+      },
+    ]);
+  }
+
+  private onFiltroMobile(): void {
+    this.novoTipoMenuAberto = false;
+    this.filtrosAbertos = !this.filtrosAbertos;
+    if (this.filtrosAbertos) this.carregarOpcoesFiltrosSidebar();
+    this.syncShellBottomNavActions();
+  }
+
+  fecharFiltros(): void {
+    if (!this.filtrosAbertos) return;
+    this.filtrosAbertos = false;
+    this.syncShellBottomNavActions();
+  }
+
+  entrarModoSelecao(): void {
+    if (this.shellBottomNavEligible && this.filtrosAbertos) this.fecharFiltros();
+    this.novoTipoMenuAberto = false;
+    this.modoSelecao = true;
+    this.syncShellBottomNavActions();
+  }
+
+  sairModoSelecao(): void {
+    this.modoSelecao = false;
+    this.acoesMenuAberto = false;
+    this.limparFeedbackSelecionarTudo();
+    this.selecionados.set(new Set());
+    this.syncShellBottomNavActions();
+  }
+
+  todosFiltradosSelecionados(): boolean {
+    return areAllSelected(
+      this.linhasFiltradas.map((r) => r.id),
+      this.selecionados(),
+    );
+  }
+
+  selecionarTodosMobile(): void {
+    this.selecionados.set(
+      selectAllIds(
+        this.selecionados(),
+        this.linhasFiltradas.map((r) => r.id),
+      ),
+    );
+    this.dispararFeedbackSelecionarTudo();
+    this.syncShellBottomNavActions();
+  }
+
+  private dispararFeedbackSelecionarTudo(): void {
+    this.limparFeedbackSelecionarTudo();
+    this.selecionarTudoBusy = true;
+    this.selecionarTudoFeedbackTimer = setTimeout(() => {
+      this.selecionarTudoFeedbackTimer = null;
+      this.selecionarTudoBusy = false;
+      if (this.modoSelecao) this.syncShellBottomNavActions();
+    }, 250);
+  }
+
+  private limparFeedbackSelecionarTudo(): void {
+    if (this.selecionarTudoFeedbackTimer != null) {
+      clearTimeout(this.selecionarTudoFeedbackTimer);
+      this.selecionarTudoFeedbackTimer = null;
+    }
+    this.selecionarTudoBusy = false;
+  }
+
+  private onAcoesSelecao(): void {
+    this.novoTipoMenuAberto = false;
+    this.acoesMenuAberto = !this.acoesMenuAberto;
+    this.syncShellBottomNavActions();
+  }
+
+  private onNovoMobile(): void {
+    if (this.modoSelecao) return;
+    this.acoesMenuAberto = false;
+    this.novoTipoMenuAberto = !this.novoTipoMenuAberto;
+    this.syncShellBottomNavActions();
+  }
+
+  acoesMenuItens(): MobileListActionMenuItem[] {
+    const um = this.selecionados().size === 1;
+    const row = um ? this.linhaSelecionadaUnica() : null;
+    return [
+      {
+        id: 'editar',
+        label: 'Editar',
+        ariaLabel: 'Editar transação selecionada',
+        disabled: !um || !row || !this.podeAcaoEditarLinha(row),
+      },
+      {
+        id: 'excluir',
+        label: 'Excluir',
+        ariaLabel: 'Excluir transação selecionada',
+        icon: 'trash',
+        danger: true,
+        disabled: !um || !row || !this.podeExcluirNoMenu(row),
+      },
+    ];
+  }
+
+  novoTipoMenuItens(): MobileListActionMenuItem[] {
+    return [
+      {
+        id: 'recebimento',
+        label: 'Recebimento',
+        ariaLabel: 'Novo recebimento',
+      },
+      {
+        id: 'despesa',
+        label: 'Despesa',
+        ariaLabel: 'Nova despesa',
+      },
+      {
+        id: 'vale',
+        label: 'Vale',
+        ariaLabel: 'Novo vale',
+      },
+    ];
+  }
+
+  onAcoesMenuOpenChange(open: boolean): void {
+    if (open || !this.acoesMenuAberto) return;
+    this.acoesMenuAberto = false;
+    this.syncShellBottomNavActions();
+  }
+
+  onNovoTipoMenuOpenChange(open: boolean): void {
+    if (open || !this.novoTipoMenuAberto) return;
+    this.novoTipoMenuAberto = false;
+    this.syncShellBottomNavActions();
+  }
+
+  onItemAcaoSelecao(item: MobileListActionMenuItem): void {
+    const row = this.linhaSelecionadaUnica();
+    if (!row) return;
+    if (item.id === 'editar') {
+      if (!this.podeAcaoEditarLinha(row)) return;
+      this.sairModoSelecao();
+      this.onAcaoEditarLinha(row);
+      return;
+    }
+    if (item.id === 'excluir') {
+      if (!this.podeExcluirNoMenu(row)) return;
+      this.acoesMenuAberto = false;
+      this.syncShellBottomNavActions();
+      this.abrirModalExclusao(row);
+    }
+  }
+
+  onItemNovoTipo(item: MobileListActionMenuItem): void {
+    this.novoTipoMenuAberto = false;
+    this.syncShellBottomNavActions();
+    if (item.id === 'recebimento') this.abrirNovoRecebimento();
+    else if (item.id === 'despesa') this.abrirNovoDespesa();
+    else if (item.id === 'vale') this.abrirNovoVale();
+  }
+
+  private linhaSelecionadaUnica(): FinTransacaoLinhaUi | null {
+    if (this.selecionados().size !== 1) return null;
+    const id = [...this.selecionados()][0];
+    return this.linhasFonte.find((r) => r.id === id) ?? null;
+  }
+
+  onMobileCardClick(row: FinTransacaoLinhaUi, ev: Event): void {
+    if (this.modoSelecao) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.selecionados.set(toggleId(this.selecionados(), row.id));
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (this.podeAcaoEditarLinha(row)) {
+      this.onAcaoEditarLinha(row);
+    }
+  }
+
+  tituloCard(row: FinTransacaoLinhaUi): string {
+    if (this.exibirTitularDuasLinhas(row)) {
+      return String(row.titular ?? '').trim() || this.linhaPrincipal(row);
+    }
+    return this.linhaPrincipal(row);
+  }
+
+  subtituloCard(row: FinTransacaoLinhaUi): string {
+    if (!this.exibirTitularDuasLinhas(row)) return '';
+    return String(row.subtitulo ?? '').trim();
+  }
+
+  rotuloNatureza(row: FinTransacaoLinhaUi): string {
+    return row.linhaReceita === true ? 'Receita' : 'Despesa';
+  }
+
+  /** Empty global ≠ empty filtrado (MLP). */
+  rotuloListaVazia(): string {
+    if (
+      this.linhasFonte.length === 0 &&
+      !this.busca.trim() &&
+      !this.temFiltroAtivo()
+    ) {
+      return 'Nenhuma transação no período selecionado';
+    }
+    return 'Nenhum item encontrado';
+  }
+
+  temFiltroAtivo(): boolean {
+    return this.chipsFiltrosMobile().length > 0;
+  }
+
+  chipsFiltrosMobile(): { id: string; label: string }[] {
+    const chips: { id: string; label: string }[] = [];
+    const padraoIni = primeiroDiaMesYmdFiltro();
+    const padraoFim = ultimoDiaMesYmdFiltro();
+    if (
+      this.periodoInicioYmd !== padraoIni ||
+      this.periodoFimYmd !== padraoFim
+    ) {
+      chips.push({ id: 'periodo', label: 'Período' });
+    }
+    if (!(this.filtroReceber && this.filtroPagar)) {
+      if (this.filtroReceber && !this.filtroPagar) {
+        chips.push({ id: 'natureza', label: 'A receber' });
+      } else if (this.filtroPagar && !this.filtroReceber) {
+        chips.push({ id: 'natureza', label: 'A pagar' });
+      }
+    }
+    if (this.filtroTipoData !== 'vencimento') {
+      const rotulo =
+        this.filtroTipoData === 'competencia'
+          ? 'Competência'
+          : 'Pagamento';
+      chips.push({ id: 'tipoData', label: rotulo });
+    }
+    if (!(this.statusPago && this.statusEmAberto && this.statusAtrasado)) {
+      const labels: string[] = [];
+      if (this.statusEmAberto) labels.push('Em aberto');
+      if (this.statusAtrasado) labels.push('Atrasado');
+      if (this.statusPago) labels.push('Pago');
+      chips.push({
+        id: 'status',
+        label: labels.length ? labels.join(', ') : 'Status: nenhum',
+      });
+    }
+    if (this.filtroVisao) {
+      chips.push({
+        id: 'visao',
+        label: this.rotuloVisaoAtiva() ?? 'Visão',
+      });
+    }
+    if (this.opcoesFiltroCarregadas) {
+      const formas = this.formasOpcoes();
+      if (
+        formas.length > 0 &&
+        this.formasMarcadas.size < formas.length
+      ) {
+        chips.push({ id: 'formas', label: 'Formas' });
+      }
+      const cats = this.categoriasOpcoes();
+      if (
+        cats.length > 0 &&
+        this.categoriasMarcadas.size < cats.length
+      ) {
+        chips.push({ id: 'categorias', label: 'Categorias' });
+      }
+    }
+    return chips;
+  }
+
+  removerChipFiltro(id: string, ev?: Event): void {
+    ev?.stopPropagation();
+    if (id === 'periodo') {
+      this.periodoInicioYmd = primeiroDiaMesYmdFiltro();
+      this.periodoFimYmd = ultimoDiaMesYmdFiltro();
+      this.syncDdMmFromPeriodoYmd();
+      this.filtroVisao = null;
+      this.pagina = 1;
+      this.aplicarFiltrosAutomatico();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'natureza') {
+      this.filtroReceber = true;
+      this.filtroPagar = true;
+      this.filtroVisao = null;
+      this.pagina = 1;
+      this.aplicarFiltrosNaturezaNaHora();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'tipoData') {
+      this.filtroTipoData = 'vencimento';
+      this.filtroVisao = null;
+      this.pagina = 1;
+      this.aplicarFiltrosAutomatico();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'status') {
+      this.statusPago = true;
+      this.statusEmAberto = true;
+      this.statusAtrasado = true;
+      this.filtroVisao = null;
+      this.pagina = 1;
+      this.aplicarFiltrosAutomatico();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'visao') {
+      this.filtroVisao = null;
+      this.pagina = 1;
+      this.aplicarFiltrosAutomatico();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'formas') {
+      this.formasMarcadas = new Set(this.formasOpcoes());
+      this.pagina = 1;
+      this.aplicarFiltrosAutomatico();
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (id === 'categorias') {
+      this.categoriasMarcadas = new Set(
+        this.categoriasOpcoes().map((c) => c.id),
+      );
+      this.pagina = 1;
+      this.aplicarFiltrosAutomatico();
+      this.syncShellBottomNavActions();
+    }
   }
 
   carregar(): void {
@@ -1121,6 +1571,10 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
   toggleFiltros(ev?: Event): void {
     ev?.stopPropagation();
     this.dispararPulsoToolbar('filtro');
+    if (this.shellBottomNavEligible) {
+      this.onFiltroMobile();
+      return;
+    }
     const abrindo = !this.filtrosAbertos;
     this.filtrosAbertos = abrindo;
     if (abrindo) this.carregarOpcoesFiltrosSidebar();
@@ -1437,12 +1891,15 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
   }
 
   calcularTotais(): void {
+    this.novoTipoMenuAberto = false;
     this.resumoTotais.set(calcularTotaisTransacoes(this.linhasFiltradas));
     this.modalTotaisAberto.set(true);
+    this.syncShellBottomNavActions();
   }
 
   fecharModalTotais(): void {
     this.modalTotaisAberto.set(false);
+    this.syncShellBottomNavActions();
   }
 
   toggleNovoMenu(ev: Event): void {
@@ -1648,9 +2105,26 @@ export class FinanceiroTransacoesComponent implements OnInit, OnDestroy {
       }
       return;
     }
+    if (this.acoesMenuAberto) {
+      ev.preventDefault();
+      this.acoesMenuAberto = false;
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (this.novoTipoMenuAberto) {
+      ev.preventDefault();
+      this.novoTipoMenuAberto = false;
+      this.syncShellBottomNavActions();
+      return;
+    }
+    if (this.modoSelecao && this.shellBottomNavEligible) {
+      ev.preventDefault();
+      this.sairModoSelecao();
+      return;
+    }
     if (this.filtrosAbertos) {
       ev.preventDefault();
-      this.filtrosAbertos = false;
+      this.fecharFiltros();
       return;
     }
     if (this.perPageMenuAberto) {

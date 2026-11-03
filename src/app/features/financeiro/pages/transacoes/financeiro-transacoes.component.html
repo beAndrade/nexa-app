@@ -11,7 +11,10 @@
             <h1 class="list-head__title">Transações</h1>
             <app-financeiro-bloquear-btn />
           </div>
-          <div class="list-head__actions">
+          <div
+            class="list-head__actions"
+            [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+          >
             <div
               class="list-head__busca-wrap"
               [class.list-head__busca-wrap--open]="buscaAberta"
@@ -257,15 +260,51 @@
       }
   </div>
 
+  @if (shellBottomNavEligible && chipsFiltrosMobile().length) {
+    <div class="fin-transacoes-mobile-chips" aria-label="Filtros ativos">
+      @for (chip of chipsFiltrosMobile(); track chip.id) {
+        <button
+          type="button"
+          class="fin-transacoes-mobile-chips__chip"
+          (click)="removerChipFiltro(chip.id, $event)"
+          [attr.aria-label]="'Remover filtro ' + chip.label"
+        >
+          <span>{{ chip.label }}</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
   <div
     class="fin-transacoes-layout"
-    [class.fin-transacoes-layout--filtros-abertos]="filtrosAbertos"
+    [class.fin-transacoes-layout--filtros-abertos]="
+      filtrosAbertos && !shellBottomNavEligible
+    "
   >
     <aside
       class="fin-transacoes-filtros"
-      [class.fin-transacoes-filtros--open]="filtrosAbertos"
+      [class.fin-transacoes-filtros--open]="
+        filtrosAbertos && !shellBottomNavEligible
+      "
       aria-label="Filtros de transações"
-      [attr.aria-hidden]="filtrosAbertos ? null : 'true'"
+      [attr.aria-hidden]="
+        filtrosAbertos && !shellBottomNavEligible ? null : 'true'
+      "
     >
       <div class="fin-transacoes-filtros__scroll">
           <section class="fin-filtros-card fin-filtros-card--periodo">
@@ -511,7 +550,7 @@
 
     <div class="fin-transacoes-layout__main">
         <div class="list-table-card fin-transacoes__card">
-          <div class="table-wrap">
+          <div class="table-wrap fin-transacoes-desktop-table">
               <table class="list-table fin-transacoes-table">
                 <colgroup>
                   <col class="fin-transacoes-table__col-check" />
@@ -814,6 +853,205 @@
                   }
                 </tbody>
               </table>
+            </div>
+
+            <div class="fin-transacoes-mobile-list" aria-label="Lista de transações">
+              @if (carregando) {
+                <p class="fin-transacoes-mobile-list__busy">Carregando…</p>
+              } @else if (linhasPagina.length === 0) {
+                <div class="fin-transacoes-mobile-list__empty">
+                  <app-table-empty [label]="rotuloListaVazia()" />
+                </div>
+              } @else {
+                @for (row of linhasPagina; track row.id) {
+                  <div
+                    class="fin-transacoes-mobile-card"
+                    [class.fin-transacoes-mobile-card--selecao]="modoSelecao"
+                    [class.fin-transacoes-mobile-card--selected]="
+                      modoSelecao && linhaSelecionada(row.id)
+                    "
+                    [class.fin-transacoes-mobile-card--receita]="
+                      row.linhaReceita === true
+                    "
+                    [class.fin-transacoes-mobile-card--despesa]="
+                      row.linhaReceita !== true
+                    "
+                  >
+                    <button
+                      type="button"
+                      class="fin-transacoes-mobile-card__main"
+                      (click)="onMobileCardClick(row, $event)"
+                      [attr.aria-label]="
+                        modoSelecao
+                          ? (linhaSelecionada(row.id)
+                              ? 'Desmarcar '
+                              : 'Selecionar ') + tituloCard(row)
+                          : 'Abrir ' + tituloCard(row)
+                      "
+                      [attr.aria-pressed]="
+                        modoSelecao ? linhaSelecionada(row.id) : null
+                      "
+                    >
+                      <span
+                        class="fin-transacoes-mobile-card__check"
+                        [class.fin-transacoes-mobile-card__check--on]="
+                          linhaSelecionada(row.id)
+                        "
+                        aria-hidden="true"
+                      ></span>
+                      <span class="fin-transacoes-mobile-card__body">
+                        <span class="fin-transacoes-mobile-card__top">
+                          <span class="fin-transacoes-mobile-card__titulo">{{
+                            tituloCard(row)
+                          }}</span>
+                          <span
+                            class="fin-transacoes-mobile-card__valor"
+                            [class.fin-transacoes-mobile-card__valor--receita]="
+                              row.linhaReceita === true
+                            "
+                            [class.fin-transacoes-mobile-card__valor--despesa]="
+                              row.linhaReceita !== true
+                            "
+                          >
+                            {{
+                              row.valorLiquido
+                                | currency: 'BRL' : 'symbol' : '1.2-2'
+                            }}
+                          </span>
+                        </span>
+                        @if (subtituloCard(row)) {
+                          <span class="fin-transacoes-mobile-card__sub">{{
+                            subtituloCard(row)
+                          }}</span>
+                        }
+                        <span class="fin-transacoes-mobile-card__meta">
+                          <span class="fin-transacoes-mobile-card__natureza">{{
+                            rotuloNatureza(row)
+                          }}</span>
+                          <span
+                            class="badge"
+                            [class.badge--ok]="
+                              classeBadgeStatusTransacao(row) === 'badge--ok'
+                            "
+                            [class.badge--warn]="
+                              classeBadgeStatusTransacao(row) === 'badge--warn'
+                            "
+                            [class.badge--atraso]="
+                              classeBadgeStatusTransacao(row) ===
+                              'badge--atraso'
+                            "
+                          >
+                            {{ rotuloStatusTransacao(row) }}
+                          </span>
+                        </span>
+                        <span class="fin-transacoes-mobile-card__ctx">
+                          @if (row.categoria) {
+                            <span>{{ row.categoria }}</span>
+                          }
+                          @if (row.formaPagamento && row.formaPagamento !== '—') {
+                            <span>{{ row.formaPagamento }}</span>
+                          }
+                          @if (row.origem) {
+                            <span>{{ row.origem }}</span>
+                          }
+                        </span>
+                        <span class="fin-transacoes-mobile-card__foot">
+                          <span class="fin-transacoes-mobile-card__data">{{
+                            formatarData(row.dataYmd)
+                          }}</span>
+                          @if (
+                            row.valorBruto !== row.valorLiquido
+                          ) {
+                            <span class="fin-transacoes-mobile-card__bruto"
+                              >Bruto
+                              {{
+                                row.valorBruto
+                                  | currency: 'BRL' : 'symbol' : '1.2-2'
+                              }}</span
+                            >
+                          }
+                        </span>
+                      </span>
+                    </button>
+                    @if (!modoSelecao && linhaTemAcoes(row)) {
+                      <div
+                        class="fin-transacoes-mobile-card__acoes"
+                        (click)="$event.stopPropagation()"
+                      >
+                        @if (podeAcaoEditarLinha(row)) {
+                          <button
+                            type="button"
+                            class="fin-transacoes-mobile-card__acao"
+                            (click)="onAcaoEditarLinha(row)"
+                            aria-label="Editar"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                              />
+                              <path
+                                d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"
+                              />
+                            </svg>
+                          </button>
+                        }
+                        @if (podeExcluirNoMenu(row)) {
+                          <button
+                            type="button"
+                            class="fin-transacoes-mobile-card__acao fin-transacoes-mobile-card__acao--danger"
+                            [disabled]="excluindoId === row.id"
+                            (click)="abrirModalExclusao(row)"
+                            aria-label="Excluir"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+                              />
+                              <path d="M3 6h18" />
+                              <path
+                                d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                              />
+                            </svg>
+                          </button>
+                        }
+                        @if (colunaPagoVisivel(row)) {
+                          <button
+                            type="button"
+                            class="drawer-switch fin-transacoes-mobile-card__pago"
+                            [class.drawer-switch--on]="row.status === 'pago'"
+                            [attr.aria-pressed]="row.status === 'pago'"
+                            [disabled]="switchPagoDesabilitado(row)"
+                            [attr.aria-label]="tooltipColunaPago(row)"
+                            (click)="onTogglePago(row, $event)"
+                          ></button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              }
             </div>
 
             <span
@@ -1158,3 +1396,207 @@
     </div>
   </div>
 }
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && filtrosAbertos"
+  [closeOnEscape]="false"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <section class="fin-filtros-card fin-filtros-card--periodo fin-filtros-card--sheet">
+    <h3 class="fin-filtros-card__title">Período</h3>
+    <app-cliente-drawer-periodo-filtro
+      [(inicioYmd)]="periodoInicioYmd"
+      [(fimYmd)]="periodoFimYmd"
+      exibicaoFormato="belasis"
+      [painelFlutuante]="true"
+      (periodoAlterado)="onPeriodoFiltroAlterado()"
+    />
+  </section>
+
+  <section class="fin-filtros-card fin-filtros-card--sheet">
+    <h3 class="fin-filtros-card__title">Tipo de transação</h3>
+    <ul class="fin-filtros-check-list">
+      <li>
+        <label class="fin-filtros-check">
+          <input
+            type="checkbox"
+            [checked]="filtroReceber"
+            (change)="toggleFiltroReceber($event)"
+          />
+          <span class="fin-filtros-check__label">Contas a receber</span>
+        </label>
+      </li>
+      <li>
+        <label class="fin-filtros-check">
+          <input
+            type="checkbox"
+            [checked]="filtroPagar"
+            (change)="toggleFiltroPagar($event)"
+          />
+          <span class="fin-filtros-check__label">Contas a pagar</span>
+        </label>
+      </li>
+    </ul>
+  </section>
+
+  <section class="fin-filtros-card fin-filtros-card--tipo-data fin-filtros-card--sheet">
+    <h3 class="fin-filtros-card__title">
+      <span class="fin-filtros-card__title-label">Tipo de data</span>
+    </h3>
+    <ul class="fin-filtros-radio-list">
+      <li>
+        <label class="fin-filtros-radio">
+          <input
+            type="radio"
+            name="finTipoDataSheet"
+            value="vencimento"
+            [checked]="filtroTipoData === 'vencimento'"
+            (change)="onFiltroTipoDataChange('vencimento')"
+          />
+          <span class="fin-filtros-radio__dot" aria-hidden="true"></span>
+          <span>Venc/Disponibilidade</span>
+        </label>
+      </li>
+      <li>
+        <label class="fin-filtros-radio">
+          <input
+            type="radio"
+            name="finTipoDataSheet"
+            value="competencia"
+            [checked]="filtroTipoData === 'competencia'"
+            (change)="onFiltroTipoDataChange('competencia')"
+          />
+          <span class="fin-filtros-radio__dot" aria-hidden="true"></span>
+          <span>Competência</span>
+        </label>
+      </li>
+      <li>
+        <label class="fin-filtros-radio">
+          <input
+            type="radio"
+            name="finTipoDataSheet"
+            value="pagamento"
+            [checked]="filtroTipoData === 'pagamento'"
+            (change)="onFiltroTipoDataChange('pagamento')"
+          />
+          <span class="fin-filtros-radio__dot" aria-hidden="true"></span>
+          <span>Pagamento</span>
+        </label>
+      </li>
+    </ul>
+  </section>
+
+  <section class="fin-filtros-card fin-filtros-card--sheet">
+    <h3 class="fin-filtros-card__title">
+      <span class="fin-filtros-card__title-label">Status</span>
+    </h3>
+    <ul class="fin-filtros-check-list">
+      <li>
+        <label class="fin-filtros-check">
+          <input
+            type="checkbox"
+            [checked]="statusEmAberto"
+            (change)="toggleStatusEmAberto($event)"
+          />
+          <span class="fin-filtros-check__label">
+            <span class="badge badge--warn">Em aberto</span>
+          </span>
+        </label>
+      </li>
+      <li>
+        <label class="fin-filtros-check">
+          <input
+            type="checkbox"
+            [checked]="statusAtrasado"
+            (change)="toggleStatusAtrasado($event)"
+          />
+          <span class="fin-filtros-check__label">
+            <span class="badge badge--atraso">Atrasado</span>
+          </span>
+        </label>
+      </li>
+      <li>
+        <label class="fin-filtros-check">
+          <input
+            type="checkbox"
+            [checked]="statusPago"
+            (change)="toggleStatusPago($event)"
+          />
+          <span class="fin-filtros-check__label">
+            <span class="badge badge--ok">Pago</span>
+          </span>
+        </label>
+      </li>
+    </ul>
+  </section>
+
+  @if (formasPagamentoFiltro().length > 0) {
+    <section class="fin-filtros-card fin-filtros-card--sheet">
+      <h3 class="fin-filtros-card__title">Formas de pagamento</h3>
+      <div class="fin-filtros-card__subhead"><span>Ativas</span></div>
+      <button
+        type="button"
+        class="fin-filtros-card__link fin-filtros-card__link--solo"
+        (click)="desmarcarTodasFormas()"
+      >
+        Desmarcar tudo
+      </button>
+      <ul class="fin-filtros-check-list">
+        @for (forma of formasPagamentoFiltro(); track forma) {
+          <li>
+            <label class="fin-filtros-check">
+              <input
+                type="checkbox"
+                [checked]="formaSelecionada(forma)"
+                (change)="toggleFormaPagamento(forma, $event)"
+              />
+              <span class="fin-filtros-check__label">{{ forma }}</span>
+            </label>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (categoriasFiltro().length > 0) {
+    <section class="fin-filtros-card fin-filtros-card--sheet">
+      <h3 class="fin-filtros-card__title">Categorias</h3>
+      <button
+        type="button"
+        class="fin-filtros-card__link fin-filtros-card__link--solo"
+        (click)="desmarcarTodasCategorias()"
+      >
+        Desmarcar tudo
+      </button>
+      <ul class="fin-filtros-check-list">
+        @for (cat of categoriasFiltro(); track cat.id) {
+          <li>
+            <label class="fin-filtros-check">
+              <input
+                type="checkbox"
+                [checked]="categoriaSelecionada(cat.id)"
+                (change)="toggleCategoria(cat.id, $event)"
+              />
+              <span class="fin-filtros-check__label">{{ cat.nome }}</span>
+            </label>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</app-mobile-filtros-sheet>
+
+<app-mobile-list-actions-menu
+  [open]="shellBottomNavEligible && modoSelecao && acoesMenuAberto"
+  [items]="acoesMenuItens()"
+  (openChange)="onAcoesMenuOpenChange($event)"
+  (itemSelect)="onItemAcaoSelecao($event)"
+/>
+
+<app-mobile-list-actions-menu
+  [open]="shellBottomNavEligible && !modoSelecao && novoTipoMenuAberto"
+  [items]="novoTipoMenuItens()"
+  (openChange)="onNovoTipoMenuOpenChange($event)"
+  (itemSelect)="onItemNovoTipo($event)"
+/>

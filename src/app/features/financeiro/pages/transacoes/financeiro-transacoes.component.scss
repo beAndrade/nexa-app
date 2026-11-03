@@ -1143,6 +1143,377 @@
   max-width: calc(100vw - 1.5rem);
 }
 
+.fin-transacoes-mobile-chips {
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 0 8px;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.fin-transacoes-mobile-chips__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid #e7e5e4;
+  border-radius: 999px;
+  background: #fff;
+  color: #44403c;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fin-transacoes-mobile-list {
+  display: none;
+}
+
+.fin-transacoes-mobile-list__busy,
+.fin-transacoes-mobile-list__empty {
+  margin: 0;
+  padding: 24px 12px;
+  text-align: center;
+  color: #a8a29e;
+}
+
+.fin-transacoes-mobile-card {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 8px 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  color: inherit;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fin-transacoes-mobile-card--receita {
+  background: rgba(222, 243, 222, 0.55);
+}
+
+.fin-transacoes-mobile-card--despesa {
+  background: #ffefef;
+}
+
+.fin-transacoes-mobile-card--selected {
+  box-shadow:
+    0 0 0 1px var(--color-primary, #3788d8),
+    0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.fin-transacoes-mobile-card__main {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #3788d8);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+
+.fin-transacoes-mobile-card__check {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 0;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: #fff;
+  opacity: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition:
+    width 0.2s ease,
+    margin-right 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.fin-transacoes-mobile-card--selecao .fin-transacoes-mobile-card__check {
+  width: 16px;
+  margin-right: 10px;
+  border: 1.5px solid #d6d3d1;
+  opacity: 1;
+}
+
+.fin-transacoes-mobile-card--selecao .fin-transacoes-mobile-card__check--on {
+  border-color: var(--color-primary, #3788d8);
+  background: var(--color-primary, #3788d8);
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.fin-transacoes-mobile-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.fin-transacoes-mobile-card__top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.fin-transacoes-mobile-card__titulo {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #1c1917;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fin-transacoes-mobile-card__valor {
+  flex: 0 0 auto;
+  max-width: 45%;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fin-transacoes-mobile-card__valor--receita {
+  color: #166534;
+}
+
+.fin-transacoes-mobile-card__valor--despesa {
+  color: #b42318;
+}
+
+.fin-transacoes-mobile-card__sub {
+  overflow: hidden;
+  color: #78716c;
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fin-transacoes-mobile-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+
+  .badge {
+    margin: 0;
+  }
+}
+
+.fin-transacoes-mobile-card__natureza {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f5f5f4;
+  color: #78716c;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.fin-transacoes-mobile-card__ctx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  width: 100%;
+  min-width: 0;
+  color: #a8a29e;
+  font-size: 12px;
+  line-height: 1.25;
+
+  span {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.fin-transacoes-mobile-card__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.fin-transacoes-mobile-card__data {
+  flex: 0 0 auto;
+  color: #a8a29e;
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.fin-transacoes-mobile-card__bruto {
+  min-width: 0;
+  overflow: hidden;
+  color: #a8a29e;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fin-transacoes-mobile-card__acoes {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  align-self: center;
+}
+
+.fin-transacoes-mobile-card__acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-muted, #78716c);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #3788d8);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &--danger {
+    color: #b42318;
+  }
+}
+
+.fin-transacoes-mobile-card__pago {
+  margin: 4px 0;
+  flex-shrink: 0;
+}
+
+.fin-filtros-card--sheet {
+  margin-bottom: 12px;
+}
+
+/** ≤767 — alinhado a shellMobile JS (`min-width: 768` ⇒ bar/cards só abaixo). */
+@media (max-width: 767px) {
+  .fin-transacoes-page .fin-transacoes-desktop-table {
+    display: none;
+  }
+
+  .fin-transacoes-page .fin-transacoes-filtros {
+    display: none !important;
+  }
+
+  .fin-transacoes-mobile-chips {
+    display: flex;
+  }
+
+  .fin-transacoes-page.fin-transacoes-page--filtros-abertos,
+  .fin-transacoes-page .fin-transacoes-layout--filtros-abertos {
+    gap: 0 !important;
+  }
+
+  .fin-transacoes-page .fin-transacoes__card {
+    overflow: visible;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .fin-transacoes-page .list-head__actions--bottom-nav .list-head__toolbar-btn,
+  .fin-transacoes-page .list-head__actions--bottom-nav .fin-transacoes-novo-menu {
+    display: none;
+  }
+
+  .fin-transacoes-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0 8px;
+  }
+
+  .fin-transacoes-page {
+    overflow-x: hidden;
+    max-width: 100%;
+    padding-bottom: 88px;
+  }
+
+  .fin-transacoes__footer {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    justify-content: space-between;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .fin-trans-th-sort__tip {
+    display: none;
+  }
+}
 
 /* Chrome cliente-head não se aplica a este shell (sem .cliente-head). */
 
