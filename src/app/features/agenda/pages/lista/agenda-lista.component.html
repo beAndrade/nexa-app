@@ -4,53 +4,68 @@
       <div class="list-head__left">
         <h1 class="list-head__title">Agenda — lista</h1>
       </div>
-      <div class="list-head__actions">
+      <div
+        class="list-head__actions"
+        [class.list-head__actions--bottom-nav]="shellBottomNavEligible"
+      >
         <a routerLink="/agenda/calendario" class="list-head__toolbar-btn">
           <span class="list-head__toolbar-label">Calendário</span>
         </a>
-        <a routerLink="/agenda" class="list-head__toolbar-btn list-head__toolbar-btn--primary">
+        <a
+          routerLink="/agenda"
+          class="list-head__toolbar-btn list-head__toolbar-btn--primary"
+        >
           <span class="list-head__toolbar-label">Hub do dia</span>
         </a>
-        <a routerLink="/agenda/novo" class="list-head__toolbar-btn list-head__toolbar-btn--primary">
-          <span class="list-head__toolbar-label">Novo</span>
-        </a>
+        @if (!shellBottomNavEligible) {
+          <a
+            routerLink="/agenda/novo"
+            class="list-head__toolbar-btn list-head__toolbar-btn--primary"
+          >
+            <span class="list-head__toolbar-label">Novo</span>
+          </a>
+        }
       </div>
     </div>
   </header>
 
-  <p class="agenda-lista-hint hint">
-    Por padrão, últimos 90 dias — altere as datas e toque em Atualizar.
-  </p>
+  @if (!shellBottomNavEligible) {
+    <p class="agenda-lista-hint hint">
+      Por padrão, últimos 90 dias — altere as datas e toque em Atualizar.
+    </p>
 
-  <div class="agenda-lista-filtros filtros">
-    <label>
-      <span>De (dd-mm-aaaa)</span>
-      <input
-        type="text"
-        [(ngModel)]="dataInicio"
-        name="di"
-        inputmode="numeric"
-        placeholder="09-01-2026"
-        maxlength="10"
-        autocomplete="off"
-        spellcheck="false"
-      />
-    </label>
-    <label>
-      <span>Até (dd-mm-aaaa)</span>
-      <input
-        type="text"
-        [(ngModel)]="dataFim"
-        name="df"
-        inputmode="numeric"
-        placeholder="09-04-2026"
-        maxlength="10"
-        autocomplete="off"
-        spellcheck="false"
-      />
-    </label>
-    <button type="button" class="btn primary" (click)="carregar()">Atualizar lista</button>
-  </div>
+    <div class="agenda-lista-filtros filtros">
+      <label>
+        <span>De (dd-mm-aaaa)</span>
+        <input
+          type="text"
+          [(ngModel)]="dataInicio"
+          name="di"
+          inputmode="numeric"
+          placeholder="09-01-2026"
+          maxlength="10"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </label>
+      <label>
+        <span>Até (dd-mm-aaaa)</span>
+        <input
+          type="text"
+          [(ngModel)]="dataFim"
+          name="df"
+          inputmode="numeric"
+          placeholder="09-04-2026"
+          maxlength="10"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </label>
+      <button type="button" class="btn primary" (click)="carregar()">
+        Atualizar lista
+      </button>
+    </div>
+  }
 
   @if (erro) {
     <p class="alert" role="alert">{{ erro }}</p>
@@ -64,7 +79,11 @@
   }
 
   @if (!carregando && itens.length > 0) {
-    <div class="list-table-card agenda-lista-table-card" role="region" aria-label="Lista de atendimentos">
+    <div
+      class="list-table-card agenda-lista-table-card"
+      role="region"
+      aria-label="Lista de atendimentos"
+    >
       <div class="table-wrap agenda-lista-table-wrap">
         <table class="list-table agenda-lista-table">
           <thead>
@@ -112,3 +131,59 @@
     </ul>
   }
 </div>
+
+<app-mobile-filtros-sheet
+  [open]="shellBottomNavEligible && filtrosAbertos"
+  [closeOnEscape]="true"
+  title="Filtros"
+  (closed)="fecharFiltros()"
+>
+  <p class="agenda-lista-sheet-hint hint">
+    Por padrão, últimos 90 dias. Ajuste o período e toque em Atualizar.
+  </p>
+  <div class="agenda-lista-filtros agenda-lista-filtros--sheet">
+    <label>
+      <span>De (dd-mm-aaaa)</span>
+      <input
+        type="text"
+        [(ngModel)]="draftInicio"
+        name="diSheet"
+        inputmode="numeric"
+        placeholder="09-01-2026"
+        maxlength="10"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </label>
+    <label>
+      <span>Até (dd-mm-aaaa)</span>
+      <input
+        type="text"
+        [(ngModel)]="draftFim"
+        name="dfSheet"
+        inputmode="numeric"
+        placeholder="09-04-2026"
+        maxlength="10"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </label>
+  </div>
+
+  <div mobileFiltrosSheetFooter class="agenda-lista-sheet-footer">
+    <button
+      type="button"
+      class="list-head__toolbar-btn list-head__toolbar-btn--link"
+      (click)="limparFiltrosMobile()"
+    >
+      Limpar
+    </button>
+    <button
+      type="button"
+      class="btn primary"
+      (click)="aplicarFiltrosMobile()"
+    >
+      Atualizar
+    </button>
+  </div>
+</app-mobile-filtros-sheet>

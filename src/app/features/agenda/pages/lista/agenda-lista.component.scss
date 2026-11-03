@@ -9,6 +9,10 @@
   margin: 0 0 1rem;
 }
 
+.agenda-lista-sheet-hint {
+  margin: 0 0 1rem;
+}
+
 .agenda-lista-filtros {
   display: flex;
   flex-wrap: wrap;
@@ -33,6 +37,25 @@
     min-width: 9.5rem;
     font-variant-numeric: tabular-nums;
   }
+
+  &--sheet {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 0;
+
+    input[type='text'] {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+}
+
+.agenda-lista-sheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
 }
 
 .btn {
@@ -117,6 +140,12 @@
 }
 
 @include bp.bp-down(shell-mobile) {
+  .agenda-lista-page {
+    overflow-x: hidden;
+    max-width: 100%;
+    padding-bottom: 88px;
+  }
+
   .agenda-lista-table-wrap {
     display: none;
   }
@@ -126,7 +155,5 @@
     flex-direction: column;
   }
 
-  .list-head__toolbar-label {
-    display: none;
-  }
+  /* Calendário e Hub permanecem com texto identificável no header mobile. */
 }
