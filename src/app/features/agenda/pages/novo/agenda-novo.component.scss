@@ -1,3 +1,5 @@
+@use '../../../../styles/breakpoints' as bp;
+
 .toolbar {
   margin-bottom: 1.25rem;
 
@@ -1627,7 +1629,8 @@ textarea {
   gap: 0.4rem 0.55rem;
   box-sizing: border-box;
 
-  @media (max-width: 720px) {
+  /** I1: alinhar wrap da linha Mega/Pacote ao shell-mobile (768), não 720. */
+  @include bp.bp-down(shell-mobile) {
     flex-wrap: wrap;
   }
 }
@@ -3694,6 +3697,190 @@ textarea {
       border-color: var(--el-drawer-field-border-hover);
       color: var(--el-drawer-field-border-hover);
       cursor: pointer;
+    }
+  }
+}
+
+/**
+ * I1 — Refinamento mobile da linha de itens (shell-mobile ≤768).
+ * Empilha Serviço/Produto/Mega/Pacote/Cabelo em 1 coluna; desktop ≥769 intacto.
+ */
+:host.agenda-novo--drawer .form.form--modal {
+  @include bp.bp-down(shell-mobile) {
+    --drawer-descricao-panel-min: 260px;
+    --drawer-tipo-linha-panel-min: 260px;
+
+    /**
+     * Serviço / Produto com totais: desfaz nowrap desktop.
+     */
+    .servico-row--drawer:has(.servico-row__total-estimado):not(
+        :has(.cabelo-calc--nested)
+      ):not(:has(.servico-row__etapas-wrap)) {
+      flex-wrap: wrap;
+
+      .servico-row__field--tipo-linha,
+      .servico-row__field--descricao,
+      .servico-row__field--produto-catalogo,
+      .servico-row__field--tamanho,
+      .servico-row__field--produto-qtd-drawer,
+      .servico-row__field--pro,
+      .servico-row__field--hora-linha-modal,
+      .servico-row__field--duracao-linha-modal,
+      .servico-row__field--money,
+      .servico-row__field--money-desconto,
+      .servico-row__field--produto-total-estimado,
+      .servico-row__field--preco-unit-prod,
+      .servico-row__field--modal-prod-money {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      .servico-row__actions--drawer {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        margin-left: 0;
+        justify-content: flex-end;
+      }
+    }
+
+    /**
+     * Serviço / Produto sem colunas de valor (layout-produto-drawer).
+     */
+    .servico-row--drawer.servico-row--layout-produto-drawer {
+      flex-wrap: wrap;
+
+      .servico-row__field--tipo-linha,
+      .servico-row__field--descricao,
+      .servico-row__field--produto-catalogo,
+      .servico-row__field--tamanho,
+      .servico-row__field--produto-qtd-drawer,
+      .servico-row__field--pro,
+      .servico-row__field--hora-linha-modal,
+      .servico-row__field--duracao-linha-modal {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      .servico-row__actions--drawer {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        margin-left: 0;
+        justify-content: flex-end;
+      }
+    }
+
+    /** Qtde. Produto: sobrescreve o piso fixo 58px do bloco fino. */
+    .servico-row--drawer .servico-row__field--produto-qtd-drawer {
+      flex: 1 1 100%;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    /**
+     * Mega / Pacote: cabeçalho em 1 coluna (mesmo nó mega-topo + linha-cabecalho).
+     */
+    .servico-row--drawer .servico-row__mega-topo,
+    .servico-row--drawer .servico-row__linha-cabecalho-modal {
+      flex-wrap: wrap;
+      align-items: stretch;
+
+      .servico-row__field--mega-cabecalho,
+      .servico-row__field--tipo-linha,
+      .servico-row__field--pacote-mega,
+      .servico-row__field--pro,
+      .servico-row__field--hora-linha-modal,
+      .servico-row__field--duracao-linha-modal,
+      .servico-row__field--produto-total-estimado,
+      .servico-row__field--linha-cab--col {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+      }
+
+      .servico-row__actions--linha-cab {
+        flex: 1 1 100%;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        margin-left: 0;
+        justify-content: flex-end;
+      }
+    }
+
+    /** Etapas Mega/Pacote: 1 coluna até shell-mobile (antes só ≤640). */
+    .etapa-row.etapa-row--etapas-modal {
+      grid-template-columns: 1fr;
+    }
+
+    /**
+     * Cabelo: tipo + rodapé empilhados (desktop mantém 2 colunas).
+     */
+    .servico-row--drawer.servico-row--cabelo-drawer {
+      grid-template-columns: 1fr;
+
+      > .servico-row__field--tipo-linha {
+        grid-column: 1;
+        grid-row: 1;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      > .servico-row__cabelo-rodape--drawer {
+        grid-column: 1;
+        grid-row: 2;
+        width: 100%;
+        min-width: 0;
+      }
+
+      > .cabelo-calc.cabelo-calc--nested,
+      > .hint {
+        grid-column: 1;
+        grid-row: 3;
+        width: 100%;
+        min-width: 0;
+      }
+    }
+
+    .servico-row__cabelo-rodape--drawer {
+      grid-template-columns: 1fr;
+
+      .servico-row__actions--cabelo-rodape {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+    /**
+     * Ghosts Produto / placeholders “—” (aria-hidden).
+     * Não esconde duração/valor com texto real (sem aria-hidden no ghost).
+     */
+    .servico-row--drawer .servico-row__field.servico-row__field--ghost,
+    .servico-row--drawer
+      .servico-row__field:has(> .servico-row__field-ghost[aria-hidden='true']) {
+      display: none;
+    }
+
+    /**
+     * Painéis saas-select: caber em ~360–390 (piso desktop 420px estourava).
+     */
+    .servico-row--drawer .servico-row__field--tipo-linha,
+    .servico-row--drawer .servico-row__field--descricao,
+    .servico-row--drawer .servico-row__field--produto-catalogo,
+    .servico-row--drawer .servico-row__field--pacote-mega,
+    .servico-row--drawer .servico-row__field--pro,
+    .servico-row--drawer .servico-row__field--pro-cabelo-modal {
+      --saas-select-panel-min-width: min(100%, 280px);
     }
   }
 }
