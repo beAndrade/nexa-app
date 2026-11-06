@@ -321,7 +321,27 @@
 
   <footer class="nc-footer" aria-label="Ações da comanda">
     <div class="nc-footer__bar">
-      <div class="nc-footer__actions">
+      <div class="nc-footer__primary">
+        @if (!comandaFinalizada()) {
+          <button
+            type="button"
+            class="btn btn-footer btn-footer--primary-nc"
+            [disabled]="!podeSalvarComandaRodape()"
+            (click)="gravarRodape()"
+          >
+            Salvar
+          </button>
+        }
+        <button
+          type="button"
+          class="btn btn-footer btn-footer--faturar"
+          [disabled]="!podeFaturar()"
+          (click)="abrirFaturar()"
+        >
+          {{ comandaFinalizada() ? 'Ver pagamentos' : 'Faturar' }}
+        </button>
+      </div>
+      <div class="nc-footer__secondary">
         <button type="button" class="btn btn-footer btn-footer--ghost" (click)="fechar.emit()">
           Cancelar
         </button>
@@ -432,24 +452,6 @@
             }
           </div>
         }
-        @if (!comandaFinalizada()) {
-          <button
-            type="button"
-            class="btn btn-footer btn-footer--primary-nc"
-            [disabled]="!podeSalvarComandaRodape()"
-            (click)="gravarRodape()"
-          >
-            Salvar
-          </button>
-        }
-        <button
-          type="button"
-          class="btn btn-footer btn-footer--faturar"
-          [disabled]="!podeFaturar()"
-          (click)="abrirFaturar()"
-        >
-          {{ comandaFinalizada() ? 'Ver pagamentos' : 'Faturar' }}
-        </button>
         @if (comandaFinalizada()) {
           <button
             type="button"
