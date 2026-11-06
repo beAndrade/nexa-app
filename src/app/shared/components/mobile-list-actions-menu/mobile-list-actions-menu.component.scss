@@ -1,9 +1,11 @@
+@use '../../../styles/breakpoints' as bp;
+
 :host {
   display: contents;
   --z-mobile-list-actions-menu: 930;
 }
 
-@media (min-width: 768px) {
+@include bp.bp-up(shell-mobile) {
   :host {
     display: none;
   }

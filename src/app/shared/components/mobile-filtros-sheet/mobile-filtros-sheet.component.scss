@@ -1,8 +1,10 @@
+@use '../../../styles/breakpoints' as bp;
+
 :host {
   display: contents;
 }
 
-@media (min-width: 768px) {
+@include bp.bp-up(shell-mobile) {
   :host {
     display: none;
   }

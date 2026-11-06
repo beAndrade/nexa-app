@@ -311,7 +311,7 @@ input.list-head__busca-input[type='search']::-webkit-search-cancel-button {
   appearance: none;
 }
 
-@include bp.bp-down(shell-mobile) {
+@include bp.shell-mobile-viewport {
   .list-head__actions {
     display: flex;
     flex-wrap: wrap;
@@ -1075,7 +1075,7 @@ select.list-footer__per-page {
 /// Mobile List Pattern v1 — touch chrome (≤767, alinhado ao AppShell / JS shellMobile).
 /// Colocado após as regras base para vencer a cascata (mesma especificidade).
 /// Hit ≥44×44 via `--touch-min`; desktop (≥768) permanece 32px / pager 28–24.
-@media not all and (min-width: #{bp.bp(shell-mobile)}) {
+@include bp.shell-mobile-viewport {
   .list-head__busca-wrap {
     height: var(--touch-min, 44px);
     min-height: var(--touch-min, 44px);

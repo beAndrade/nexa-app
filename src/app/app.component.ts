@@ -28,7 +28,7 @@ import { SessaoUsuarioService } from './core/services/sessao-usuario.service';
 import { SidebarProfileComponent } from './layout/sidebar-profile/sidebar-profile.component';
 import { SidebarFlyoutService } from './layout/sidebar-flyout.service';
 import { shellKeyboardOffset } from './core/utils/shell-keyboard';
-import { mediaQueryMin } from './styles/breakpoints';
+import { mediaQueryBelow } from './styles/breakpoints';
 import { AppShellUiService } from './core/services/app-shell-ui.service';
 import { SidebarNovoMenuComponent } from './layout/sidebar-novo-menu/sidebar-novo-menu.component';
 import { MobileBottomNavComponent } from './layout/mobile-bottom-nav/mobile-bottom-nav.component';
@@ -88,9 +88,10 @@ export class AppComponent implements OnInit {
   readonly title = 'Espaço Lounge';
   isPublicRoute = false;
 
-  /** Viewport estreito: menu lateral em overlay (< shellMobile / ≤767px). */
+  /** Viewport estreito: menu lateral em overlay (< shellMobile ≡ ≤767px). */
   isMobileViewport = false;
   mobileNavOpen = false;
+  /** matchMedia de `mediaQueryBelow('shellMobile')` — matches = mobile (≤767). */
   private desktopMq: MediaQueryList | null = null;
 
   /** Menu Principal accordion (sidebar expandida / overlay mobile). */
@@ -289,11 +290,11 @@ export class AppComponent implements OnInit {
 
   private setupMobileViewport(): void {
     if (typeof window === 'undefined' || !window.matchMedia) return;
-    // ≥ shellMobile (768) = desktop; abaixo = mobile (≤767).
-    this.desktopMq = window.matchMedia(mediaQueryMin('shellMobile'));
+    // < shellMobile (768) = mobile (≤767); ≥768 = desktop.
+    this.desktopMq = window.matchMedia(mediaQueryBelow('shellMobile'));
     const apply = (): void => {
       const wasMobile = this.isMobileViewport;
-      this.isMobileViewport = !(this.desktopMq?.matches ?? true);
+      this.isMobileViewport = this.desktopMq?.matches ?? false;
       if (this.isMobileViewport) {
         this.mobileNavOpen = false;
         this.closeCollapsedNavFlyout();
@@ -342,7 +343,8 @@ export class AppComponent implements OnInit {
             innerHeight: window.innerHeight,
             visualHeight: vv.height,
             offsetTop: vv.offsetTop,
-            desktop: this.desktopMq?.matches ?? true,
+            // desktopMq agora é below(shellMobile): matches = mobile.
+            desktop: !(this.desktopMq?.matches ?? false),
           }),
         );
       });
