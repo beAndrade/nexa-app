@@ -249,6 +249,11 @@ export class FaturarDrawerComponent implements OnInit {
 
   excluindoPagamentoId: number | null = null;
 
+  /**
+   * Último método confirmado em «adicionarAoRascunho» (rótulo Previsão vs Data).
+   */
+  ultimoMetodoIntento: MetodoPagamentoComanda | null = null;
+
   /** Formas de pagamento (cadastro financeiro ou fallback). */
   formasMetodos: MetodoComandaOpcaoUi[] = [...METODOS_COMANDA_FALLBACK];
   private rotulosMetodoUi: Partial<Record<MetodoPagamentoComanda, string>> = {
@@ -747,6 +752,93 @@ export class FaturarDrawerComponent implements OnInit {
     );
   }
 
+  /** Pendente do cliente: API `pendente` + rascunho comanda `pendente`. */
+  pendenteClienteResumoExibicao(): number {
+    const api = this.pagamentos
+      .filter((p) => p.metodo === 'pendente')
+      .reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    const rasc = this.rascunho
+      .filter((x) => x.destino === 'comanda' && x.metodo === 'pendente')
+      .reduce((s, x) => s + x.valor, 0);
+    return Math.round((api + rasc) * 100) / 100;
+  }
+
+  mostrarLinhaPendenteClienteResumo(): boolean {
+    return this.pendenteClienteResumoExibicao() > 0.001;
+  }
+
+  /** A receber (cartão): API + rascunho comanda `a_receber_cartao`. */
+  aReceberCartaoResumoExibicao(): number {
+    const api = this.pagamentos
+      .filter((p) => p.metodo === 'a_receber_cartao')
+      .reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    const rasc = this.rascunho
+      .filter((x) => x.destino === 'comanda' && x.metodo === 'a_receber_cartao')
+      .reduce((s, x) => s + x.valor, 0);
+    return Math.round((api + rasc) * 100) / 100;
+  }
+
+  mostrarLinhaAReceberCartaoResumo(): boolean {
+    return this.aReceberCartaoResumoExibicao() > 0.001;
+  }
+
+  /**
+   * Quanto ainda falta alocar no resumo (não usa `saldoRestante`).
+   * Conta API `pendente`/`a_receber_cartao` + rascunho comanda.
+   */
+  faltaDistribuirResumoExibicao(): number {
+    const somaApiPendenteOuAReceber = this.pagamentos
+      .filter(
+        (p) => p.metodo === 'pendente' || p.metodo === 'a_receber_cartao',
+      )
+      .reduce((s, p) => s + (parseFloat(p.valor) || 0), 0);
+    const alocado =
+      this.resumo.total_pago +
+      somaApiPendenteOuAReceber +
+      this.somaRascunhoComanda();
+    const cred = this.creditoComandaAplicado();
+    return Math.max(
+      0,
+      Math.round((this.totalAposDesconto() - alocado - cred) * 100) / 100,
+    );
+  }
+
+  mostrarLinhaFaltaDistribuirResumo(): boolean {
+    return this.faltaDistribuirResumoExibicao() > 0.001;
+  }
+
+  mostrarTipPendenciaCliente(): boolean {
+    return (
+      this.pendenteClienteResumoExibicao() > 0.001 &&
+      this.podeMostrarFaturar() &&
+      !this.modoVerPagamentos()
+    );
+  }
+
+  textoTipPendenciaCliente(): string {
+    return `Esta comanda será faturada com ${this.brl(this.pendenteClienteResumoExibicao())} pendentes do cliente.`;
+  }
+
+  /** Rótulo do campo de data: Previsão só após intento «pendente». */
+  rotuloCampoDataPagamento(): string {
+    return this.ultimoMetodoIntento === 'pendente'
+      ? 'Previsão de recebimento'
+      : 'Pagamento';
+  }
+
+  ariaLabelCampoDataPagamento(): string {
+    return this.ultimoMetodoIntento === 'pendente'
+      ? 'Previsão de recebimento'
+      : 'Data do pagamento';
+  }
+
+  ariaLabelEditarDataLinha(l: PagamentoLinhaUi): string {
+    const metodo = l.row.metodo;
+    return metodo === 'pendente'
+      ? 'Editar previsão de recebimento'
+      : 'Editar data do pagamento';
+  }
+
   /** Linha «Créditos» (saldo pré-pago usado na comanda). */
   mostrarLinhaCreditosComandaResumo(): boolean {
     return this.creditoComandaAplicado() > 0.001;
@@ -937,6 +1029,8 @@ export class FaturarDrawerComponent implements OnInit {
         return;
       }
     }
+
+    this.ultimoMetodoIntento = metodo;
 
     const dataYmd = ddMmYyyyToYmd(this.dataCtrl.value) ?? ymdHoje();
     const parcelas = Math.max(1, Math.floor(this.parcelasCtrl.value || 1));

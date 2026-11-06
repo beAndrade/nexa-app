@@ -86,7 +86,7 @@
     }
 
     <div class="fat-field fat-field--data">
-      <span class="fat-field__label">Pagamento</span>
+      <span class="fat-field__label">{{ rotuloCampoDataPagamento() }}</span>
       <span
         class="fat-data-field__wrap"
         role="button"
@@ -95,7 +95,7 @@
         (keydown.enter)="onPagamentoDataFieldClick($event)"
         (keydown.space)="$event.preventDefault(); onPagamentoDataFieldClick($event)"
         [attr.aria-expanded]="pagamentoDataPickerOpen"
-        aria-label="Data do pagamento"
+        [attr.aria-label]="ariaLabelCampoDataPagamento()"
       >
         <span
           class="fat-data-field__display"
@@ -349,7 +349,7 @@
                   <button
                     type="button"
                     class="fat-pag-data-edit"
-                    [attr.aria-label]="'Editar data do pagamento'"
+                    [attr.aria-label]="ariaLabelEditarDataLinha(l)"
                     [attr.aria-expanded]="linhaDataPickerAberto(l)"
                     [disabled]="salvandoDataLinhaKey === chaveLinha(l)"
                     (click)="toggleLinhaDataPicker($event, l)"
@@ -464,13 +464,31 @@
         </div>
       }
       <div class="fat-resumo__row">
-        <span>Total</span>
+        <span>Total da comanda</span>
         <span>{{ brl(totalLiquidoResumo()) }}</span>
       </div>
       <div class="fat-resumo__row fat-resumo__row--strong">
-        <span>Total pago</span>
+        <span>Recebido</span>
         <span>{{ brl(totalPagoResumoExibicao()) }}</span>
       </div>
+      @if (mostrarLinhaPendenteClienteResumo()) {
+        <div class="fat-resumo__row">
+          <span>Pendente do cliente</span>
+          <span>{{ brl(pendenteClienteResumoExibicao()) }}</span>
+        </div>
+      }
+      @if (mostrarLinhaAReceberCartaoResumo()) {
+        <div class="fat-resumo__row">
+          <span>A receber (cartão)</span>
+          <span>{{ brl(aReceberCartaoResumoExibicao()) }}</span>
+        </div>
+      }
+      @if (mostrarLinhaFaltaDistribuirResumo()) {
+        <div class="fat-resumo__row">
+          <span>Falta distribuir</span>
+          <span>{{ brl(faltaDistribuirResumoExibicao()) }}</span>
+        </div>
+      }
       @if (mostrarLinhaCreditoClienteResumo()) {
         <div class="fat-resumo__row">
           <span>Crédito para o cliente</span>
@@ -478,6 +496,11 @@
         </div>
       }
     </div>
+    @if (mostrarTipPendenciaCliente()) {
+      <p class="fat-tip-pendencia" role="status">
+        {{ textoTipPendenciaCliente() }}
+      </p>
+    }
   </div>
 
   <footer class="fat-footer">

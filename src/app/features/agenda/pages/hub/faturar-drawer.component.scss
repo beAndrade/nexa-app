@@ -3,6 +3,8 @@
  * Reutiliza variáveis do drawer pai (`--drawer-field-h`, `--drawer-field-stroke`).
  */
 @use '../../../../styles/badge-atraso-icon' as badge-atraso;
+@use '../../../../styles/breakpoints' as bp;
+@use '../../../../styles/drawer-responsive' as dr;
 
 :host {
   display: flex;
@@ -118,6 +120,8 @@
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
+  /** I3: clearance extra no scroller. */
+  scroll-padding-bottom: 12px;
 }
 
 .fat-alert {
@@ -814,6 +818,18 @@ input[type='number'].fat-field__input {
   transform: translateX(22px);
 }
 
+/** I4.5 — lixeira sempre visível em touch (sem depender de hover). */
+@include bp.bp-down(shell-mobile) {
+  .fat-pag-info .fat-pag-del {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .fat-pag-metodo__label {
+    transform: translateX(22px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fat-pag-info .fat-pag-del,
   .fat-pag-metodo__label {
@@ -993,16 +1009,28 @@ input[type='number'].fat-field__input {
   }
 }
 
+/** I4.3 — tip de pendência do cliente (visível, com BRL). */
+.fat-tip-pendencia {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-primary) 8%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, #e5e7eb);
+  font-size: 13px;
+  line-height: 1.35;
+  color: rgba(0, 0, 0, 0.72);
+}
+
 /* Footer */
 .fat-footer {
   display: flex;
   gap: 0.5rem;
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 16px;
+  flex: 0 0 auto;
+  @include dr.drawer-flow-footer-chrome(8px, 16px);
   border-top: 1px solid #e5e7eb;
   background: #ffffff;
-  flex: 0 0 auto;
 
   .fat-btn {
     flex: 1 1 0;
