@@ -252,6 +252,14 @@ export class AgendaNovoClientSidebarComponent implements OnInit {
     return this.pagamentosAtrasadosCount > 0;
   }
 
+  /**
+   * Chip do resumo compacto (comanda mobile): pendente e/ou atraso.
+   * Não inclui só `a_receber_cartao` — `contagensSidebarParaCliente` já exclui quitadas.
+   */
+  get temValoresEmAberto(): boolean {
+    return this.comandasPendenteCount > 0 || this.pagamentosAtrasadosCount > 0;
+  }
+
   private clienteTemHistoricoAtendimentos$(clienteId: string): Observable<boolean> {
     const cid = String(clienteId ?? '').trim();
     if (!cid) return of(false);

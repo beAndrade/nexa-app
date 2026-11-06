@@ -1,3 +1,5 @@
+@use '../../../../styles/breakpoints' as bp;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -14,6 +16,21 @@
   background: #fff;
   /** Tooltip do badge “Novo” pode subir acima do cabeçalho. */
   overflow: visible;
+}
+
+/** Resumo compacto: oculto fora da comanda mobile (agenda-novo intacto). */
+.client-sidebar-drawer__compact {
+  display: none;
+}
+
+/** Wrapper do conteúdo completo (avatar + head/busca); layout desktop inalterado. */
+.client-sidebar-drawer__full {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  width: 100%;
+  min-width: 0;
 }
 
 :host-context(.agenda-novo--drawer) {
@@ -571,5 +588,153 @@
     padding: 0 0 1rem;
     border-right: none;
     border-bottom: 1px solid var(--drawer-stroke, #e7e5e4);
+  }
+}
+
+/**
+ * I2 — resumo compacto só na comanda (`.nc-drawer__client`) em shell-mobile.
+ * Não afeta o sidebar do agenda-novo.
+ */
+@include bp.bp-down(shell-mobile) {
+  :host-context(.nc-drawer__client) {
+    height: auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    padding: 0;
+    border-right: none;
+    border-bottom: none;
+
+    .client-sidebar-drawer {
+      align-items: stretch;
+      gap: 0;
+      padding-top: 0.65rem;
+      padding-bottom: 0.65rem;
+    }
+
+    .client-sidebar-drawer__compact {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.4rem;
+      width: 100%;
+      min-width: 0;
+      min-height: 4.5rem;
+      max-height: 6rem;
+      box-sizing: border-box;
+    }
+
+    .client-sidebar-drawer__compact-nome {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: transparent;
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.25;
+      color: #1c1917;
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      -webkit-appearance: none;
+      appearance: none;
+
+      &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+    }
+
+    .client-sidebar-drawer__compact-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.65rem;
+      min-width: 0;
+    }
+
+    .client-sidebar-drawer__compact-chip {
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+      margin: 0;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid #fdba74;
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #c2410c;
+      font: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+      cursor: pointer;
+      white-space: nowrap;
+
+      &:focus-visible {
+        outline: 2px solid rgba(194, 65, 12, 0.45);
+        outline-offset: 2px;
+      }
+    }
+
+    .client-sidebar-drawer__compact-ver {
+      display: inline-flex;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: transparent;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      line-height: 1.3;
+      color: var(--color-link, #3f769d);
+      cursor: pointer;
+      text-decoration: none;
+      -webkit-appearance: none;
+      appearance: none;
+
+      &:hover,
+      &:focus-visible {
+        color: var(--color-link-hover, #2f5e7e);
+        text-decoration: underline;
+      }
+
+      &:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+    }
+
+    /**
+     * Com cliente: some o bloco completo (avatar / telefone / badge).
+     * Sem cliente: mantém a busca; esconde só o avatar.
+     */
+    .client-sidebar-drawer:has(.client-sidebar-drawer__compact) .client-sidebar-drawer__full {
+      display: none;
+    }
+
+    .client-sidebar-drawer__full app-cliente-avatar {
+      display: none;
+    }
+
+    .client-sidebar-drawer__full {
+      width: 100%;
+      min-width: 0;
+      gap: 0;
+      padding: 0;
+      align-items: stretch;
+    }
+
+    .client-sidebar-drawer__dados {
+      display: none;
+    }
   }
 }
