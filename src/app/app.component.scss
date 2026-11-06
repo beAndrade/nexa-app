@@ -2,13 +2,6 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');
 
-/// Overlay / chrome mobile: abaixo de `shell-mobile` (768px) ⇒ ≤767px.
-/// Alinha ao JS `!matchMedia(min-width: 768px)` sem alterar tokens.
-@mixin shell-mobile-viewport {
-  @media not all and (min-width: #{bp.bp(shell-mobile)}) {
-    @content;
-  }
-}
 :host {
   display: block;
   width: 100%;
@@ -1109,7 +1102,7 @@
   }
 }
 
-@include shell-mobile-viewport {
+@include bp.shell-mobile-viewport {
   .shell {
     --shell-mobile-bottom-nav-h: 61.14px;
     --shell-mobile-bottom-nav-inset: 15px;
@@ -1165,7 +1158,7 @@
   }
 }
 
-@include shell-mobile-viewport {
+@include bp.shell-mobile-viewport {
   .app-sidebar {
     position: fixed;
     left: 0;

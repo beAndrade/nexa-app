@@ -6,6 +6,7 @@
 export {
   BREAKPOINTS_PX,
   DRAWER_SHELL_MAX_PX,
+  mediaQueryBelow,
   mediaQueryMax,
   mediaQueryMin,
   type BreakpointKey,

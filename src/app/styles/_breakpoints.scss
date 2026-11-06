@@ -5,6 +5,12 @@
 ///
 /// `shell-mobile` e `agenda-mobile` = 768px (overlay da sidebar + grelha Agenda).
 /// Não reintroduzir 640px como limiar de shell — causava mismatch JS/CSS.
+///
+/// Semântica de fronteira (parity com `breakpoints.ts`):
+/// - `bp-up` / `mediaQueryMin` — ≥ token (piso inclusive).
+/// - `bp-down` / `mediaQueryMax` — ≤ token (inclusivo; **não** alterar).
+/// - `bp-below` / `mediaQueryBelow` — estritamente < token (ex.: shell-mobile 768 → ≤767).
+/// Em 768px: `bp-down(shell-mobile)` aplica; `bp-below(shell-mobile)` / `shell-mobile-viewport` não.
 $breakpoints: (
   /// Sidebar overlay + viewport “mobile” do shell (JS usa o mesmo valor).
   shell-mobile: 768px,
@@ -53,6 +59,22 @@ $cliente-drawer-max-width: 1200px !default;
 /// `max-width` — até ao breakpoint (inclusive).
 @mixin bp-down($name) {
   @media (max-width: bp($name)) {
+    @content;
+  }
+}
+
+/// Abaixo do token (exclusivo do piso).
+/// Ex.: shell-mobile 768 → aplica em <768 (≤767). Em 768 NÃO aplica.
+/// Paridade TS: `mediaQueryBelow`. Não introduzir literal 767 — deriva do token.
+@mixin bp-below($name) {
+  @media not all and (min-width: bp($name)) {
+    @content;
+  }
+}
+
+/// Alias canônico do viewport mobile do shell (≤767 / < shell-mobile).
+@mixin shell-mobile-viewport {
+  @include bp-below(shell-mobile) {
     @content;
   }
 }

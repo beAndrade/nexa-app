@@ -4,6 +4,11 @@
  * `shellMobile` e `agendaMobile` compartilham 768px de propósito:
  * o overlay da sidebar (CSS) e o matchMedia do shell (JS) devem coincidir.
  * Valores abaixo de 768 (ex.: formNarrow 560) continuam para formulários/chrome.
+ *
+ * Semântica de fronteira (parity SCSS):
+ * - `mediaQueryMin` / `bp-up` — ≥ token
+ * - `mediaQueryMax` / `bp-down` — ≤ token (inclusivo; **não** alterar)
+ * - `mediaQueryBelow` / `bp-below` — estritamente < token (shellMobile → ≤767)
  */
 export const BREAKPOINTS_PX = {
   /** Sidebar overlay + JS `isMobileViewport` (alinhado ao CSS do shell). */
@@ -35,4 +40,9 @@ export function mediaQueryMax(key: BreakpointKey): string {
 
 export function mediaQueryMin(key: BreakpointKey): string {
   return `(min-width: ${BREAKPOINTS_PX[key]}px)`;
+}
+
+/** Estritamente abaixo do token. shellMobile → <768 ≡ ≤767. Paridade: `bp-below`. */
+export function mediaQueryBelow(key: BreakpointKey): string {
+  return `not all and (min-width: ${BREAKPOINTS_PX[key]}px)`;
 }
