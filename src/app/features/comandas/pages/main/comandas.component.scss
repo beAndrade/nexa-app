@@ -1241,6 +1241,14 @@ tbody td.col-ticket {
   '.fat-footer'
 );
 
+/* I3: teclado / safe chrome no painel (vv-offset). */
+.app-drawer:not(.app-drawer--comanda):not(.app-drawer--faturar),
+.app-drawer--comanda:not(.app-drawer--faturar),
+.app-drawer--edit-agendamento,
+.app-drawer--faturar {
+  @include dr.drawer-flow-panel-keyboard-chrome;
+}
+
 @include bp.bp-down(shell-mobile) {
   .app-drawer:not(.app-drawer--comanda) {
     overflow-x: hidden;

@@ -567,6 +567,11 @@ tbody td.col-ticket {
   '.agenda-modal__footer'
 );
 
+/* I3: teclado / safe chrome no painel (vv-offset). */
+.app-drawer {
+  @include dr.drawer-flow-panel-keyboard-chrome;
+}
+
 @include bp.bp-down(shell-mobile) {
   .app-drawer {
     overflow-x: hidden;

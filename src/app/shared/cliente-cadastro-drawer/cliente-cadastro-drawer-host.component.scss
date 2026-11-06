@@ -2339,6 +2339,13 @@ app-servico-cadastro-drawer-host {
     background: #ffffff;
   }
 
+  /* I3: vv-offset + overflow-y hidden (sobrescreve overflow-y: auto do shell empilhado). */
+  .cliente-comanda-empilhada.app-drawer,
+  .cliente-edit-ag-empilhada.app-drawer,
+  .cliente-faturar-empilhada.app-drawer {
+    @include dr.drawer-flow-panel-keyboard-chrome;
+  }
+
   .cliente-credito-empilhada.app-drawer {
     z-index: var(--z-cliente-stack-credito-drawer);
     --drawer-preferred-w: 480px;

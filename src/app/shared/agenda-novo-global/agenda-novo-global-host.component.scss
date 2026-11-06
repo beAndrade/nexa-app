@@ -89,6 +89,11 @@ app-agenda-novo-global-host {
   '.agenda-modal__footer'
 );
 
+/* I3: teclado / safe chrome no painel (vv-offset). */
+.agenda-novo-global-drawer.app-drawer {
+  @include dr.drawer-flow-panel-keyboard-chrome;
+}
+
 @include bp.bp-down(shell-mobile) {
   .agenda-novo-global-drawer.app-drawer {
     overflow-x: hidden;

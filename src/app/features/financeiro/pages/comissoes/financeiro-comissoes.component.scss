@@ -1148,7 +1148,7 @@
 @include dr.drawer-mobile-column(
   '.fin-comissoes-drawer.app-drawer--comanda',
   '.nc-modal-header',
-  '.nc-drawer__flow',
+  '.nc-drawer__scroll',
   '.nc-footer'
 );
 
@@ -1158,6 +1158,11 @@
   '.fat-body',
   '.fat-footer'
 );
+
+/* I3: teclado chrome só na comanda (pagar fora do escopo). */
+.fin-comissoes-drawer.app-drawer--comanda {
+  @include dr.drawer-flow-panel-keyboard-chrome;
+}
 
 .fin-comissoes-col--placeholder {
   display: none;

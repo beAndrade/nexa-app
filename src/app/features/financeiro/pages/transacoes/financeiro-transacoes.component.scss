@@ -1098,7 +1098,7 @@
 @include dr.drawer-mobile-column(
   '.fin-trans-drawer.app-drawer--comanda:not(.app-drawer--faturar)',
   '.nc-modal-header',
-  '.nc-drawer__flow',
+  '.nc-drawer__scroll',
   '.nc-footer'
 );
 
@@ -1108,6 +1108,12 @@
   '.fat-body',
   '.fat-footer'
 );
+
+/* I3: teclado / safe chrome no painel (vv-offset). */
+.fin-trans-drawer.app-drawer--comanda:not(.app-drawer--faturar),
+.fin-trans-drawer.app-drawer--faturar {
+  @include dr.drawer-flow-panel-keyboard-chrome;
+}
 
 .fin-transacoes-estorno-modal,
 .fin-transacoes-exclusao-modal {
