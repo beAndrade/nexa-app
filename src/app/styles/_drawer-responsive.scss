@@ -128,6 +128,27 @@
   }
 }
 
+/// Footer do fluxo Agenda → Comanda → Faturar: safe-area na base, sem vv-offset
+/// (o offset do teclado fica no painel via `drawer-flow-panel-keyboard-chrome`).
+/// `$pad-y` / `$pad-x` preservam o padding visual atual do host.
+@mixin drawer-flow-footer-chrome($pad-y, $pad-x: null) {
+  flex-shrink: 0;
+  padding-top: $pad-y;
+  @if $pad-x != null {
+    padding-inline: $pad-x;
+  }
+  padding-bottom: calc(#{$pad-y} + env(safe-area-inset-bottom, 0px));
+}
+
+/// Painel fixed do fluxo: encolhe a content box com o teclado (`--shell-vv-offset`).
+/// Não altera transform / top / height do slide.
+@mixin drawer-flow-panel-keyboard-chrome {
+  box-sizing: border-box;
+  padding-bottom: var(--shell-vv-offset, 0px);
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
 /// Atalho: flush (sem container-type).
 @mixin drawer-responsive-shell($max-width, $name: null) {
   @include drawer-flush-right($max-width);
