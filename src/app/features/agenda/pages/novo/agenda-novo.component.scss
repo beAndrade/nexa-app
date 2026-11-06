@@ -1,4 +1,5 @@
 @use '../../../../styles/breakpoints' as bp;
+@use '../../../../styles/drawer-responsive' as dr;
 
 .toolbar {
   margin-bottom: 1.25rem;
@@ -2462,6 +2463,8 @@ textarea {
     flex: 1 1 auto;
     padding-inline: 15px;
     box-sizing: border-box;
+    /** I3: clearance extra além de `--drawer-obs-footer-gap`. */
+    scroll-padding-bottom: 12px;
   }
 
   /**
@@ -2772,12 +2775,13 @@ textarea {
   /**
    * Rodapé encostado ao fundo do drawer; padding 15px nas laterais (como nova-comanda).
    * Botões agrupados à direita: Cancelar fica imediatamente à esquerda de Salvar.
+   * I3: safe-area via mixin (sem vv-offset no footer).
    */
   .agenda-modal__footer {
     margin-top: 0;
     margin-bottom: 0;
     justify-content: flex-end;
-    padding: 10px 15px;
+    @include dr.drawer-flow-footer-chrome(10px, 15px);
     border-top: 1px solid hsl(220, 13%, 91%);
 
     &::before {
@@ -2786,6 +2790,19 @@ textarea {
 
     .agenda-modal__footer-salvar {
       margin-left: 0;
+    }
+  }
+
+  /** I3: compactação do footer ≤ shell-mobile (sem alterar layout I1 das linhas). */
+  @include bp.bp-down(shell-mobile) {
+    .agenda-modal__footer {
+      gap: 0.4rem;
+
+      .btn.btn-footer,
+      .agenda-modal__footer-salvar.btn {
+        min-width: 0;
+        padding-inline: 0.7rem;
+      }
     }
   }
 
