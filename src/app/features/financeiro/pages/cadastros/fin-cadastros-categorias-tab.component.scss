@@ -2,6 +2,7 @@
 @use '../../../../styles/fin-list-row-acoes';
 @use './fin-cadastro-drawer-shell.scss';
 @use '../../../../styles/drawer-stack';
+@use '../../../../styles/breakpoints' as bp;
 
 :host {
   display: block;
@@ -233,7 +234,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .fin-cad-tab__card {
     overflow: visible;
     background: transparent;

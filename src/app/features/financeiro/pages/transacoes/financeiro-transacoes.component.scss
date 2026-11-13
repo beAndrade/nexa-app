@@ -5,6 +5,7 @@
 @use '../../../../styles/badge-atraso-icon' as badge-atraso;
 @use '../../../../styles/drawer-stack';
 @use '../../../../styles/drawer-responsive' as dr;
+@use '../../../../styles/breakpoints' as bp;
 @use './financeiro-transacoes-filtros-sidebar';
 
 :host {
@@ -1463,7 +1464,7 @@
 }
 
 /** ≤767 — alinhado a shellMobile JS (`min-width: 768` ⇒ bar/cards só abaixo). */
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .fin-transacoes-page .fin-transacoes-desktop-table {
     display: none;
   }

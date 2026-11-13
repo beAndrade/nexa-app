@@ -1229,7 +1229,7 @@
   display: none;
 }
 
-@include bp.bp-down(shell-mobile) {
+@include bp.shell-mobile-viewport {
   .fin-comissoes .list-head__actions--bottom-nav .list-head__toolbar-btn {
     display: none;
   }
