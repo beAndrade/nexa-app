@@ -1,4 +1,5 @@
 @use '../../../../styles/list-page-shell';
+@use '../../../../styles/breakpoints' as bp;
 
 .clientes-exclusao-massa-resultado {
   padding: 0.75rem 1rem;
@@ -1088,7 +1089,7 @@
   display: flex;
 }
 
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .clientes-page .list-table-card > .clientes-desktop-table {
     display: none;
   }
@@ -1364,7 +1365,7 @@
   }
 }
 
-@media (min-width: 768px) {
+@include bp.bp-up(shell-mobile) {
   .clientes-mobile-list {
     display: none;
   }
@@ -1378,7 +1379,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .clientes-excluir-overlay {
     opacity: 0;
     transition: opacity 220ms ease;
@@ -1526,17 +1527,19 @@
   }
 }
 
-@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
-  .clientes-excluir-overlay,
-  .comandas-modal.clientes-excluir-modal {
-    transition: opacity 120ms linear;
-  }
+@include bp.shell-mobile-viewport {
+  @media (prefers-reduced-motion: reduce) {
+    .clientes-excluir-overlay,
+    .comandas-modal.clientes-excluir-modal {
+      transition: opacity 120ms linear;
+    }
 
-  .comandas-modal.clientes-excluir-modal,
-  .comandas-modal.clientes-excluir-modal--open,
-  .comandas-modal.clientes-excluir-modal--saindo {
-    transform: translate(-50%, -50%);
-    animation: none;
+    .comandas-modal.clientes-excluir-modal,
+    .comandas-modal.clientes-excluir-modal--open,
+    .comandas-modal.clientes-excluir-modal--saindo {
+      transform: translate(-50%, -50%);
+      animation: none;
+    }
   }
 }
 
