@@ -295,7 +295,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .megahair-panel .megahair-desktop-table {
     display: none;
   }

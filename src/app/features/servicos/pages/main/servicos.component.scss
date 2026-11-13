@@ -1,4 +1,5 @@
 @use '../../../../styles/list-page-shell';
+@use '../../../../styles/breakpoints' as bp;
 
 .servicos-page {
   padding: 0;
@@ -33,11 +34,11 @@
     min-width: 0;
   }
 
-@media (min-width: 768px) {
-  .servicos-megahair-faixa {
-    display: none;
+  @include bp.bp-up(shell-mobile) {
+    .servicos-megahair-faixa {
+      display: none;
+    }
   }
-}
 
   .list-head__actions--servicos {
     display: flex;
@@ -625,7 +626,7 @@
   text-align: right;
 }
 
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .servicos-page .servicos-desktop-table {
     display: none;
   }
@@ -854,16 +855,18 @@
   }
 }
 
-@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
-  .servicos-excluir-overlay,
-  .comandas-modal.servicos-excluir-modal {
-    transition: opacity 120ms linear;
-  }
+@include bp.shell-mobile-viewport {
+  @media (prefers-reduced-motion: reduce) {
+    .servicos-excluir-overlay,
+    .comandas-modal.servicos-excluir-modal {
+      transition: opacity 120ms linear;
+    }
 
-  .comandas-modal.servicos-excluir-modal,
-  .comandas-modal.servicos-excluir-modal--open,
-  .comandas-modal.servicos-excluir-modal--saindo {
-    transform: translate(-50%, -50%);
-    animation: none;
+    .comandas-modal.servicos-excluir-modal,
+    .comandas-modal.servicos-excluir-modal--open,
+    .comandas-modal.servicos-excluir-modal--saindo {
+      transform: translate(-50%, -50%);
+      animation: none;
+    }
   }
 }
