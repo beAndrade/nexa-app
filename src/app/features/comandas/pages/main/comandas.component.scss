@@ -1773,7 +1773,7 @@ tbody td.col-ticket {
 }
 
 /** ≤767 — alinhado a shellMobile JS (`min-width: 768` ⇒ bar/cards só abaixo). */
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .comandas-page .comandas-desktop-table {
     display: none;
   }
