@@ -879,7 +879,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .marcas-page {
     overflow-x: hidden;
     padding-bottom: 88px;
