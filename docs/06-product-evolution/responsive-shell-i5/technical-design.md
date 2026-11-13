@@ -1,12 +1,13 @@
-# Technical Design — Responsive Shell I5 (Foundation + Shared Chrome)
+# Technical Design — Responsive Shell I5 (Foundation + Shared Chrome + MLP lotes)
 
 **Tipo:** Technical Design  
-**Status:** I5.1 IMPLEMENTADO · I5.2 IMPLEMENTADO  
-**Unidades:** I5.1 Foundation · I5.2 Shared Chrome  
+**Status:** I5.1 IMPLEMENTADO · I5.2 IMPLEMENTADO · I5.3 B1 IMPLEMENTADO · I5.3 B2 IMPLEMENTADO · I5.3 B3 IMPLEMENTADO · I5.3 B4 IMPLEMENTADO · I5.3 B5 IMPLEMENTADO · I5.3 B6 IMPLEMENTADO · I5.3 B7 IMPLEMENTADO · I5.3 B8 IMPLEMENTADO · I5.3 B9 IMPLEMENTADO  
+**Unidades:** I5.1 Foundation · I5.2 Shared Chrome · I5.3 B1 Clientes · I5.3 B2 Serviços + Megahair · I5.3 B3 Avaliações · I5.3 B4 Cadastros auxiliares · I5.3 B5 Estoque · I5.3 B6 Comandas (lista) · I5.3 B7 Orçamentos · I5.3 B8 Financeiro · I5.3 B9 Agenda Lista  
+
 **Architecture Review:** APPROVED — `237ad410-98c5-410b-a420-e208be445ed7` (diagnóstico `ac055466-2bb3-488e-ae40-38ddeb982d0b`)  
 **Contrato:** `shellMobile` / `shell-mobile` = **768** (piso desktop); mobile **≤767**; desktop **≥768**
 
-Este documento registra o TD aprovado de I5.1 + I5.2. Não duplica o diagnóstico longo de unificação de breakpoints.
+Este documento registra o TD aprovado de I5.1 + I5.2 e o progresso de I5.3 (lotes MLP). Não duplica o diagnóstico longo de unificação de breakpoints.
 
 ---
 
@@ -17,7 +18,7 @@ Este documento registra o TD aprovado de I5.1 + I5.2. Não duplica o diagnóstic
 - `bp-down` / `mediaQueryMax` permanecem **inclusivos**; **não** alterar semântica global
 - Introduzir **`bp-below` + `mediaQueryBelow`** (estritamente abaixo do token)
 - Preservar 640 / 720 / 560 / 860 / 1024 / comanda-cols / etc.
-- **Não** migrar literais `767` de features MLP, Agenda Hub, drawers neste escopo
+- Literais `767`/`768` de features MLP entram só em **I5.3** (lotes); Agenda Hub / drawers fora até unidade própria
 - **Não** reabrir I1–I4 / Gates 6
 
 ---
@@ -164,14 +165,266 @@ Build: `ng build --configuration development`. Testes unitários pertinentes dos
 
 ---
 
-## 3. Sequência e fora de escopo
+## 3. I5.3 — Features MLP (lotes)
+
+**ID:** I5.3  
+**Nome:** Migrar literais shell das features MLP  
+**Status:** B1–B9 IMPLEMENTADOS · QA B1–B6 e B8 aprovado · QA B7 e B9 aprovados com ressalvas menores documentadas · nenhuma implementação adicional pendente  
+**Depende de:** I5.1 + I5.2  
+**Risco:** Baixo (migração mecânica SCSS; consome API I5.1; sem HTML/TS)
+
+### 3.1 B1 — Clientes
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/clientes/pages/lista/clientes.component.scss` | 3× `max-width: 767` → `bp.shell-mobile-viewport`; 1× `min-width: 768` → `bp.bp-up(shell-mobile)`; MQ composta reduced-motion aninhada |
+
+#### NÃO INCLUI
+
+- HTML / TS de Clientes
+- outros módulos MLP (B2+)
+- Agenda Hub / drawers
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+
+### 3.2 Critérios de aceite (B1)
+
+- [x] Zero `max-width: 767` / `min-width: 768` shell no SCSS de Clientes
+- [x] Cascata / seletores / propriedades preservados
+- [x] Build development verde
+- [x] Smoke limiar MQ 767 / 768 / 769 (`shell-mobile-viewport` / `bp-up`) — polaridade confirmada; visual `/clientes` pendente (sessão expirada)
+
+### 3.3 B2 — Serviços + Megahair
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/servicos/pages/main/servicos.component.scss` | 1× `min-width: 768` aninhado em `.servicos-page` → `bp.bp-up(shell-mobile)` (mesmo nível); 1× `max-width: 767` → `bp.shell-mobile-viewport`; 1× MQ composta `767 + prefers-reduced-motion` → nest; `@use` bp |
+| `src/app/features/servicos/pages/main/servicos-megahair-panel.component.scss` | 1× `max-width: 767` → `bp.shell-mobile-viewport` (`@use` bp já presente) |
+
+#### NÃO INCLUI
+
+- HTML / TS de Serviços / Megahair
+- outros módulos MLP (B3+)
+- Agenda Hub / drawers (âncora drawer pré-existente preservada)
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+
+### 3.4 Critérios de aceite (B2)
+
+- [x] Zero `max-width: 767` / `min-width: 768` shell nos dois SCSS
+- [x] Cascata / seletores / propriedades preservados; `bp-up` permanece aninhado em `.servicos-page`
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual `/servicos` se sessão disponível
+
+### 3.5 B3 — Avaliações
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/avaliacoes/pages/main/avaliacoes.component.scss` | 2× `max-width: 767` → `bp.shell-mobile-viewport`; `@use` bp; MQ contextual `max-width: 1100px` (KPIs) preservada |
+
+#### NÃO INCLUI
+
+- HTML / TS de Avaliações
+- outros módulos MLP (B4+)
+- Agenda Hub / drawers
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+
+### 3.6 Critérios de aceite (B3)
+
+- [x] Zero `max-width: 767` / `min-width: 768` shell no SCSS de Avaliações
+- [x] Cascata / seletores / propriedades preservados; MQ contextual 1100px intacta
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual `/avaliacoes` se sessão disponível
+
+### 3.7 B4 — Cadastros auxiliares
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/categorias/pages/main/categorias.component.scss` | 1× `max-width: 767` → `bp.shell-mobile-viewport` (`@use` bp já presente); MQ contextual `prefers-reduced-motion` preservada |
+| `src/app/features/marcas/pages/main/marcas.component.scss` | 1× `max-width: 767` → `bp.shell-mobile-viewport` (`@use` bp já presente); MQ contextual `prefers-reduced-motion` preservada |
+| `src/app/features/fornecedores/pages/main/fornecedores.component.scss` | 1× `max-width: 767` → `bp.shell-mobile-viewport`; `@use` bp; MQ contextual `prefers-reduced-motion` preservada |
+| `src/app/features/profissionais/pages/main/profissionais.component.scss` | 1× `max-width: 767` → `bp.shell-mobile-viewport`; `@use` bp |
+
+#### NÃO INCLUI
+
+- HTML / TS dos quatro módulos
+- outros módulos MLP (B5+)
+- Agenda Hub / drawers
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+- min-width:768 / PRM composto (ausentes nestes arquivos)
+
+### 3.8 Critérios de aceite (B4)
+
+- [x] Zero `max-width: 767` / `min-width: 768` shell nos quatro SCSS
+- [x] Cascata / seletores / propriedades preservados; MQs contextuais intactas
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual 1–2 rotas se sessão
+
+### 3.9 B5 — Estoque
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/estoque/pages/main/estoque.component.scss` | 1× `max-width: 767` → `bp.shell-mobile-viewport`; `@use` bp; `@container` contextuais (1024 / 720 / 540) preservados |
+
+#### NÃO INCLUI
+
+- HTML / TS de Estoque
+- outros módulos MLP (B6+)
+- Agenda Hub / drawers
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+- min-width:768 / PRM composto (ausentes neste arquivo)
+
+### 3.10 Critérios de aceite (B5)
+
+- [x] Zero `max-width: 767` / `min-width: 768` shell no SCSS de Estoque
+- [x] Cascata / seletores / propriedades preservados; `@container` contextuais intactos
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual `/estoque` se sessão disponível
+
+### 3.11 B6 — Comandas (lista)
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/comandas/pages/main/comandas.component.scss` | 1× `max-width: 767` (lista, ~L1776) → `bp.shell-mobile-viewport`; `@use` bp já presente |
+
+#### NÃO INCLUI
+
+- HTML / TS de Comandas
+- outros módulos MLP (B7+)
+- Agenda Hub
+- **Drawer de Comandas:** `@include bp.bp-down(shell-mobile)` (~L1252) **permanece intocado** (confirmado)
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+
+### 3.12 Critérios de aceite (B6)
+
+- [x] Zero `max-width: 767` residual na regra da lista; lista usa `shell-mobile-viewport`
+- [x] Drawer ~L1252 `bp-down(shell-mobile)` **inalterado** (confirmação explícita)
+- [x] Cascata / seletores / propriedades preservados
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual `/comandas` se sessão disponível
+
+### 3.13 B7 — Orçamentos
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/orcamentos/pages/main/orcamentos.component.scss` | 1× `max-width: 767` (lista, ~L832) → `bp.shell-mobile-viewport`; `@use` bp já presente |
+| `src/app/features/orcamentos/pages/main/orcamento-preview-overlay.component.scss` | 1× `max-width: 767` (~L172) → `bp.shell-mobile-viewport`; adicionar `@use` bp |
+
+#### NÃO INCLUI
+
+- HTML / TS de Orçamentos
+- outros módulos MLP (B8+)
+- Agenda Hub
+- **Drawer de Orçamentos:** `@include bp.bp-down(shell-mobile)` (~L575) **permanece intocado** (confirmado)
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+
+### 3.14 Critérios de aceite (B7)
+
+- [x] Zero `max-width: 767` residual shell nos arquivos B7; lista e preview usam `shell-mobile-viewport`
+- [x] Drawer ~L575 `bp-down(shell-mobile)` **inalterado** (confirmação explícita)
+- [x] Cascata / seletores / propriedades preservados
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual `/orcamentos` se sessão disponível
+
+### 3.15 B8 — Financeiro
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/financeiro/pages/transacoes/financeiro-transacoes.component.scss` | 1× `max-width: 767` (~L1466) → `bp.shell-mobile-viewport`; adicionar `@use` bp |
+| `src/app/features/financeiro/pages/cadastros/financeiro-cadastros.component.scss` | 1× `max-width: 767` (~L195) → `bp.shell-mobile-viewport`; adicionar `@use` bp |
+| `src/app/features/financeiro/pages/cadastros/fin-cadastros-categorias-tab.component.scss` | 1× `max-width: 767` (~L236) → `bp.shell-mobile-viewport`; adicionar `@use` bp |
+| `src/app/features/financeiro/pages/comissoes/financeiro-comissoes.component.scss` | 1× `bp.bp-down(shell-mobile)` da **lista** (~L1232) → `bp.shell-mobile-viewport`; `@use` bp já presente |
+
+#### NÃO INCLUI
+
+- HTML / TS de Financeiro
+- outros módulos MLP (B9+)
+- Agenda Hub
+- drawers Financeiro / Painel / Caixa do dia / MQs não-shell (640, 720, 900, 1280, …)
+- outros `bp-down` fora do inventário B8
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+
+### 3.16 Critérios de aceite (B8)
+
+- [x] Zero `max-width: 767` residual shell e zero `bp-down(shell-mobile)` residual da lista nos arquivos B8; usam `shell-mobile-viewport`
+- [x] Cascata / seletores / propriedades preservados
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual `/financeiro/transacoes`, cadastros, comissoes se rotas/sessão
+
+### 3.17 B9 — Agenda Lista
+
+**Status:** IMPLEMENTADO  
+**Nota:** último lote I5.3 MLP do inventário original (B1–B9).
+
+#### INCLUI
+
+| Arquivo | Migração |
+|---|---|
+| `src/app/features/agenda/pages/lista/agenda-lista.component.scss` | 1× `bp.bp-down(shell-mobile)` da **lista** (~L142) → `bp.shell-mobile-viewport`; `@use` bp já presente |
+
+#### NÃO INCLUI
+
+- HTML / TS de Agenda Lista
+- Agenda Hub / drawers / Agenda Novo / sidebars
+- outros `bp-down` fora do inventário B9
+- `bp-down` / tokens / novos literais
+- reabrir Gate 6 UX
+
+### 3.18 Critérios de aceite (B9)
+
+- [x] Zero `bp-down(shell-mobile)` residual da lista no arquivo B9; usa `shell-mobile-viewport`
+- [x] Cascata / seletores / propriedades preservados
+- [x] Build development verde
+- [x] Smoke limiar MQ 360 / 390 / 767 vs 768 / 769 — polaridade; visual `/agenda/lista` se sessão disponível
+
+### 3.19 Sequência
 
 ```text
 I5.1 Foundation (API + mover mixin + AppShell wire)
         ↓
 I5.2 Shared Chrome (AppShell TS + list-page-shell + sheets/actions)
         ↓
-[fora] I5.3+ features / Agenda Hub / drawers
+I5.3 B1 Clientes (SCSS)
+        ↓
+I5.3 B2 Serviços + Megahair (SCSS)
+        ↓
+I5.3 B3 Avaliações (SCSS)
+        ↓
+I5.3 B4 Cadastros auxiliares (SCSS)
+        ↓
+I5.3 B5 Estoque (SCSS)
+        ↓
+I5.3 B6 Comandas lista (SCSS)
+        ↓
+I5.3 B7 Orçamentos (SCSS)
+        ↓
+I5.3 B8 Financeiro (SCSS)
+        ↓
+I5.3 B9 Agenda Lista (SCSS)  ← esta passagem (último lote MLP B1–B9)
+        ↓
+[fora desta passagem] Agenda Hub / drawers
 ```
 
 ---
@@ -184,4 +437,12 @@ I5.2 Shared Chrome (AppShell TS + list-page-shell + sheets/actions)
 | ID | `237ad410-98c5-410b-a420-e208be445ed7` |
 | Gate I5.1 | autorizado |
 | Gate I5.2 | autorizado **após** I5.1 |
+| Gate I5.3 B1 | autorizado como consumidor da API I5.1 (migração mecânica 1 arquivo SCSS; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
+| Gate I5.3 B2 | autorizado como consumidor da API I5.1 (migração mecânica 2 arquivos SCSS; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
+| Gate I5.3 B3 | autorizado como consumidor da API I5.1 (migração mecânica 1 arquivo SCSS; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
+| Gate I5.3 B4 | autorizado como consumidor da API I5.1 (migração mecânica 4 arquivos SCSS; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
+| Gate I5.3 B5 | autorizado como consumidor da API I5.1 (migração mecânica 1 arquivo SCSS; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
+| Gate I5.3 B6 | autorizado como consumidor da API I5.1 (migração mecânica 1 arquivo SCSS — só lista; drawer L1252 intocado; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
+| Gate I5.3 B7 | autorizado como consumidor da API I5.1 (migração mecânica 2 arquivos SCSS — lista + preview; drawer L575 intocado; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
+| Gate I5.3 B8 | autorizado como consumidor da API I5.1 (migração mecânica 4 arquivos SCSS Financeiro; sem API/schema novos; AR de unidade nova dispensado — justificativa L1/L2 local) |
 | Decisão de produto pendente | Não |
