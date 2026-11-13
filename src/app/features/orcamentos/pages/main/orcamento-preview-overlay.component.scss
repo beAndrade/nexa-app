@@ -1,3 +1,5 @@
+@use '../../../../styles/breakpoints' as bp;
+
 :host {
   display: block;
   position: fixed;
@@ -169,7 +171,7 @@
 }
 
 /** Viewport estreito: chrome sem título absoluto sobre as ações. */
-@media (max-width: 767px) {
+@include bp.shell-mobile-viewport {
   .orcamento-preview__chrome-inner {
     flex-wrap: wrap;
     justify-content: flex-start;
