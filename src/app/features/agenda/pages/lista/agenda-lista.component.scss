@@ -139,7 +139,7 @@
   word-break: break-word;
 }
 
-@include bp.bp-down(shell-mobile) {
+@include bp.shell-mobile-viewport {
   .agenda-lista-page {
     overflow-x: hidden;
     max-width: 100%;
