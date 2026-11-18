@@ -260,12 +260,21 @@ export class AgendaNovoComponent implements OnInit, OnChanges, OnDestroy {
     return this.modoModal && !!this.idAtendimentoEmEdicao?.trim();
   }
 
-  /** Painel lateral do cliente (mobile / viewport estreito). */
+  /** Painel lateral do cliente (mobile / viewport estreito) — legado; P1 usa chrome compacto. */
   painelClienteMobileAberto = false;
 
   @HostBinding('class.agenda-novo--cliente-panel-open')
   get clientePanelMobileAberto(): boolean {
     return this.modoModal && this.painelClienteMobileAberto;
+  }
+
+  /**
+   * P1 — cliente selecionado no drawer: chrome compacto no mobile
+   * e select do formulário colapsado (sem duplicar identificação).
+   */
+  @HostBinding('class.agenda-novo--tem-cliente')
+  get temClienteNoDrawer(): boolean {
+    return this.modoModal && !!this.clienteSelecionado();
   }
 
   @HostBinding('class.agenda-novo--somente-comanda')
@@ -5911,6 +5920,17 @@ export class AgendaNovoComponent implements OnInit, OnChanges, OnDestroy {
 
   togglePainelClienteMobile(): void {
     this.painelClienteMobileAberto = !this.painelClienteMobileAberto;
+  }
+
+  /**
+   * P1 — após «Trocar cliente» no compacto: fecha overlay legado e abre o select.
+   */
+  onTrocarClienteMobile(): void {
+    this.painelClienteMobileAberto = false;
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.clienteSelectModal?.togglePanel();
+    }, 0);
   }
 
   /**

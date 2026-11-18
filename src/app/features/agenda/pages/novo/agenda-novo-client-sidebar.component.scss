@@ -18,7 +18,11 @@
   overflow: visible;
 }
 
-/** Resumo compacto: oculto fora da comanda mobile (agenda-novo intacto). */
+/**
+ * Resumo compacto: oculto por defeito.
+ * Visível em: Comanda mobile (`.nc-drawer__client`) e Agenda drawer mobile
+ * (`.agenda-novo--drawer` ≤ drawer-form) — ver mixins abaixo.
+ */
 .client-sidebar-drawer__compact {
   display: none;
 }
@@ -42,7 +46,8 @@
     align-items: center;
   }
 
-  .client-sidebar-drawer app-cliente-avatar {
+  /* Só o avatar do bloco full (desktop); o compacto não pode herdar margin auto. */
+  .client-sidebar-drawer__full > app-cliente-avatar {
     align-self: center;
     margin-inline: auto;
   }
@@ -591,150 +596,280 @@
   }
 }
 
-/**
- * I2 — resumo compacto só na comanda (`.nc-drawer__client`) em shell-mobile.
- * Não afeta o sidebar do agenda-novo.
- */
-@include bp.bp-down(shell-mobile) {
-  :host-context(.nc-drawer__client) {
-    height: auto;
+/// Estilos do resumo compacto (I2 Comanda + P1 Agenda mobile).
+@mixin client-sidebar-compact-chrome {
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 0;
+  border-right: none;
+  border-bottom: none;
+
+  .client-sidebar-drawer {
+    align-items: stretch;
+    gap: 0;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+  }
+
+  .client-sidebar-drawer__compact {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+    width: 100%;
+    min-width: 0;
     min-height: 0;
-    max-height: 100%;
-    overflow: hidden;
+    max-height: none;
+    box-sizing: border-box;
+  }
+
+  .client-sidebar-drawer__compact-head {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .client-sidebar-drawer__compact-nome {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
     padding: 0;
-    border-right: none;
-    border-bottom: none;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #1c1917;
+    text-align: left;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
 
-    .client-sidebar-drawer {
-      align-items: stretch;
-      gap: 0;
-      padding-top: 0.65rem;
-      padding-bottom: 0.65rem;
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: 4px;
     }
+  }
 
-    .client-sidebar-drawer__compact {
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.4rem;
-      width: 100%;
-      min-width: 0;
-      min-height: 4.5rem;
-      max-height: 6rem;
-      box-sizing: border-box;
+  .client-sidebar-drawer__compact app-cliente-avatar,
+  .client-sidebar-drawer__compact-avatar {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-self: center;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    margin-inline: 0;
+    line-height: 0;
+  }
+
+  .client-sidebar-drawer__compact-nome-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .client-sidebar-drawer__compact-chip {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0 0 0 auto;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid #fdba74;
+    border-radius: 999px;
+    background: #fff7ed;
+    color: #c2410c;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:focus-visible {
+      outline: 2px solid rgba(194, 65, 12, 0.45);
+      outline-offset: 2px;
     }
+  }
 
-    .client-sidebar-drawer__compact-nome {
-      display: block;
-      width: 100%;
-      min-width: 0;
-      margin: 0;
-      padding: 0;
-      border: none;
-      background: transparent;
-      font: inherit;
-      font-size: 1rem;
-      font-weight: 600;
-      line-height: 1.25;
-      color: #1c1917;
-      text-align: left;
-      cursor: pointer;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      -webkit-appearance: none;
-      appearance: none;
+  .client-sidebar-drawer__compact-contact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    width: 100%;
+    min-width: 0;
+  }
 
-      &:focus-visible {
-        outline: 2px solid var(--color-primary);
-        outline-offset: 2px;
-        border-radius: 4px;
-      }
-    }
+  .client-sidebar-drawer__compact-tel {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.3;
+    color: rgba(0, 0, 0, 0.75);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 
-    .client-sidebar-drawer__compact-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem 0.65rem;
-      min-width: 0;
-    }
-
-    .client-sidebar-drawer__compact-chip {
-      display: inline-flex;
-      align-items: center;
-      max-width: 100%;
-      margin: 0;
-      padding: 0.2rem 0.55rem;
-      border: 1px solid #fdba74;
-      border-radius: 999px;
-      background: #fff7ed;
-      color: #c2410c;
-      font: inherit;
-      font-size: 0.75rem;
-      font-weight: 600;
-      line-height: 1.3;
-      cursor: pointer;
-      white-space: nowrap;
-
-      &:focus-visible {
-        outline: 2px solid rgba(194, 65, 12, 0.45);
-        outline-offset: 2px;
-      }
-    }
-
-    .client-sidebar-drawer__compact-ver {
-      display: inline-flex;
-      align-items: center;
-      margin: 0;
-      padding: 0;
-      border: none;
-      background: transparent;
-      font: inherit;
-      font-size: 0.875rem;
-      font-weight: 500;
-      line-height: 1.3;
+    &:hover,
+    &:focus-visible {
       color: var(--color-link, #3f769d);
-      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    &--empty {
+      color: rgba(0, 0, 0, 0.45);
+      cursor: default;
       text-decoration: none;
-      -webkit-appearance: none;
-      appearance: none;
 
       &:hover,
       &:focus-visible {
-        color: var(--color-link-hover, #2f5e7e);
-        text-decoration: underline;
-      }
-
-      &:focus-visible {
-        outline: 2px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
-        outline-offset: 2px;
-        border-radius: 4px;
+        color: rgba(0, 0, 0, 0.45);
+        text-decoration: none;
+        outline: none;
       }
     }
+  }
 
-    /**
-     * Com cliente: some o bloco completo (avatar / telefone / badge).
-     * Sem cliente: mantém a busca; esconde só o avatar.
-     */
-    .client-sidebar-drawer:has(.client-sidebar-drawer__compact) .client-sidebar-drawer__full {
-      display: none;
+  .client-sidebar-drawer__compact-wa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    min-height: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0.2rem 0.55rem;
+    border: none;
+    border-radius: 999px;
+    background: #4fc14f;
+    color: #fff;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-appearance: none;
+    appearance: none;
+
+    &:focus-visible {
+      outline: 2px solid rgba(79, 193, 79, 0.45);
+      outline-offset: 2px;
+    }
+  }
+
+  .client-sidebar-drawer__compact-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.65rem;
+    min-width: 0;
+  }
+
+  .client-sidebar-drawer__compact-trocar {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.3;
+    color: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+    text-decoration: none;
+    -webkit-appearance: none;
+    appearance: none;
+
+    &:hover,
+    &:focus-visible {
+      color: rgba(0, 0, 0, 0.75);
+      text-decoration: underline;
     }
 
-    .client-sidebar-drawer__full app-cliente-avatar {
-      display: none;
+    &:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+      outline-offset: 2px;
+      border-radius: 4px;
     }
 
-    .client-sidebar-drawer__full {
-      width: 100%;
-      min-width: 0;
-      gap: 0;
-      padding: 0;
-      align-items: stretch;
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      text-decoration: none;
     }
+  }
 
-    .client-sidebar-drawer__dados {
-      display: none;
-    }
+  /**
+   * Com cliente: some o bloco completo (avatar / telefone / badge).
+   * Sem cliente: mantém a busca; esconde só o avatar.
+   */
+  .client-sidebar-drawer:has(.client-sidebar-drawer__compact) .client-sidebar-drawer__full {
+    display: none;
+  }
+
+  .client-sidebar-drawer__full app-cliente-avatar {
+    display: none;
+  }
+
+  .client-sidebar-drawer__full {
+    width: 100%;
+    min-width: 0;
+    gap: 0;
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .client-sidebar-drawer__dados {
+    display: none;
+  }
+}
+
+/**
+ * I2 — resumo compacto na comanda (`.nc-drawer__client`) em shell-mobile.
+ */
+@include bp.bp-down(shell-mobile) {
+  :host-context(.nc-drawer__client) {
+    @include client-sidebar-compact-chrome;
+  }
+}
+
+/**
+ * P1 — mesmo compacto no Agenda drawer mobile (≤ drawer-form / 720).
+ * Em ≥721 o rail esquerdo continua com a sidebar completa.
+ * Não usar shell-mobile aqui: entre 721–768 o Agenda ainda é layout de duas colunas.
+ */
+@include bp.bp-down(drawer-form) {
+  :host-context(.agenda-novo--drawer) {
+    @include client-sidebar-compact-chrome;
   }
 }

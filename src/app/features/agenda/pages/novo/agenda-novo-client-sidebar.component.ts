@@ -16,6 +16,7 @@ import {
   telefoneClienteWhatsappDigitos,
   telefoneClienteWhatsappExibicao,
 } from '../../../../core/utils/telefone-br';
+import { telefoneWhatsappInternacional } from '../../../../core/utils/whatsapp-deep-link';
 import { nomeClienteParaWhatsapp } from '../../../../core/utils/whatsapp-variaveis';
 import {
   SaasSelectComponent,
@@ -106,11 +107,18 @@ export class AgendaNovoClientSidebarComponent implements OnInit {
   @Input() whatsappHora: string | null = null;
   /** Só permite WhatsApp após o agendamento existir na base (já salvo). */
   @Input() agendamentoSalvo = false;
+  /**
+   * Agenda mobile (chrome compacto): mostra «Trocar cliente».
+   * Comanda mantém `false` — P1 Comanda não entra neste incremento.
+   */
+  @Input() permitirTrocarCliente = false;
 
   /**
    * Ex.: linhas da secção «Informações» — o ecrã de comandas abre o drawer da ficha (`abrirCadastroCliente`).
    */
   readonly abrirCadastroCliente = output<AbrirCadastroClientePayload>();
+  /** Pai foca o select do formulário após limpar a seleção. */
+  readonly trocarClientePedido = output<void>();
 
   private readonly api = inject(SheetsApiService);
   private readonly destroyRef = inject(DestroyRef);
@@ -270,6 +278,14 @@ export class AgendaNovoClientSidebarComponent implements OnInit {
     return telefoneClienteWhatsappExibicao(this.cliente);
   }
 
+  /** `tel:+55…` para contato rápido no compacto; vazio se não houver dígitos válidos. */
+  telefoneTelHref(): string {
+    const digitos = telefoneClienteWhatsappDigitos(this.cliente);
+    if (digitos.length < 10) return '';
+    const intl = telefoneWhatsappInternacional(digitos);
+    return intl ? `tel:+${intl}` : '';
+  }
+
   podeConversarWhatsapp(): boolean {
     return telefoneClienteWhatsappDigitos(this.cliente).length >= 10;
   }
@@ -316,6 +332,17 @@ export class AgendaNovoClientSidebarComponent implements OnInit {
   clicouAbrirCadastroCliente(payload: AbrirCadastroClientePayload = {}): void {
     if (!this.temClienteSelecionado) return;
     this.abrirCadastroCliente.emit(payload);
+  }
+
+  /**
+   * Limpa a seleção no mesmo control do formulário (sem alterar regras de persistência).
+   * O pai reexibe o select e pode focar o campo.
+   */
+  trocarCliente(): void {
+    if (!this.permitirTrocarCliente || this.clienteIdControl?.disabled) return;
+    this.clienteIdControl.setValue('');
+    this.clienteIdControl.markAsTouched();
+    this.trocarClientePedido.emit();
   }
 
   linhaAniversarioExibicao(): string {
