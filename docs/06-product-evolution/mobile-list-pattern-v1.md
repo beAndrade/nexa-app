@@ -1,5 +1,7 @@
 # Nexa Mobile List Pattern v1
 
+> **Rastreabilidade (I6):** este documento é o **subpadrão de listagens** do [Mobile Navigation Pattern (I6)](./mobile-navigation-pattern/contrato.md) — contrato canônico de navegação mobile (App Shell, receitas de bar, glossário, overlays). Em matéria de navegação/chrome da bar e overlays, prevalece o I6; o MLP v1 permanece a especificação detalhada de listas (card-stack, sheet, seleção, popover). **Não** é contrato concorrente de navegação. Status I6: contrato redigido, aguardando revisão (sem implementação nesta etapa).
+
 **Status:** FASE 1 CONCLUÍDA COM LIMITAÇÕES · FASE 2 (SERVIÇOS) APROVADA · FASE 3 (MIGRAÇÃO DAS LISTAS ATIVAS) CONCLUÍDA NESTA RODADA
 
 **Tipo:** especificação de produto / contrato de UX. O contrato abaixo permanece; o que muda nesta revisão é o estado real da implementação.
