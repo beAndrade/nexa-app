@@ -54,8 +54,7 @@ import {
 } from '../../../../core/utils/fin-formas-pagamento.util';
 import { TableEmptyComponent } from '../../../../shared/table-empty/table-empty.component';
 import {
-  primeiroDiaMesYmdFiltro,
-  ultimoDiaMesYmdFiltro,
+  ymdHojeFiltro,
   ymdToDdMmYyyyFiltro,
 } from '../../../financeiro/pages/transacoes/fin-transacoes-filtro.util';
 import { FlipDropdownPanelDirective } from '../../../../shared/flip-dropdown-panel/flip-dropdown-panel.directive';
@@ -211,10 +210,11 @@ export class ComandasComponent implements OnInit, OnDestroy {
   erro = '';
   grupos: ComandaGrupo[] = [];
 
-  dataInicio = ymdToDdMmYyyyFiltro(primeiroDiaMesYmdFiltro());
-  dataFim = ymdToDdMmYyyyFiltro(ultimoDiaMesYmdFiltro());
-  periodoInicioYmd = primeiroDiaMesYmdFiltro();
-  periodoFimYmd = ultimoDiaMesYmdFiltro();
+  /** Default só na construção: Hoje. `carregar()` não redefine período/filtros. */
+  periodoInicioYmd = ymdHojeFiltro();
+  periodoFimYmd = this.periodoInicioYmd;
+  dataInicio = ymdToDdMmYyyyFiltro(this.periodoInicioYmd);
+  dataFim = ymdToDdMmYyyyFiltro(this.periodoFimYmd);
   filtrosAbertos = false;
   buscaAberta = false;
   busca = '';
@@ -232,7 +232,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
   /** Select nativo não estiliza o painel; menu custom igual ao layout de referência. */
   perPageMenuAberto = false;
 
-  /** Soft-delete ainda não listado na API — «Excluídas» deixa a lista vazia por enquanto. */
+  /** Soft-delete ainda não listado na API — checkbox «Excluídas» desabilitado (I1/C4). */
   filtroExcluidas = false;
   filtroNaoExcluidas = true;
 
@@ -609,7 +609,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
     this.abrirDrawerComandaPorGrupo(g);
   }
 
-  /** Filtros além do padrão (não excluídas + mês corrente, sem status/pagamento). */
+  /** Filtros além do padrão (não excluídas + hoje, sem status/pagamento). */
   temFiltroAtivo(): boolean {
     return this.chipsFiltrosMobile().length > 0;
   }
@@ -623,11 +623,10 @@ export class ComandasComponent implements OnInit, OnDestroy {
     } else if (!this.filtroExcluidas && !this.filtroNaoExcluidas) {
       chips.push({ id: 'status-nenhum', label: 'Status: nenhum' });
     }
-    const padraoIni = primeiroDiaMesYmdFiltro();
-    const padraoFim = ultimoDiaMesYmdFiltro();
+    const padraoHoje = ymdHojeFiltro();
     if (
-      this.periodoInicioYmd !== padraoIni ||
-      this.periodoFimYmd !== padraoFim
+      this.periodoInicioYmd !== padraoHoje ||
+      this.periodoFimYmd !== padraoHoje
     ) {
       chips.push({ id: 'periodo', label: 'Período' });
     }
@@ -655,8 +654,9 @@ export class ComandasComponent implements OnInit, OnDestroy {
       this.filtroExcluidas = false;
       this.filtroNaoExcluidas = true;
     } else if (id === 'periodo') {
-      this.periodoInicioYmd = primeiroDiaMesYmdFiltro();
-      this.periodoFimYmd = ultimoDiaMesYmdFiltro();
+      const hoje = ymdHojeFiltro();
+      this.periodoInicioYmd = hoje;
+      this.periodoFimYmd = hoje;
       this.syncDdMmFromPeriodoYmd();
       this.pagina = 1;
       this.carregar();
@@ -842,9 +842,6 @@ export class ComandasComponent implements OnInit, OnDestroy {
   }
 
   get buscaPlaceholder(): string {
-    if (this.shellBottomNavEligible) {
-      return this.buscaAberta ? 'Digite para buscar' : '';
-    }
     return this.buscaAberta
       ? 'Procure por ticket, cliente, número ou valor...'
       : '';
@@ -873,6 +870,7 @@ export class ComandasComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Recarrega a lista com o período/filtros atuais — não redefine defaults. */
   carregar(): void {
     this.carregando = true;
     this.erro = '';

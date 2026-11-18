@@ -193,14 +193,20 @@
         <section class="comandas-filtros-card">
           <h3 class="comandas-filtros-card__title">Status</h3>
           <div class="comandas-filtros-card__body">
-            <label class="comandas-filtros-check">
+            <label
+              class="comandas-filtros-check comandas-filtros-check--disabled"
+              title="Indisponível — a lista não inclui itens excluídos"
+            >
               <input
                 type="checkbox"
                 name="st_excluidas"
-                [checked]="filtroExcluidas"
-                (change)="toggleFiltroExcluidas($event)"
+                disabled
+                [checked]="false"
               />
-              <span class="comandas-filtros-check__label">Excluídas</span>
+              <span class="comandas-filtros-check__label">
+                Excluídas
+                <span class="comandas-filtros-check__hint">Indisponível</span>
+              </span>
             </label>
             <label class="comandas-filtros-check">
               <input
@@ -1219,14 +1225,20 @@
   <section class="comandas-filtros-card comandas-filtros-card--sheet">
     <h3 class="comandas-filtros-card__title">Status</h3>
     <div class="comandas-filtros-card__body">
-      <label class="comandas-filtros-check">
+      <label
+        class="comandas-filtros-check comandas-filtros-check--disabled"
+        title="Indisponível — a lista não inclui itens excluídos"
+      >
         <input
           type="checkbox"
           name="st_excluidas_sheet"
-          [checked]="filtroExcluidas"
-          (change)="toggleFiltroExcluidas($event)"
+          disabled
+          [checked]="false"
         />
-        <span class="comandas-filtros-check__label">Excluídas</span>
+        <span class="comandas-filtros-check__label">
+          Excluídas
+          <span class="comandas-filtros-check__hint">Indisponível</span>
+        </span>
       </label>
       <label class="comandas-filtros-check">
         <input
