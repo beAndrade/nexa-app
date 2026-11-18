@@ -3837,6 +3837,26 @@ textarea {
     }
 
     /**
+     * AGD-ETAPA-01 — Mobile: bloco de etapas usa 100% (não --mega-etapas-col-w);
+     * rail some para não disputar flex com Etapa/Profissional.
+     */
+    .servico-row__etapas-wrap--modal-cabecalho .etapas-block--etapas-modal {
+      flex: 1 1 100%;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .servico-row__etapas-wrap--modal-cabecalho .servico-row__etapas-wrap__rail {
+      display: none;
+    }
+
+    .etapa-row__actions--etapas {
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    /**
      * Cabelo: tipo + rodapé empilhados (desktop mantém 2 colunas).
      */
     .servico-row--drawer.servico-row--cabelo-drawer {
