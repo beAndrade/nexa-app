@@ -165,8 +165,8 @@ Dimensions:
 - Edge cases — cases the feature documents call out, plus adjacent cases that follow directly from those rules. Do not invent product policy.
 - Error handling — documented failure behavior. If failure behavior is not specified, do not invent it; record a Specification Gap when the implementation had to choose.
 - Regression — behavior outside the intended change still holds for the scope derived below.
-- UX/UI — flows, hierarchy, and consistency required by the feature documents and applicable UI rules. Skip when there is no UI change and no UX document in scope.
-- Responsive behavior — viewports or breakpoints the feature documents name. If none are named, do not invent a viewport matrix; record that none were specified.
+- UX/UI — flows, hierarchy, and consistency required by the feature documents, applicable UI rules, and the Operational UX, Visual & Responsive Validation section below. Skip when there is no visible interface change and no UX document in scope.
+- Responsive behavior — when the change has a visible interface, apply that same section, including its viewport matrix, in proportion to the change. Feature documents may name additional viewports or states. When there is no visible interface, this dimension is Não aplicável. Do not skip the matrix only because the feature document did not repeat the widths.
 - Architecture — layer and ADR constraints, only when applicable under Reading order.
 - Data integrity — persisted state stays consistent with the feature documents and the relevant domain model. Não aplicável when the change does not write or transform persisted data.
 - Automated tests — existing tests that cover the change, when they exist and can be run. Absence of a suite is not, by itself, a defect. It is Não validada or Não aplicável, with the reason, and it is not a pass.
@@ -180,6 +180,201 @@ Execute them as that document’s checklist.
 Do not promote that EPIC’s scenarios into the default for other features.
 
 Performance and accessibility are in scope only when the feature documents require them.
+
+---
+
+# Operational UX, Visual & Responsive Validation
+
+This section defines how to judge a visible interface.
+
+It does not define product behavior, business rules, or architecture.
+
+It does not add a severity scale or a disposition vocabulary. Severity and disposition stay the ones in this protocol.
+
+Apply it when the change has a visible interface.
+
+When there is no visible interface, UX/UI and Responsive behavior stay Não aplicável.
+
+Depth stays proportional, as in Efficiency and Scope below.
+
+## Primary user and product context
+
+Nexa is an operational management system for beauty professionals and salon teams.
+
+The primary users are salon professionals performing daily operational tasks, not end customers booking appointments.
+
+Validation must evaluate the product from the perspective of the professional using Nexa during their working routine.
+
+The mobile experience must prioritize:
+
+- Operational efficiency.
+- Quick access to frequent actions.
+- Clear information hierarchy.
+- Minimal unnecessary navigation and interaction steps.
+- Comfortable touch interaction.
+- Readability during real-world use.
+- Predictable behavior and feedback.
+
+A visually attractive interface that compromises operational efficiency is not a successful experience.
+
+## Mobile and desktop consistency
+
+Mobile and desktop are two responsive experiences of the same product.
+
+They must preserve:
+
+- The same business rules and capabilities.
+- Consistent terminology and information architecture.
+- Consistent visual identity and design language.
+- Predictable navigation and interaction patterns.
+
+They do not need identical layouts.
+
+Desktop may prioritize information density, parallel visibility and administrative productivity.
+
+Mobile must prioritize operational clarity, direct actions, touch interaction and efficient workflows.
+
+Do not treat mobile as a compressed desktop layout or as a separate simplified product that loses important capabilities.
+
+## Functional UX validation
+
+Evaluate whether the user can complete the intended operational tasks efficiently.
+
+Consider:
+
+- Number of steps required for frequent tasks.
+- Accessibility of primary actions.
+- Unnecessary navigation between screens, drawers and modals.
+- Visibility of relevant information during operations.
+- Feedback after actions.
+- Error prevention and recovery.
+- Suitability for one-handed mobile interaction when applicable.
+
+Judge the interface according to the real purpose of each module.
+
+## Visual composition validation
+
+Visual validation is mandatory whenever the implementation changes a visible interface.
+
+Inspect:
+
+- Alignment and spacing.
+- Information hierarchy.
+- Field distribution and grouping.
+- Button positioning and wrapping.
+- Component proportions.
+- Typography and readability.
+- Overflow, clipping and overlapping elements.
+- Consistency between related components.
+- Scroll behavior and fixed elements.
+- Empty, loading, error and success states.
+
+Pay particular attention to conditional layouts and dynamic content.
+
+Examples:
+
+- Different appointment line types.
+- Mega Hair stages and their associated fields.
+- Forms with optional or conditional fields.
+- Lists with different amounts of content.
+- Drawers with different numbers of footer actions.
+- Different operational statuses that change available actions.
+
+Do not validate only the initial or default state when other states significantly change the layout.
+
+## Responsive validation matrix
+
+Use representative viewport widths according to this responsive contract:
+
+| Viewport | Validation purpose |
+|---|---|
+| 360px | Compact mobile |
+| 390px | Standard mobile |
+| 767px | Upper mobile boundary |
+| 768px | Desktop transition |
+| 1024px | Compact desktop |
+| 1280px | Standard desktop |
+
+Validate the relevant layouts and interactions at these widths.
+
+Do not blindly test every possible combination at every viewport.
+
+Select representative states that exercise meaningful layout changes, especially at responsive boundaries.
+
+When a problem appears between reference widths, investigate the intermediate width to identify the actual breakpoint or layout failure.
+
+Feature documents may name additional viewports or states. They do not replace this matrix when the change has a visible interface.
+
+## Interaction and layout coverage
+
+Identify relevant interactive controls and layout-changing states from the feature scope and implementation.
+
+Examples include:
+
+- Date pickers and selectors.
+- Dropdowns and autocomplete.
+- Form validation and conditional fields.
+- Menus, drawers, sheets and modals.
+- Primary and secondary actions.
+- Dynamic lists and repeated fields.
+- Selection modes.
+- Different operational statuses.
+
+A control is not functionally validated merely because it exists in the DOM or has a valid event binding.
+
+A layout is not visually validated merely because its CSS contains responsive rules.
+
+Exercise relevant interactions and inspect the resulting rendered interface.
+
+## Evidence and findings
+
+For visual or responsive findings, record, inside the existing Findings section:
+
+- Viewport width.
+- Relevant screen or component.
+- UI state used during inspection.
+- Screenshot or reproducible evidence when available.
+- Expected behavior or composition.
+- Actual behavior.
+- Operational impact.
+- Severity, using only the scale in this protocol, and recommended treatment.
+
+Distinguish:
+
+- Functional defects.
+- Responsive defects.
+- Visual composition defects.
+- Usability problems.
+- Subjective visual preferences.
+
+That distinction is a classification inside the finding. It is not a new severity and not a new disposition.
+
+Do not classify subjective preferences as functional defects without evidence of usability or consistency impact.
+
+If a preference compromises usability or violates an approved design contract, classify the finding on the existing severity scale.
+
+An isolated Low visual refinement does not block Approved, unless it compromises usability or violates an approved design contract. In that case it is no longer an isolated refinement: apply the severity rules already in this protocol.
+
+Essential operational failures, inaccessible actions, serious layout breakage and significant responsive defects follow those same severity and disposition rules.
+
+## Efficiency and scope
+
+Validation must be proportional to the implementation scope.
+
+For an incremental change:
+
+- Test all relevant interactions introduced or modified.
+- Inspect the visual states affected by the change.
+- Verify relevant responsive boundaries.
+- Perform regression checks on directly affected shared components and consumers.
+
+For an initial module validation or broader module evolution:
+
+- Explore the main operational journeys.
+- Identify relevant screens and layout variants.
+- Inspect representative functional and visual states.
+
+Avoid exhaustive combinations that provide little additional confidence.
 
 ---
 
@@ -368,6 +563,8 @@ Include what was not run.
 
 Each finding states the documented expectation, the observed behavior, the evidence, and the severity.
 
+A visual, responsive, or operational UX finding also records the fields in Operational UX, Visual & Responsive Validation. The QA Report shape does not change.
+
 ## Severity
 
 The scale used, and the highest severity present.
@@ -451,6 +648,8 @@ Impeccable remains responsible for its own visual craft and for the finish revie
 QA must not repeat that finish review and must not apply its disposition words as this protocol’s result.
 
 When the feature explicitly includes an Impeccable build, QA may cite that result as visual evidence.
+
+That citation does not replace the Operational UX, Visual & Responsive Validation section. Composition, responsiveness, and operational efficiency stay in this protocol.
 
 An ordinary ERP feature does not need an Impeccable pass.
 

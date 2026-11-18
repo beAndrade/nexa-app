@@ -36,8 +36,8 @@ Se o identificador, o contrato ou a interface não puderem ser inspecionados, o 
 
 1. Leia o contrato de UX e os critérios de aceite antes de olhar a tela.
 2. Abra a interface implementada. Não aceite só o relato de quem implementou.
-3. Percorra layout, texto visível, interação, estado vazio, erro, foco e breakpoint que o contrato da unidade exigir.
-4. Registre cada tela, viewport, estado e interação efetivamente inspecionados.
+3. Percorra layout, texto visível, interação, estado vazio, erro, foco e breakpoint que o contrato da unidade exigir. A inspeção operacional, visual e responsiva segue a seção Operational UX, Visual & Responsive Validation em `docs/05-prompts/Phase-2/08-validation.md`: mesma matriz de viewports, mesmos estados que mudam o layout e a mesma proporcionalidade de escopo. O status deste gate continua o da lista abaixo. Severidade e disposição oficiais continuam as do protocolo de QA; este review não cria outra escala.
+4. Registre cada tela, viewport, estado e interação efetivamente inspecionados. Para achado visual ou responsivo, registre também largura, estado de UI, comportamento esperado, comportamento observado e impacto operacional.
 5. Separe evidência observada de hipótese e de limitação de ferramenta. O que não foi visto não entra como aprovação.
 6. Critique Impeccable só se a unidade pedir. O veredito deste gate continua sendo o da lista abaixo.
 
