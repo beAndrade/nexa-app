@@ -605,7 +605,7 @@ export class FaturarDrawerComponent implements OnInit {
         },
         error: (e: Error) => {
           this.salvandoDataLinhaKey = null;
-          this.erro = e.message || 'Não foi possível actualizar a data.';
+          this.erro = e.message || 'Não foi possível atualizar a data.';
         },
       });
   }
@@ -992,7 +992,7 @@ export class FaturarDrawerComponent implements OnInit {
   rotuloBotaoConfirmar(): string {
     const verPag = this.modoVerPagamentos();
     if (this.salvando) {
-      return verPag ? 'A gravar…' : 'A faturar…';
+      return verPag ? 'Salvando…' : 'Faturando…';
     }
     return verPag ? 'Gravar' : 'Faturar';
   }

@@ -528,7 +528,7 @@
       </svg>
       Calcular troco
     </button>
-    @if (podeMostrarFaturar()) {
+    @if (podeMostrarFaturar() || salvando) {
       <button
         type="button"
         class="fat-btn fat-btn--faturar"
